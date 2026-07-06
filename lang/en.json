@@ -29,6 +29,7 @@
   "SHARDS.Izir.MarkSelectedHint": "Mark the selected token(s) as Nameless (Izir-touched).",
   "SHARDS.Izir.MarkedDone": "{n} marked as Nameless.",
   "SHARDS.Izir.MarkedNone": "Select one or more tokens first.",
+  "SHARDS.Izir.MarkedAlready": "Already tracked — selected in the roster.",
   "SHARDS.Izir.NoMarked": "No Nameless tracked yet. Select a token and mark it.",
   "SHARDS.Izir.LevelShort": "Lv",
   "SHARDS.Izir.PendingTemptation": "Temptation roll pending",

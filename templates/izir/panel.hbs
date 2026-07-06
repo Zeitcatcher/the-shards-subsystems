@@ -12,7 +12,7 @@
     <ul class="izir-roster-list">
       {{#each roster}}
       <li class="izir-roster-item tier-{{this.tierId}} {{#if this.selected}}selected{{/if}}"
-        data-action="selectActor" data-actor="{{this.id}}">
+        data-action="selectActor" data-actor="{{this.uuid}}">
         <img src="{{this.img}}" alt="" />
         <div class="izir-roster-meta">
           <span class="izir-roster-name">{{this.name}}</span>
@@ -37,7 +37,7 @@
         <h2>{{detail.name}}</h2>
         <span class="izir-tier-banner">{{detail.tierLabel}}</span>
       </div>
-      <button type="button" class="izir-unmark" data-action="unmark" data-actor="{{detail.id}}"
+      <button type="button" class="izir-unmark" data-action="unmark" data-actor="{{detail.uuid}}"
         data-tooltip="{{localize 'SHARDS.Izir.Unmark'}}"><i class="fa-solid fa-user-xmark"></i></button>
     </header>
 
@@ -57,14 +57,14 @@
     {{#if isOverview}}
     <div class="izir-overview">
       <div class="izir-stepper">
-        <button type="button" data-action="levelDown" data-actor="{{detail.id}}"
+        <button type="button" data-action="levelDown" data-actor="{{detail.uuid}}"
           {{#unless detail.canDown}}disabled{{/unless}}><i class="fa-solid fa-minus"></i></button>
         <div class="izir-level-display">
           <span class="izir-level-num">{{detail.level}}</span>
           <span class="izir-level-max">/ {{detail.maxLevel}}</span>
           <span class="izir-level-caption">{{localize "SHARDS.Izir.Immersion"}}</span>
         </div>
-        <button type="button" data-action="levelUp" data-actor="{{detail.id}}"
+        <button type="button" data-action="levelUp" data-actor="{{detail.uuid}}"
           {{#unless detail.canUp}}disabled{{/unless}}><i class="fa-solid fa-plus"></i></button>
       </div>
 

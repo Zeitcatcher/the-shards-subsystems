@@ -72,9 +72,22 @@ export function isMarked(actor) {
   return Boolean(raw) && raw.enabled !== false;
 }
 
-/** All marked actors in the world. */
+/**
+ * All marked actors: world actors AND token actors placed on any scene (unlinked NPC
+ * tokens are synthetic actors that never appear in game.actors). Deduped by UUID.
+ */
 export function listMarkedActors() {
-  return (game.actors?.contents ?? []).filter(isMarked);
+  const byUuid = new Map();
+  for (const a of game.actors?.contents ?? []) {
+    if (isMarked(a)) byUuid.set(a.uuid, a);
+  }
+  for (const scene of game.scenes?.contents ?? []) {
+    for (const token of scene.tokens ?? []) {
+      const a = token.actor;
+      if (a && isMarked(a)) byUuid.set(a.uuid, a);
+    }
+  }
+  return [...byUuid.values()];
 }
 
 /** Mark an actor as Безымянный (creates the flag at level 0). */

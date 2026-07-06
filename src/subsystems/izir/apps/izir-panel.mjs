@@ -1,7 +1,10 @@
 /**
  * Izir GM control panel (ApplicationV2 + HandlebarsApplicationMixin).
- * Roster of marked actors + a tabbed detail (Overview, Effects). Every mutation goes
- * flags → syncActor → re-render; the panel never touches items directly.
+ * Roster of marked actors + a tabbed detail. Every mutation goes flags → syncActor →
+ * re-render; the panel never touches items directly.
+ *
+ * Actors are keyed by UUID (not id) so unlinked token actors — the usual case for
+ * NPC tokens dropped on a scene — are tracked correctly, not just world actors.
  */
 
 import { MODULE_ID, SETTINGS, TEMPLATES } from "../../../core/constants.mjs";
@@ -35,6 +38,9 @@ const dcBase = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_BASE))
 const dcStep = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_STEP)) || 0;
 const TIER_ORDER = ["whisper", "grip", "call", "nineveh", "subjugated"];
 
+/** Resolve any actor (world or token) from its UUID. */
+const resolveActor = (uuid) => (uuid ? fromUuidSync(uuid) : null);
+
 function tierLabel(st) {
   if (st.terminal === "subjugated") return game.i18n.localize("SHARDS.Izir.Tier.subjugated");
   return game.i18n.localize(tierForLevel(st.level).nameKey);
@@ -49,7 +55,7 @@ function entryTierId(entry) {
 // ---- action handlers (Foundry binds `this` to the application instance) ----
 
 async function onSelectActor(_event, target) {
-  this._actorId = target.dataset.actor;
+  this._actorUuid = target.dataset.actor;
   this.render();
 }
 
@@ -60,23 +66,34 @@ async function onTab(_event, target) {
 
 async function onMarkSelected() {
   const tokens = canvas.tokens?.controlled ?? [];
+  if (!tokens.length) {
+    ui.notifications?.warn(game.i18n.localize("SHARDS.Izir.MarkedNone"));
+    return;
+  }
   let n = 0;
+  let already = 0;
   for (const t of tokens) {
     const actor = t.actor;
-    if (!actor || isMarked(actor)) continue;
+    if (!actor) continue;
+    if (isMarked(actor)) {
+      already += 1;
+      this._actorUuid = actor.uuid; // focus the already-tracked one so it's visible
+      continue;
+    }
     await markActor(actor);
     await appendLog(actor, "mark", {});
     await syncActor(actor);
-    this._actorId = actor.id;
+    this._actorUuid = actor.uuid;
     n += 1;
   }
   if (n) ui.notifications?.info(game.i18n.format("SHARDS.Izir.MarkedDone", { n }));
+  else if (already) ui.notifications?.info(game.i18n.localize("SHARDS.Izir.MarkedAlready"));
   else ui.notifications?.warn(game.i18n.localize("SHARDS.Izir.MarkedNone"));
   this.render();
 }
 
 async function onUnmark(_event, target) {
-  const actor = game.actors.get(target.dataset.actor);
+  const actor = resolveActor(target.dataset.actor);
   if (!actor) return;
   const ok = await foundry.applications.api.DialogV2.confirm({
     window: { title: game.i18n.localize("SHARDS.Izir.Unmark") },
@@ -87,7 +104,7 @@ async function onUnmark(_event, target) {
   await patchIzir(actor, { enabled: false });
   await syncActor(actor);
   await unmarkActor(actor);
-  if (this._actorId === actor.id) this._actorId = null;
+  if (this._actorUuid === actor.uuid) this._actorUuid = null;
   this.render();
 }
 
@@ -98,14 +115,14 @@ async function onLevelDown(_event, target) {
   await stepLevel.call(this, target.dataset.actor, -1);
 }
 
-async function stepLevel(actorId, delta) {
-  const actor = game.actors.get(actorId);
+async function stepLevel(actorUuid, delta) {
+  const actor = resolveActor(actorUuid);
   if (!actor) return;
   const st = readIzir(actor);
   if (st.terminal) return; // terminal state is locked
   const next = clampLevel(st.level + delta);
   if (next === st.level) return;
-  // Reaching the top opens the fork dialog (Ниневеш / Подчинение) instead of a plain set.
+  // Reaching the top opens the fork dialog (Nineveh / Subjugation) instead of a plain set.
   if (next >= MAX_LEVEL && delta > 0) {
     await triggerFork(actor);
     this.render();
@@ -119,7 +136,7 @@ async function stepLevel(actorId, delta) {
 }
 
 async function onToggleSuppress(_event, target) {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const family = target.dataset.family;
   const st = readIzir(actor);
@@ -134,7 +151,7 @@ async function onToggleSuppress(_event, target) {
 }
 
 async function onEditReason(_event, target) {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const family = target.dataset.family;
   const st = readIzir(actor);
@@ -149,7 +166,7 @@ async function onEditReason(_event, target) {
 }
 
 async function onToggleReveal(_event, target) {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const family = target.dataset.family;
   const st = readIzir(actor);
@@ -162,26 +179,26 @@ async function onToggleReveal(_event, target) {
 }
 
 async function onTempt() {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (actor) await openTemptationDialog(actor);
   this.render();
 }
 
 async function onRecordOutcome(_event, target) {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   await recordTemptationOutcome(actor, target.dataset.outcome, null);
   this.render();
 }
 
 async function onClearPending() {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (actor) await clearPendingTemptation(actor);
   this.render();
 }
 
 async function onChip(_event, target) {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   switch (target.dataset.chip) {
     case "suggestSuppress":
@@ -189,7 +206,7 @@ async function onChip(_event, target) {
       this._tab = "effects";
       break;
     case "suggestDeepen":
-      await stepLevel.call(this, actor.id, +1);
+      await stepLevel.call(this, actor.uuid, +1);
       break;
     case "suggestSurge":
       await postSurge(actor);
@@ -204,12 +221,12 @@ async function onChip(_event, target) {
 }
 
 async function onExportJournal() {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (actor) await exportLog(actor);
 }
 
 async function onArtBrowse(_event, target) {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const threshold = target.dataset.threshold;
   const field = target.dataset.field;
@@ -228,7 +245,7 @@ async function onArtBrowse(_event, target) {
 }
 
 async function onArtClear(_event, target) {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const threshold = target.dataset.threshold;
   await patchIzir(actor, { art: { thresholds: { [threshold]: { portrait: "", token: "" } } } });
@@ -236,7 +253,7 @@ async function onArtClear(_event, target) {
 }
 
 async function onArtApply(_event, target) {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const applied = await applyThresholdArt(actor, target.dataset.threshold);
   if (!applied) ui.notifications?.warn(game.i18n.localize("SHARDS.Izir.ArtNone"));
@@ -244,7 +261,7 @@ async function onArtApply(_event, target) {
 }
 
 async function onArtRevert() {
-  const actor = game.actors.get(this._actorId);
+  const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   await revertArt(actor);
   this.render();
@@ -365,7 +382,7 @@ function buildHistoryView(st) {
 }
 
 export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
-  _actorId = null;
+  _actorUuid = null;
   _tab = "overview";
 
   static DEFAULT_OPTIONS = {
@@ -402,13 +419,13 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext() {
     const marked = listMarkedActors();
-    if (this._actorId && !marked.some((a) => a.id === this._actorId)) this._actorId = null;
-    if (!this._actorId && marked.length) this._actorId = marked[0].id;
+    if (this._actorUuid && !marked.some((a) => a.uuid === this._actorUuid)) this._actorUuid = null;
+    if (!this._actorUuid && marked.length) this._actorUuid = marked[0].uuid;
 
     const roster = marked.map((a) => {
       const st = readIzir(a);
       return {
-        id: a.id,
+        uuid: a.uuid,
         name: a.name,
         img: a.img,
         level: st.level,
@@ -416,11 +433,11 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         tierLabel: tierLabel(st),
         terminal: st.terminal,
         pending: Boolean(st.pendingTemptation),
-        selected: a.id === this._actorId,
+        selected: a.uuid === this._actorUuid,
       };
     });
 
-    const selected = marked.find((a) => a.id === this._actorId) ?? null;
+    const selected = marked.find((a) => a.uuid === this._actorUuid) ?? null;
     let detail = null;
     let effects = null;
     let temptation = null;
@@ -429,7 +446,7 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (selected) {
       const st = readIzir(selected);
       detail = {
-        id: selected.id,
+        uuid: selected.uuid,
         name: selected.name,
         img: selected.img,
         level: st.level,
@@ -471,10 +488,10 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
 let instance;
 
-/** Open (or focus) the Izir panel, optionally focused on a specific actor. */
-export function openIzirPanel(actorId) {
+/** Open (or focus) the Izir panel, optionally focused on a specific actor UUID. */
+export function openIzirPanel(actorUuid) {
   instance ??= new IzirPanel();
-  if (actorId) instance._actorId = actorId;
+  if (actorUuid) instance._actorUuid = actorUuid;
   instance.render({ force: true });
 }
 

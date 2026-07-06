@@ -1,6 +1,7 @@
 /**
- * Izir subsystem manifest: declares its settings, panel launcher, and best-effort
- * sheet button, then self-registers with the umbrella core.
+ * Izir subsystem manifest: declares its settings and panel launcher, then
+ * self-registers with the umbrella core. The panel is opened from the scene-controls
+ * toolbar button and the launcher macro (no per-sheet button).
  */
 
 import { IZIR, MODULE_ID, SETTINGS } from "../../core/constants.mjs";
@@ -38,38 +39,14 @@ const IZIR_SETTINGS = [
   { key: SETTINGS.IZIR_TOKEN_ICONS, scope: "world", type: "Boolean", default: true, config: true },
 ];
 
-/** Inject a GM-only "open Izir panel" button into a pf2e actor sheet header. */
-function izirSheetButton(app, root) {
-  const actor = app?.actor ?? app?.document;
-  if (!actor || !game.user?.isGM) return;
-  const header = root.querySelector?.(".window-header");
-  if (!header || header.querySelector(".shards-izir-header-btn")) return;
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "header-control icon shards-izir-header-btn";
-  btn.innerHTML = '<i class="fa-solid fa-eye"></i>';
-  btn.setAttribute("data-tooltip", game.i18n.localize("SHARDS.Izir.OpenForActor"));
-  btn.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    openIzirPanel(actor.id);
-  });
-
-  const closeBtn = header.querySelector('[data-action="close"]');
-  if (closeBtn) header.insertBefore(btn, closeBtn);
-  else header.appendChild(btn);
-}
-
 registerSubsystem({
   id: IZIR,
   titleKey: "SHARDS.Izir.PanelTitle",
   icon: "fa-solid fa-eye",
   macroImg: "icons/svg/eye.svg",
   settings: IZIR_SETTINGS,
-  openPanel: (actorId) => openIzirPanel(actorId),
+  openPanel: (actorUuid) => openIzirPanel(actorUuid),
   refresh: () => refreshIzirPanel(),
-  sheetButton: izirSheetButton,
   onReady: async () => {
     try {
       await loadContent();
