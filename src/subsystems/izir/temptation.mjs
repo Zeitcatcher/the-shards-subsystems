@@ -10,12 +10,18 @@
 import { MODULE_ID, SETTINGS } from "../../core/constants.mjs";
 import { isPrimaryGM } from "../../core/platform.mjs";
 import { readIzir, patchIzir, isMarked } from "./state.mjs";
-import { dcFor } from "./logic/model.mjs";
+import { dcFor, slideDeltaFor, slideNeeded } from "./logic/model.mjs";
+import { applySlideChange } from "./transform.mjs";
 import { refreshIzirPanel } from "./apps/izir-panel.mjs";
 
-const dcBase = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_BASE)) || 14;
+const dcBase = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_BASE)) || 20;
 const dcStep = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_STEP)) || 0;
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
+
+/** The default temptation DC for an actor's current immersion. */
+export function suggestedDC(state) {
+  return dcFor(state.level, dcBase(), dcStep());
+}
 
 /** Non-GM users who own this actor (players who can roll for it). */
 function playerOwners(actor) {
@@ -24,42 +30,18 @@ function playerOwners(actor) {
     .map((u) => u.id);
 }
 
-/** Open the temptation dialog, write the pending marker, then whisper or roll. */
-export async function openTemptationDialog(actor) {
-  if (!actor) return;
-  const st = readIzir(actor);
-  const suggested = dcFor(st.level, dcBase(), dcStep());
-
-  const content = `
-    <div class="form-group">
-      <label>${game.i18n.localize("SHARDS.Izir.TemptationDC")}</label>
-      <input type="number" name="dc" value="${suggested}" step="1" min="1" autofocus>
-    </div>
-    <div class="form-group">
-      <label>${game.i18n.localize("SHARDS.Izir.TemptationReason")}</label>
-      <input type="text" name="reason" value="" placeholder="${game.i18n.localize("SHARDS.Izir.TemptationReasonHint")}">
-    </div>`;
-
-  const result = await foundry.applications.api.DialogV2.prompt({
-    window: { title: game.i18n.localize("SHARDS.Izir.TemptationTitle"), icon: "fa-solid fa-hand-sparkles" },
-    content,
-    ok: {
-      label: game.i18n.localize("SHARDS.Izir.TemptationRoll"),
-      icon: "fa-solid fa-dice-d20",
-      callback: (_ev, button) => ({
-        dc: Number(button.form.elements.dc.value),
-        reason: String(button.form.elements.reason.value ?? "").trim(),
-      }),
-    },
-  }).catch(() => null);
-  if (!result || !Number.isFinite(result.dc)) return;
-
+/**
+ * Start a temptation check with a known DC and reason (the panel supplies both
+ * inline). Writes the pending marker, then whispers the card (PC) or rolls (NPC).
+ */
+export async function callTemptation(actor, dc, reason = "") {
+  if (!actor || !Number.isFinite(dc)) return;
   const id = foundry.utils.randomID();
-  await patchIzir(actor, { pendingTemptation: { id, dc: result.dc, reason: result.reason, createdAt: Date.now() } });
+  await patchIzir(actor, { pendingTemptation: { id, dc, reason, createdAt: Date.now() } });
 
   const owners = playerOwners(actor);
-  if (owners.length) await postTemptationCard(actor, id, result.dc, result.reason, owners);
-  else await rollNpcTemptation(actor, id, result.dc);
+  if (owners.length) await postTemptationCard(actor, id, dc, reason, owners);
+  else await rollNpcTemptation(actor, id, dc);
   refreshIzirPanel();
 }
 
@@ -141,21 +123,45 @@ async function captureFromMessage(message) {
   await recordTemptationOutcome(actor, outcome, total);
 }
 
-/** Write a temptation outcome to the log and clear the pending marker. */
+/**
+ * Write a temptation outcome to the log, clear the pending marker, and move the
+ * slide (fail +1, crit fail +2 — successes hold). The slide may auto-raise the
+ * level or signal the Tenth Step; a small GM whisper reports what moved.
+ */
 export async function recordTemptationOutcome(actor, outcome, total = null) {
   const st = readIzir(actor);
   const pending = st.pendingTemptation;
+  const delta = slideDeltaFor(outcome);
   const log = [
     ...st.log,
     {
       t: Date.now(),
       type: "temptation",
-      data: { id: pending?.id ?? null, dc: pending?.dc ?? null, outcome, total },
+      data: { id: pending?.id ?? null, dc: pending?.dc ?? null, outcome, total, slideDelta: delta },
       note: pending?.reason ?? "",
     },
   ];
   await patchIzir(actor, { log, pendingTemptation: null });
+
+  if (delta > 0) {
+    const r = await applySlideChange(actor, { delta, source: "temptation" });
+    if (r) await whisperSlideReport(actor, delta, r);
+  }
   refreshIzirPanel();
+}
+
+/** GM-only confirmation of the slide movement after a captured outcome. */
+async function whisperSlideReport(actor, delta, r) {
+  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+  const needed = slideNeeded(r.level);
+  let text = game.i18n.format("SHARDS.Izir.SlideMoved", { delta, value: r.slide, needed });
+  if (r.leveled) text += ` ${game.i18n.format("SHARDS.Izir.SlideLeveled", { name: actor.name, level: r.level })}`;
+  if (r.atTenth) text += ` ${game.i18n.format("SHARDS.Izir.TenthReady", { name: actor.name })}`;
+  await ChatMessage.create({
+    content: `<div class="izir-temptation-card"><p>${text}</p></div>`,
+    whisper: gmIds,
+    speaker: ChatMessage.getSpeaker({ actor }),
+  });
 }
 
 /** Discard a pending temptation without recording an outcome. */

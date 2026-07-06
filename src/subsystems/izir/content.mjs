@@ -9,7 +9,7 @@
 import { MODULE_ID } from "../../core/constants.mjs";
 
 const KINDS = new Set(["boon", "bane"]);
-const FORMS = new Set(["effect", "action", "spell"]);
+const FORMS = new Set(["effect", "action", "spell", "strike"]);
 const GATES = new Set([null, undefined, "subjugated"]);
 
 let cached = null;
@@ -83,6 +83,12 @@ export function validateContent(raw) {
     if (e.rules != null && !Array.isArray(e.rules)) problems.push(`${at}: rules must be an array`);
     if (e.form === "action" && e.actionData == null) problems.push(`${at}: action form needs actionData`);
     if (e.form === "spell" && e.spellData == null) problems.push(`${at}: spell form needs spellData`);
+    if (e.form === "strike" && (e.strikeData == null || typeof e.strikeData !== "object")) {
+      problems.push(`${at}: strike form needs strikeData`);
+    }
+    if (e.actionData?.recharge != null && typeof e.actionData.recharge !== "string") {
+      problems.push(`${at}: actionData.recharge must be a roll formula string`);
+    }
     if (e.auraEffectId && !packIds.has(e.auraEffectId)) {
       problems.push(`${at}: auraEffectId "${e.auraEffectId}" has no matching packEffect._id`);
     }

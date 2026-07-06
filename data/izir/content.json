@@ -25,6 +25,19 @@
       ]
     },
     {
+      "id": "void-lash",
+      "family": "void-lash",
+      "rank": 1,
+      "level": 1,
+      "kind": "boon",
+      "form": "strike",
+      "name": "Void Lash",
+      "description": "<p>A whip of living black snaps from your hand. Void Lash is a ranged Strike (30 feet) using your Izir attack modifier ({{izirAttack}}); it deals void damage that grows with you and can be used at will.</p>",
+      "img": "icons/magic/unholy/strike-beam-blood-red-purple.webp",
+      "rules": [],
+      "strikeData": { "range": 30, "die": "d4", "damageType": "void", "traits": ["magical", "void"], "category": "unarmed", "group": "brawling" }
+    },
+    {
       "id": "dreams-of-void",
       "family": "dreams-of-void",
       "rank": 1,
@@ -89,10 +102,10 @@
       "kind": "boon",
       "form": "action",
       "name": "Izir Wave I",
-      "description": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> A 15-foot cone deals @Damage[(floor(@actor.level/2))d6[void]] damage; each creature attempts a basic Reflex save against your class DC or spell DC (whichever is higher).</p>",
+      "description": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:15] Each creature in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/unholy/beam-impact-purple.webp",
       "rules": [],
-      "actionData": { "actionType": "action", "actions": 2, "traits": ["void", "manipulate"], "frequency": { "max": 1, "per": "PT10M" } }
+      "actionData": { "actionType": "action", "actions": 2, "traits": ["void", "manipulate"], "recharge": "1d6" }
     },
     {
       "id": "anathema-to-the-holy",
@@ -160,10 +173,10 @@
       "kind": "boon",
       "form": "action",
       "name": "Izir Wave II",
-      "description": "<p>The wave widens into a torrent of annihilation.</p><hr /><p><strong>Effect</strong> A 30-foot cone deals @Damage[(floor(@actor.level/2))d8[void]] damage; each creature attempts a basic Reflex save against your class DC or spell DC (whichever is higher).</p>",
+      "description": "<p>The wave widens into a torrent of annihilation.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:30] Each creature in the area takes @Damage[(floor(@actor.level/2))d8[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/unholy/beam-impact-purple.webp",
       "rules": [],
-      "actionData": { "actionType": "action", "actions": 2, "traits": ["void", "manipulate"], "frequency": { "max": 1, "per": "PT10M" } }
+      "actionData": { "actionType": "action", "actions": 2, "traits": ["void", "manipulate"], "recharge": "1d6" }
     },
     {
       "id": "the-face-fades",

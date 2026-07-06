@@ -2,7 +2,7 @@
   "name": "the-shards-subsystems",
   "private": true,
   "type": "module",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "The Shards — Campaign Subsystems (Foundry VTT, Pathfinder 2e).",
   "scripts": {
     "test": "vitest run",

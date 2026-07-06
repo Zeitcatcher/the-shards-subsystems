@@ -1,6 +1,7 @@
-/* Izir-specific styling: tier accent colours, the immersion stepper, terminal banners. */
+/* Izir-specific styling: tier accents, stepper, slide bar, the ladder, temptation
+   block, fork, satellites, chat cards. */
 
-/* Tier accent, exposed as a CSS var the detail header reads. */
+/* Tier accent variable, consumed by headers/rows/labels. */
 .the-shards-subsystems .tier-marked { --izir-tier-color: #6b7280; }
 .the-shards-subsystems .tier-whisper { --izir-tier-color: #7c6fb0; }
 .the-shards-subsystems .tier-grip { --izir-tier-color: #5b53a8; }
@@ -8,68 +9,162 @@
 .the-shards-subsystems .tier-nineveh { --izir-tier-color: #a11; }
 .the-shards-subsystems .tier-subjugated { --izir-tier-color: #b5892a; }
 
-/* Left border accent on roster rows echoes the tier. */
 .the-shards-subsystems .izir-roster-item.tier-whisper { border-left-color: #7c6fb0; }
 .the-shards-subsystems .izir-roster-item.tier-grip { border-left-color: #5b53a8; }
 .the-shards-subsystems .izir-roster-item.tier-call { border-left-color: #6a2fa0; }
 .the-shards-subsystems .izir-roster-item.tier-nineveh { border-left-color: #a11; }
 .the-shards-subsystems .izir-roster-item.tier-subjugated { border-left-color: #b5892a; }
 
-/* Immersion stepper */
+/* ---------- stepper ---------- */
 .the-shards-subsystems .izir-stepper {
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: 0.8rem;
-  margin: 0.4rem 0 1rem;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  border-radius: 5px;
+  padding: 0.45rem 0.6rem;
 }
-
-.the-shards-subsystems .izir-stepper button {
+.the-shards-subsystems .izir-step {
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
-  width: 44px;
-  font-size: 1.1rem;
-  border-radius: 6px;
+  border-radius: 5px;
+  font-size: 1rem;
+  display: grid;
+  place-items: center;
 }
-
-.the-shards-subsystems .izir-level-display {
+.the-shards-subsystems .izir-step-display {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-width: 120px;
-  padding: 0.3rem 1rem;
-  border: 1px solid var(--izir-tier-color, #6a5acd);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.03);
+  min-width: 64px;
 }
-
-.the-shards-subsystems .izir-level-num {
-  font-size: 2.2rem;
+.the-shards-subsystems .izir-step-num {
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
   color: var(--izir-tier-color, #6a5acd);
+  font-variant-numeric: tabular-nums;
+}
+.the-shards-subsystems .izir-step-num small {
+  font-size: 0.7rem;
+  opacity: 0.55;
+  font-weight: 400;
+}
+.the-shards-subsystems .izir-step-cap {
+  font-size: var(--font-size-10, 0.64rem);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.65;
+}
+.the-shards-subsystems .izir-step-note {
+  font-size: var(--font-size-11, 0.7rem);
+  opacity: 0.6;
+  max-width: 30ch;
+  line-height: 1.25;
+}
+.the-shards-subsystems .izir-tenth {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 0.78rem);
+  border: 1px solid #a11;
+  color: #a11;
+  background: rgba(170, 17, 17, 0.06);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
+.the-shards-subsystems .izir-tenth.ready {
+  background: rgba(170, 17, 17, 0.18);
+  font-weight: 700;
+  box-shadow: 0 0 6px rgba(170, 17, 17, 0.45);
 }
 
-.the-shards-subsystems .izir-level-max {
-  font-size: 0.9rem;
+/* ---------- the slide ---------- */
+.the-shards-subsystems .izir-slide {
+  border: 1px solid rgba(165, 71, 63, 0.45);
+  background: rgba(165, 71, 63, 0.05);
+  border-radius: 5px;
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.the-shards-subsystems .izir-slide.full {
+  box-shadow: inset 0 0 0 1px rgba(170, 17, 17, 0.5);
+}
+.the-shards-subsystems .izir-slide-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+.the-shards-subsystems .izir-slide-title {
+  font-size: var(--font-size-10, 0.66rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a5473f;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.the-shards-subsystems .izir-slide-count {
+  font-size: var(--font-size-13, 0.85rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.the-shards-subsystems .izir-slide-count small {
+  opacity: 0.6;
+  font-weight: 400;
+}
+.the-shards-subsystems .izir-segbar {
+  display: flex;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+.the-shards-subsystems .izir-seg {
+  height: 12px;
+  flex: 1 1 auto;
+  min-width: 8px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.the-shards-subsystems .izir-seg:hover {
+  border-color: #a5473f;
+}
+.the-shards-subsystems .izir-seg.f {
+  background: linear-gradient(180deg, #c25a52, #8f3d37);
+  border-color: #a5473f;
+}
+.the-shards-subsystems .izir-seg.gap {
+  margin-left: 5px;
+}
+.the-shards-subsystems .izir-mini {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.the-shards-subsystems .izir-slide-legend {
+  font-size: var(--font-size-10, 0.66rem);
   opacity: 0.6;
 }
 
-.the-shards-subsystems .izir-level-caption {
-  font-size: var(--font-size-11, 0.72rem);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.75;
-  margin-top: 0.15rem;
-}
-
-/* Terminal banner */
+/* ---------- terminal banner ---------- */
 .the-shards-subsystems .izir-terminal-banner {
   text-align: center;
   font-weight: 600;
   padding: 0.45rem 0.6rem;
   border-radius: 6px;
-  margin-bottom: 0.9rem;
 }
 .the-shards-subsystems .izir-terminal-banner.terminal-nineveh {
   background: rgba(170, 17, 17, 0.12);
@@ -82,184 +177,253 @@
   border: 1px solid rgba(181, 137, 42, 0.4);
 }
 
-/* Stat grid */
-.the-shards-subsystems .izir-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.6rem;
-  margin: 0;
-}
-.the-shards-subsystems .izir-stat-grid > div {
-  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
-  border-radius: 6px;
-  padding: 0.5rem 0.7rem;
-  text-align: center;
-}
-.the-shards-subsystems .izir-stat-grid dt {
-  font-size: var(--font-size-11, 0.72rem);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.7;
-}
-.the-shards-subsystems .izir-stat-grid dd {
-  margin: 0.15rem 0 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-/* Tab navigation */
-.the-shards-subsystems .izir-tabs {
+/* ---------- the ladder ---------- */
+.the-shards-subsystems .izir-ladder {
   display: flex;
-  gap: 0.3rem;
-  margin-bottom: 0.8rem;
-  border-bottom: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 5px;
 }
-.the-shards-subsystems .izir-tabs button {
-  width: auto;
-  flex: 0 0 auto;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  padding: 0.35rem 0.7rem;
-  opacity: 0.65;
+.the-shards-subsystems .izir-ladder.pulse {
+  animation: izir-pulse 0.8s ease-in-out 2;
+}
+@keyframes izir-pulse {
+  50% { box-shadow: 0 0 0 2px rgba(181, 137, 42, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .the-shards-subsystems .izir-ladder.pulse { animation: none; box-shadow: 0 0 0 2px rgba(181, 137, 42, 0.6); }
+}
+.the-shards-subsystems .izir-tier-label {
+  font-size: var(--font-size-10, 0.64rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  color: var(--izir-tier-color, #6a5acd);
+  margin: 0.45rem 0 0.1rem;
+  display: flex;
+  gap: 7px;
+  align-items: center;
   font-weight: 600;
 }
-.the-shards-subsystems .izir-tabs button.active {
-  opacity: 1;
-  border-bottom-color: var(--izir-tier-color, #6a5acd);
+.the-shards-subsystems .izir-tier-label i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--izir-tier-color, #6a5acd);
+}
+.the-shards-subsystems .izir-lrow {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 3px 5px;
+  border-radius: 5px;
+}
+.the-shards-subsystems .izir-lrow.current {
+  background: rgba(91, 83, 168, 0.09);
+  outline: 1px solid rgba(91, 83, 168, 0.45);
+}
+.the-shards-subsystems .izir-lrow.locked {
+  opacity: 0.42;
+  filter: saturate(0.4);
+}
+.the-shards-subsystems .izir-ldisc {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  border: 2px solid var(--izir-tier-color, #6a5acd);
+  display: grid;
+  place-items: center;
+  font-size: var(--font-size-11, 0.72rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+  background: rgba(0, 0, 0, 0.04);
+}
+.the-shards-subsystems .izir-lrow.current .izir-ldisc {
+  background: var(--izir-tier-color, #6a5acd);
+  color: #fff;
+}
+.the-shards-subsystems .izir-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
 }
 
-/* Effects tab */
-.the-shards-subsystems .izir-effects-hint {
-  font-size: var(--font-size-11, 0.72rem);
+/* chips */
+.the-shards-subsystems .izir-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-12, 0.76rem);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  line-height: 1.5;
+  max-width: 100%;
+}
+.the-shards-subsystems .izir-chip.passive {
+  border-color: rgba(91, 83, 168, 0.45);
+  background: rgba(91, 83, 168, 0.07);
+}
+.the-shards-subsystems .izir-chip.active {
+  border-color: rgba(91, 83, 168, 0.7);
+  background: rgba(91, 83, 168, 0.13);
+}
+.the-shards-subsystems .izir-chip.price {
+  border-color: rgba(170, 17, 17, 0.45);
+  background: rgba(170, 17, 17, 0.06);
+}
+.the-shards-subsystems .izir-chip.suppressed {
+  text-decoration: line-through;
+  border-style: dashed;
   opacity: 0.65;
-  font-style: italic;
-  margin: 0 0 0.6rem;
 }
-.the-shards-subsystems .izir-effect-group {
-  margin-bottom: 0.9rem;
+.the-shards-subsystems .izir-chip.replaced {
+  opacity: 0.45;
+  border-style: dotted;
 }
-.the-shards-subsystems .izir-effect-group-label {
-  margin: 0 0 0.35rem;
-  font-size: var(--font-size-12, 0.8rem);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--izir-tier-color, #6a5acd);
-  border-bottom: 1px dotted var(--color-border-light-tertiary, #c9c7b8);
+.the-shards-subsystems .izir-chip.gate {
+  border-style: dashed;
 }
-.the-shards-subsystems .izir-effect-row {
+.the-shards-subsystems .izir-chip .sk {
+  font-size: 0.65rem;
+  color: #a11;
+}
+.the-shards-subsystems .izir-chip .cost {
+  color: #5b53a8;
+  font-size: 0.68rem;
+  letter-spacing: -1px;
+}
+.the-shards-subsystems .izir-chip .tag {
+  font-size: var(--font-size-10, 0.62rem);
+  opacity: 0.6;
+  border-left: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  padding-left: 5px;
+}
+.the-shards-subsystems .izir-chip .why {
+  color: #8a6417;
+  font-size: 0.7rem;
+}
+
+/* chip hover controls */
+.the-shards-subsystems .izir-chip .kit {
+  display: none;
+  gap: 2px;
+  align-items: center;
+  margin-left: 2px;
+  border-left: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  padding-left: 5px;
+}
+.the-shards-subsystems .izir-lrow:not(.locked) .izir-chip:hover .kit {
+  display: inline-flex;
+}
+.the-shards-subsystems .izir-chip .kit button {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.68rem;
+  opacity: 0.6;
+  padding: 0 2px;
+  line-height: 1;
+}
+.the-shards-subsystems .izir-chip .kit button:hover {
+  opacity: 1;
+}
+
+/* fork row */
+.the-shards-subsystems .izir-fork-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--font-size-12, 0.78rem);
+  padding: 4px 11px;
+  border-radius: 4px;
+  border: 1px solid;
+  width: auto;
+  flex: 0 0 auto;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.the-shards-subsystems .izir-fork-chip.nin {
+  border-color: #a11;
+  color: #a11;
+  background: rgba(170, 17, 17, 0.07);
+}
+.the-shards-subsystems .izir-fork-chip.sub {
+  border-color: #b5892a;
+  color: #8a6417;
+  background: rgba(181, 137, 42, 0.08);
+}
+
+/* ---------- temptation block ---------- */
+.the-shards-subsystems .izir-tempt {
+  border: 1px solid rgba(181, 137, 42, 0.45);
+  background: rgba(181, 137, 42, 0.05);
+  border-radius: 5px;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.the-shards-subsystems .izir-tempt-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.3rem 0.4rem;
-  border-radius: 4px;
-}
-.the-shards-subsystems .izir-effect-row:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-.the-shards-subsystems .izir-effect-row.status-locked {
-  opacity: 0.45;
-}
-.the-shards-subsystems .izir-effect-row.status-suppressed .izir-effect-name {
-  text-decoration: line-through;
-  opacity: 0.7;
-}
-.the-shards-subsystems .izir-effect-kind {
-  flex: 0 0 auto;
-  width: 1.2rem;
-  text-align: center;
-}
-.the-shards-subsystems .izir-effect-row.is-boon .izir-effect-kind {
-  color: #5b53a8;
-}
-.the-shards-subsystems .izir-effect-row.is-bane .izir-effect-kind {
-  color: #a11;
-}
-.the-shards-subsystems .izir-effect-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.the-shards-subsystems .izir-effect-status {
-  flex: 0 0 auto;
-  font-size: var(--font-size-11, 0.72rem);
-  opacity: 0.7;
-  white-space: nowrap;
-}
-.the-shards-subsystems .izir-effect-reason {
-  flex: 0 0 auto;
-  color: #b5892a;
-  font-size: 0.8rem;
-}
-.the-shards-subsystems .izir-effect-controls {
-  flex: 0 0 auto;
-  display: flex;
-  gap: 0.15rem;
-}
-.the-shards-subsystems .izir-icon-btn {
-  width: auto;
-  flex: 0 0 auto;
-  background: none;
-  border: none;
-  padding: 0.15rem 0.3rem;
-  opacity: 0.6;
-  cursor: pointer;
-  border-radius: 3px;
-}
-.the-shards-subsystems .izir-icon-btn:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.08);
-}
-.the-shards-subsystems .izir-icon-btn.on {
-  opacity: 1;
-  color: var(--izir-tier-color, #6a5acd);
-}
-
-/* Temptation tab */
-.the-shards-subsystems .izir-tempt-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
 }
 .the-shards-subsystems .izir-tempt-dc {
-  font-size: var(--font-size-13, 0.85rem);
-}
-.the-shards-subsystems .izir-tempt-btn {
-  width: auto;
-  flex: 0 0 auto;
+  font-size: var(--font-size-10, 0.66rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a6417;
   font-weight: 600;
+  white-space: nowrap;
+}
+.the-shards-subsystems .izir-dc-input {
+  width: 64px;
+  flex: 0 0 auto;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.the-shards-subsystems .izir-reason-input {
+  flex: 1 1 140px;
+  min-width: 120px;
+}
+.the-shards-subsystems .izir-tempt-note {
+  font-size: var(--font-size-11, 0.7rem);
+  opacity: 0.7;
+  font-style: italic;
 }
 .the-shards-subsystems .izir-pending {
   border: 1px solid #b5892a;
   background: rgba(181, 137, 42, 0.1);
-  border-radius: 6px;
-  padding: 0.5rem 0.7rem;
-  margin-bottom: 0.8rem;
+  border-radius: 5px;
+  padding: 0.4rem 0.6rem;
 }
 .the-shards-subsystems .izir-pending p {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.35rem;
+  font-size: var(--font-size-12, 0.78rem);
 }
-.the-shards-subsystems .izir-outcome-buttons {
+.the-shards-subsystems .izir-outcomes {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.3rem;
 }
 .the-shards-subsystems .izir-outcome-label {
-  font-size: var(--font-size-11, 0.72rem);
-  opacity: 0.7;
-  margin-right: 0.2rem;
+  font-size: var(--font-size-10, 0.66rem);
+  opacity: 0.65;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .the-shards-subsystems .izir-outcome-btn {
   width: auto;
   flex: 0 0 auto;
-  font-size: var(--font-size-11, 0.72rem);
-  padding: 0.2rem 0.45rem;
+  font-size: var(--font-size-10, 0.68rem);
+  padding: 0.15rem 0.45rem;
   border-radius: 4px;
 }
 .the-shards-subsystems .izir-outcome-btn.outcome-criticalSuccess { border-color: #2e7d32; color: #2e7d32; }
@@ -267,139 +431,87 @@
 .the-shards-subsystems .izir-outcome-btn.outcome-failure { border-color: #b5651d; color: #b5651d; }
 .the-shards-subsystems .izir-outcome-btn.outcome-criticalFailure { border-color: #a11; color: #a11; }
 
-.the-shards-subsystems .izir-chips {
-  display: flex;
-  flex-wrap: wrap;
+.the-shards-subsystems .izir-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  margin-bottom: 0.9rem;
-}
-.the-shards-subsystems .izir-chips-label {
-  font-size: var(--font-size-11, 0.72rem);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.7;
-}
-.the-shards-subsystems .izir-chip {
-  width: auto;
-  flex: 0 0 auto;
-  font-size: var(--font-size-12, 0.8rem);
-  padding: 0.25rem 0.6rem;
+  gap: 4px;
+  font-size: var(--font-size-10, 0.66rem);
+  font-weight: 700;
+  padding: 1px 8px;
   border-radius: 999px;
-  background: rgba(106, 47, 160, 0.1);
-  border: 1px solid rgba(106, 47, 160, 0.4);
-}
-.the-shards-subsystems .izir-chip:hover {
-  background: rgba(106, 47, 160, 0.2);
-}
-
-.the-shards-subsystems .izir-tempt-recent h4,
-.the-shards-subsystems .izir-history-head h4 {
-  margin: 0 0 0.4rem;
-  font-size: var(--font-size-13, 0.85rem);
-}
-.the-shards-subsystems .izir-tempt-recent ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.the-shards-subsystems .izir-tempt-recent li {
-  font-size: var(--font-size-12, 0.8rem);
-}
-.the-shards-subsystems .izir-outcome-pill {
-  display: inline-block;
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  font-size: var(--font-size-11, 0.72rem);
-  font-weight: 600;
   color: #fff;
   background: #888;
 }
-.the-shards-subsystems .izir-outcome-pill.outcome-criticalSuccess { background: #2e7d32; }
-.the-shards-subsystems .izir-outcome-pill.outcome-success { background: #4e944f; }
-.the-shards-subsystems .izir-outcome-pill.outcome-failure { background: #b5651d; }
-.the-shards-subsystems .izir-outcome-pill.outcome-criticalFailure { background: #a11; }
-.the-shards-subsystems .izir-tempt-when {
-  opacity: 0.7;
+.the-shards-subsystems .izir-pill small {
+  font-weight: 600;
+  opacity: 0.85;
+}
+.the-shards-subsystems .izir-pill.outcome-criticalSuccess { background: #3f7d46; }
+.the-shards-subsystems .izir-pill.outcome-success { background: #5c8a60; }
+.the-shards-subsystems .izir-pill.outcome-failure { background: #a06a34; }
+.the-shards-subsystems .izir-pill.outcome-criticalFailure { background: #a03b32; }
+
+.the-shards-subsystems .izir-sugg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 0.72rem);
+  color: #8a6417;
+  border: 1px dashed #b5892a;
+  background: rgba(181, 137, 42, 0.07);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  line-height: 1.5;
 }
 
-/* History tab */
-.the-shards-subsystems .izir-history-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-.the-shards-subsystems .izir-log {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* ---------- satellites (art / history) ---------- */
+.the-shards-subsystems.izir-satellite .izir-art,
+.the-shards-subsystems.izir-satellite .izir-history {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  min-height: 0;
+  overflow-y: auto;
 }
-.the-shards-subsystems .izir-log li {
-  display: flex;
-  gap: 0.6rem;
-  font-size: var(--font-size-12, 0.8rem);
-  padding: 0.2rem 0;
-  border-bottom: 1px dotted var(--color-border-light-tertiary, #d5d3c6);
-}
-.the-shards-subsystems .izir-log-when {
-  flex: 0 0 auto;
-  opacity: 0.6;
-  min-width: 130px;
-}
-.the-shards-subsystems .izir-log-desc {
-  flex: 1 1 auto;
-}
-
-/* Sheet-header launch button */
-.shards-izir-header-btn {
-  cursor: pointer;
-}
-
-/* Art tab */
 .the-shards-subsystems .izir-art-row {
   border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
   border-radius: 6px;
-  padding: 0.5rem 0.7rem;
-  margin-bottom: 0.6rem;
+  padding: 0.45rem 0.6rem;
 }
 .the-shards-subsystems .izir-art-row.applied {
-  border-color: var(--izir-tier-color, #6a5acd);
-  box-shadow: inset 0 0 0 1px var(--izir-tier-color, #6a5acd);
+  border-color: #5b53a8;
+  box-shadow: inset 0 0 0 1px #5b53a8;
 }
-.the-shards-subsystems .izir-art-row-head {
+.the-shards-subsystems .izir-art-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
 }
 .the-shards-subsystems .izir-art-applied {
-  font-size: var(--font-size-11, 0.72rem);
-  color: var(--izir-tier-color, #6a5acd);
+  font-size: var(--font-size-10, 0.66rem);
+  color: #5b53a8;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 .the-shards-subsystems .izir-art-field {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.3rem;
+  gap: 0.45rem;
+  margin-bottom: 0.25rem;
 }
 .the-shards-subsystems .izir-art-field label {
-  flex: 0 0 60px;
-  font-size: var(--font-size-11, 0.72rem);
-  opacity: 0.75;
+  flex: 0 0 58px;
+  font-size: var(--font-size-10, 0.66rem);
+  opacity: 0.7;
 }
 .the-shards-subsystems .izir-art-path {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: var(--font-size-11, 0.72rem);
+  font-size: var(--font-size-10, 0.68rem);
   opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
@@ -410,7 +522,7 @@
 .the-shards-subsystems .izir-art-actions {
   display: flex;
   gap: 0.3rem;
-  margin-top: 0.4rem;
+  margin-top: 0.3rem;
 }
 .the-shards-subsystems .izir-art-actions button:first-child {
   width: auto;
@@ -418,10 +530,43 @@
 }
 .the-shards-subsystems .izir-art-revert {
   width: 100%;
-  margin-top: 0.4rem;
+}
+.the-shards-subsystems .izir-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.the-shards-subsystems .izir-history-head h4 {
+  margin: 0;
+  font-size: var(--font-size-13, 0.85rem);
+}
+.the-shards-subsystems .izir-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+.the-shards-subsystems .izir-log li {
+  display: flex;
+  gap: 0.6rem;
+  font-size: var(--font-size-11, 0.74rem);
+  padding: 0.15rem 0;
+  border-bottom: 1px dotted var(--color-border-light-tertiary, #d5d3c6);
+}
+.the-shards-subsystems .izir-log-when {
+  flex: 0 0 auto;
+  opacity: 0.6;
+  min-width: 122px;
+}
+.the-shards-subsystems .izir-log-desc {
+  flex: 1 1 auto;
 }
 
-/* Level-10 fork dialog */
+/* ---------- fork dialog ---------- */
 .izir-fork .izir-fork-warn {
   color: #a11;
   font-weight: 600;
@@ -437,7 +582,7 @@
   color: #8a6417;
 }
 
-/* Temptation chat card (rendered in chat, outside the panel scope) */
+/* ---------- chat cards (outside the panel scope) ---------- */
 .izir-temptation-card {
   border-left: 3px solid #6a2fa0;
   padding: 0.2rem 0.5rem;

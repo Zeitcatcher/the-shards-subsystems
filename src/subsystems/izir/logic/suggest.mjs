@@ -36,8 +36,9 @@ export function suggestChips(log, opts = {}) {
   if (streak >= need) {
     chips.push({ key: "suppress", labelKey: "SHARDS.Izir.Chip.suppress", action: "suggestSuppress" });
   }
+  // Escalation itself now flows through the slide bar; the chips left here are
+  // the flavor levers the bar can't cover.
   if (last === "criticalFailure") {
-    chips.push({ key: "deepen", labelKey: "SHARDS.Izir.Chip.deepen", action: "suggestDeepen" });
     chips.push({ key: "unsuppress", labelKey: "SHARDS.Izir.Chip.unsuppress", action: "suggestUnsuppress" });
     chips.push({ key: "surge", labelKey: "SHARDS.Izir.Chip.surge", action: "suggestSurge" });
   } else if (last === "failure") {

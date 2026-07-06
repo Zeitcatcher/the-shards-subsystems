@@ -29,222 +29,193 @@
     {{/if}}
   </section>
 
-  <section class="izir-detail">
+  <section class="izir-dash">
     {{#if detail}}
-    <header class="izir-detail-head tier-{{detail.tierId}}">
+    <header class="izir-id tier-{{detail.tierId}}">
       <img src="{{detail.img}}" alt="" />
-      <div class="izir-detail-title">
+      <div class="izir-id-title">
         <h2>{{detail.name}}</h2>
-        <span class="izir-tier-banner">{{detail.tierLabel}}</span>
+        <span class="izir-tier-pill">{{detail.tierLabel}}</span>
       </div>
-      <button type="button" class="izir-unmark" data-action="unmark" data-actor="{{detail.uuid}}"
+      <button type="button" class="izir-ghost" data-action="unmark" data-actor="{{detail.uuid}}"
         data-tooltip="{{localize 'SHARDS.Izir.Unmark'}}"><i class="fa-solid fa-user-xmark"></i></button>
     </header>
 
-    <nav class="izir-tabs">
-      <button type="button" data-action="tab" data-tab="overview"
-        class="{{#if isOverview}}active{{/if}}">{{localize "SHARDS.Izir.TabOverview"}}</button>
-      <button type="button" data-action="tab" data-tab="effects"
-        class="{{#if isEffects}}active{{/if}}">{{localize "SHARDS.Izir.TabEffects"}}</button>
-      <button type="button" data-action="tab" data-tab="temptation"
-        class="{{#if isTemptation}}active{{/if}}">{{localize "SHARDS.Izir.TabTemptation"}}</button>
-      <button type="button" data-action="tab" data-tab="art"
-        class="{{#if isArt}}active{{/if}}">{{localize "SHARDS.Izir.TabArt"}}</button>
-      <button type="button" data-action="tab" data-tab="history"
-        class="{{#if isHistory}}active{{/if}}">{{localize "SHARDS.Izir.TabHistory"}}</button>
-    </nav>
-
-    {{#if isOverview}}
-    <div class="izir-overview">
-      <div class="izir-stepper">
-        <button type="button" data-action="levelDown" data-actor="{{detail.uuid}}"
-          {{#unless detail.canDown}}disabled{{/unless}}><i class="fa-solid fa-minus"></i></button>
-        <div class="izir-level-display">
-          <span class="izir-level-num">{{detail.level}}</span>
-          <span class="izir-level-max">/ {{detail.maxLevel}}</span>
-          <span class="izir-level-caption">{{localize "SHARDS.Izir.Immersion"}}</span>
-        </div>
-        <button type="button" data-action="levelUp" data-actor="{{detail.uuid}}"
-          {{#unless detail.canUp}}disabled{{/unless}}><i class="fa-solid fa-plus"></i></button>
-      </div>
-
-      {{#if detail.terminal}}
-      <div class="izir-terminal-banner terminal-{{detail.terminal}}">
-        {{#if (shardsEq detail.terminal "nineveh")}}
-        {{localize "SHARDS.Izir.TerminalNineveh"}}
-        {{else}}
-        {{localize "SHARDS.Izir.TerminalSubjugated"}}
-        {{/if}}
-      </div>
+    <div class="izir-stats">
+      <div class="izir-stat"><span class="l">{{localize "SHARDS.Izir.Immersion"}}</span><span class="n">{{detail.level}} <small>/ {{detail.maxLevel}}</small></span></div>
+      {{#if slide}}
+      <div class="izir-stat slide-n"><span class="l">{{localize "SHARDS.Izir.SlideTitle"}}</span><span class="n">{{slide.value}} <small>/ {{slide.needed}}</small></span></div>
       {{/if}}
+      <div class="izir-stat"><span class="l">{{localize "SHARDS.Izir.StatAttack"}}</span><span class="n">{{detail.attack}}</span></div>
+      <div class="izir-stat"><span class="l">{{localize "SHARDS.Izir.StatPowerDc"}}</span><span class="n">{{detail.powerDc}}</span></div>
+      {{#unless detail.terminal}}
+      <div class="izir-stat hot"><span class="l">{{localize "SHARDS.Izir.TemptationDC"}}</span><span class="n">{{temptation.dc}}</span></div>
+      {{/unless}}
+      <div class="izir-stat"><span class="l">{{localize "SHARDS.Izir.Suppressed"}}</span><span class="n">{{detail.suppressedCount}}</span></div>
+    </div>
 
-      <dl class="izir-stat-grid">
-        <div>
-          <dt>{{localize "SHARDS.Izir.TemptationDC"}}</dt>
-          <dd>{{detail.dcPreview}}</dd>
+    <div class="izir-stepper">
+      <button type="button" class="izir-step" data-action="levelDown"
+        {{#unless detail.canDown}}disabled{{/unless}}><i class="fa-solid fa-minus"></i></button>
+      <div class="izir-step-display">
+        <span class="izir-step-num">{{detail.level}}<small>/{{detail.maxLevel}}</small></span>
+        <span class="izir-step-cap">{{localize "SHARDS.Izir.Immersion"}}</span>
+      </div>
+      <button type="button" class="izir-step" data-action="levelUp"
+        {{#unless detail.canUp}}disabled{{/unless}}><i class="fa-solid fa-plus"></i></button>
+      <span class="izir-step-note">{{localize "SHARDS.Izir.BadgeHint"}}</span>
+      <span class="izir-spacer"></span>
+      {{#unless detail.terminal}}
+      <button type="button" class="izir-tenth {{#if slide.full}}ready{{/if}}" data-action="fork">
+        <i class="fa-solid fa-skull"></i> {{localize "SHARDS.Izir.ForkTitle"}}…
+      </button>
+      {{/unless}}
+    </div>
+
+    {{#if slide}}
+    <div class="izir-slide {{#if slide.full}}full{{/if}}">
+      <div class="izir-slide-row">
+        <span class="izir-slide-title">{{localize "SHARDS.Izir.SlideTitle"}} — {{localize "SHARDS.Izir.SlideTo"}} {{slide.nextLevel}}</span>
+        <span class="izir-slide-count">{{slide.value}} <small>/ {{slide.needed}}</small></span>
+        <div class="izir-segbar">
+          {{#each slide.segments}}
+          <button type="button" class="izir-seg {{#if this.filled}}f{{/if}} {{#if this.gap}}gap{{/if}}"
+            data-action="slideSet" data-value="{{this.value}}" aria-label="set slide to {{this.value}}"></button>
+          {{/each}}
         </div>
-        <div>
-          <dt>{{localize "SHARDS.Izir.Suppressed"}}</dt>
-          <dd>{{detail.suppressedCount}}</dd>
-        </div>
-      </dl>
+        <button type="button" class="izir-mini" data-action="slideMinus" aria-label="-1">−</button>
+        <button type="button" class="izir-mini" data-action="slidePlus" aria-label="+1">+</button>
+      </div>
+      <div class="izir-slide-legend">{{localize "SHARDS.Izir.SlideLegend"}}</div>
     </div>
     {{/if}}
 
-    {{#if isEffects}}
-    <div class="izir-effects">
-      <p class="izir-effects-hint">{{localize "SHARDS.Izir.EffectsHint"}}</p>
-      {{#if effects.hasAny}}
-      {{#each effects.groups}}
-      <div class="izir-effect-group tier-{{this.tierId}}">
-        <h4 class="izir-effect-group-label">{{this.label}}</h4>
-        {{#each this.rows}}
-        <div class="izir-effect-row status-{{this.status}} {{#if this.isBane}}is-bane{{else}}is-boon{{/if}}">
-          <span class="izir-effect-kind" data-tooltip="{{#if this.isBane}}{{localize 'SHARDS.Izir.Bane'}}{{else}}{{localize 'SHARDS.Izir.Boon'}}{{/if}}">
-            <i class="fa-solid {{#if this.isBane}}fa-skull-crossbones{{else}}fa-bolt{{/if}}"></i>
+    {{#if detail.terminal}}
+    <div class="izir-terminal-banner terminal-{{detail.terminal}}">
+      {{#if (shardsEq detail.terminal "nineveh")}}{{localize "SHARDS.Izir.TerminalNineveh"}}
+      {{else}}{{localize "SHARDS.Izir.TerminalSubjugated"}}{{/if}}
+    </div>
+    {{/if}}
+
+    {{#if ladder}}
+    <div class="izir-ladder">
+      {{#each ladder.groups}}
+      <div class="izir-tier-label tier-{{this.tierId}}"><i></i>{{this.label}} · {{this.range}}</div>
+      {{#each this.rows}}
+      <div class="izir-lrow tier-{{../tierId}} {{#if this.current}}current{{/if}} {{#if this.locked}}locked{{/if}}">
+        <div class="izir-ldisc">{{this.level}}</div>
+        <div class="izir-chips">
+          {{#each this.chips}}
+          <span class="izir-chip {{#if this.isBane}}price{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}}">
+            {{#if this.isBane}}<i class="fa-solid fa-skull-crossbones sk"></i>{{/if}}
+            {{this.name}}
+            {{#if this.actionsGlyph}}<span class="cost">{{this.actionsGlyph}}</span>{{/if}}
+            {{#if this.tag}}<span class="tag">{{this.tag}}</span>{{/if}}
+            {{#if this.reason}}<i class="fa-solid fa-comment-dots why" data-tooltip="{{this.reason}}"></i>{{/if}}
+            <span class="kit">
+              {{#if this.showEye}}
+              <button type="button" data-action="toggleReveal" data-family="{{this.family}}"
+                data-tooltip="{{#if this.revealed}}{{localize 'SHARDS.Izir.Hide'}}{{else}}{{localize 'SHARDS.Izir.Reveal'}}{{/if}}">
+                <i class="fa-solid {{#if this.revealed}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>
+              </button>
+              {{/if}}
+              {{#if this.suppressed}}
+              <button type="button" data-action="editReason" data-family="{{this.family}}"
+                data-tooltip="{{localize 'SHARDS.Izir.ReasonEdit'}}"><i class="fa-solid fa-pen"></i></button>
+              {{/if}}
+              <button type="button" data-action="toggleSuppress" data-family="{{this.family}}"
+                data-tooltip="{{#if this.suppressed}}{{localize 'SHARDS.Izir.Unsuppress'}}{{else}}{{localize 'SHARDS.Izir.Suppress'}}{{/if}}">
+                <i class="fa-solid {{#if this.suppressed}}fa-rotate-left{{else}}fa-ban{{/if}}"></i>
+              </button>
+            </span>
           </span>
-          <span class="izir-effect-name">{{this.name}}</span>
-          <span class="izir-effect-status">
-            {{#if this.suppressed}}{{localize "SHARDS.Izir.StatusSuppressed"}}
-            {{else if this.unlocked}}{{localize "SHARDS.Izir.StatusActive"}}
-            {{else}}{{#if this.gate}}{{localize "SHARDS.Izir.UnlockSubjugation"}}{{else}}{{localize "SHARDS.Izir.UnlockAt"}}&nbsp;{{this.unlockLevel}}{{/if}}{{/if}}
-          </span>
-          {{#if this.reason}}<span class="izir-effect-reason" data-tooltip="{{this.reason}}"><i class="fa-solid fa-comment-dots"></i></span>{{/if}}
-          <span class="izir-effect-controls">
-            {{#if this.isBane}}
-            <button type="button" class="izir-icon-btn {{#if this.revealed}}on{{/if}}" data-action="toggleReveal" data-family="{{this.family}}"
-              data-tooltip="{{#if this.revealed}}{{localize 'SHARDS.Izir.Hide'}}{{else}}{{localize 'SHARDS.Izir.Reveal'}}{{/if}}">
-              <i class="fa-solid {{#if this.revealed}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>
-            </button>
-            {{/if}}
-            <button type="button" class="izir-icon-btn" data-action="editReason" data-family="{{this.family}}"
-              data-tooltip="{{localize 'SHARDS.Izir.ReasonEdit'}}"><i class="fa-solid fa-pen"></i></button>
-            <button type="button" class="izir-icon-btn {{#if this.suppressed}}on{{/if}}" data-action="toggleSuppress" data-family="{{this.family}}"
-              data-tooltip="{{#if this.suppressed}}{{localize 'SHARDS.Izir.Unsuppress'}}{{else}}{{localize 'SHARDS.Izir.Suppress'}}{{/if}}">
-              <i class="fa-solid {{#if this.suppressed}}fa-toggle-off{{else}}fa-toggle-on{{/if}}"></i>
-            </button>
-          </span>
+          {{/each}}
         </div>
-        {{/each}}
       </div>
       {{/each}}
-      {{else}}
-      <p class="izir-empty">{{localize "SHARDS.Izir.NoEffectsYet"}}</p>
-      {{/if}}
+      {{/each}}
+
+      <div class="izir-tier-label tier-nineveh"><i></i>{{localize "SHARDS.Izir.ForkTitle"}}</div>
+      <div class="izir-lrow tier-nineveh {{#unless detail.atNinth}}{{#unless detail.terminal}}locked{{/unless}}{{/unless}}">
+        <div class="izir-ldisc">10</div>
+        <div class="izir-chips">
+          {{#if detail.terminal}}
+          <span class="izir-fork-chip {{#if (shardsEq detail.terminal 'nineveh')}}nin{{else}}sub{{/if}}">
+            {{#if (shardsEq detail.terminal "nineveh")}}☠ {{localize "SHARDS.Izir.ForkNineveh"}}{{else}}♛ {{localize "SHARDS.Izir.ForkSubjugated"}}{{/if}}
+          </span>
+          {{else}}
+          <button type="button" class="izir-fork-chip nin" data-action="fork">☠ {{localize "SHARDS.Izir.ForkNineveh"}}</button>
+          <button type="button" class="izir-fork-chip sub" data-action="fork">♛ {{localize "SHARDS.Izir.ForkSubjugated"}}</button>
+          {{/if}}
+          {{#each ladder.gateChips}}
+          <span class="izir-chip {{#if this.isBane}}price{{else}}passive{{/if}} gate {{#if this.suppressed}}suppressed{{/if}}">
+            {{this.name}} <span class="tag">{{localize "SHARDS.Izir.UnlockSubjugation"}}</span>
+          </span>
+          {{/each}}
+        </div>
+      </div>
     </div>
     {{/if}}
 
-    {{#if isTemptation}}
-    <div class="izir-temptation">
-      <div class="izir-tempt-head">
-        <span class="izir-tempt-dc">{{localize "SHARDS.Izir.TemptationDC"}}: <strong>{{temptation.dc}}</strong></span>
-        <button type="button" class="izir-tempt-btn" data-action="tempt">
-          <i class="fa-solid fa-hand-sparkles"></i> {{localize "SHARDS.Izir.TemptationTrigger"}}
+    {{#unless temptation.consumed}}
+    <div class="izir-tempt">
+      <div class="izir-tempt-row">
+        <span class="izir-tempt-dc">{{localize "SHARDS.Izir.TemptationShort"}} · DC</span>
+        <input type="number" name="temptDc" value="{{detail.temptDc}}" min="1" step="1" class="izir-dc-input">
+        <input type="text" name="temptReason" placeholder="{{localize 'SHARDS.Izir.TemptationReasonHint'}}" class="izir-reason-input">
+        <button type="button" class="izir-primary" data-action="tempt" {{#if temptation.pending}}disabled{{/if}}>
+          <i class="fa-solid fa-dice-d20"></i> {{localize "SHARDS.Izir.TemptationTrigger"}}
         </button>
       </div>
+      {{#if temptation.subjugated}}
+      <div class="izir-tempt-note">{{localize "SHARDS.Izir.SubjugatedNote"}}</div>
+      {{/if}}
 
       {{#if temptation.pending}}
       <div class="izir-pending">
-        <p><i class="fa-solid fa-hourglass-half"></i> {{localize "SHARDS.Izir.PendingTitle"}} — DC {{temptation.pending.dc}}</p>
-        {{#if temptation.pending.reason}}<p class="izir-card-reason"><em>{{temptation.pending.reason}}</em></p>{{/if}}
-        <div class="izir-outcome-buttons">
+        <p><i class="fa-solid fa-hourglass-half"></i> {{localize "SHARDS.Izir.PendingTitle"}} — DC {{temptation.pending.dc}}
+          {{#if temptation.pending.reason}}<em>· {{temptation.pending.reason}}</em>{{/if}}</p>
+        <div class="izir-outcomes">
           <span class="izir-outcome-label">{{localize "SHARDS.Izir.RecordManually"}}</span>
           {{#each temptation.outcomes}}
           <button type="button" class="izir-outcome-btn outcome-{{this.key}}" data-action="recordOutcome" data-outcome="{{this.key}}">{{this.label}}</button>
           {{/each}}
-          <button type="button" class="izir-icon-btn" data-action="clearPending" data-tooltip="{{localize 'SHARDS.Izir.ClearPending'}}"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" class="izir-ghost" data-action="clearPending" data-tooltip="{{localize 'SHARDS.Izir.ClearPending'}}"><i class="fa-solid fa-xmark"></i></button>
         </div>
       </div>
       {{/if}}
 
-      {{#if temptation.chips.length}}
-      <div class="izir-chips">
-        <span class="izir-chips-label">{{localize "SHARDS.Izir.Suggestions"}}</span>
+      {{#if temptation.recent.length}}
+      <div class="izir-tempt-row">
+        <span class="izir-lbl">{{localize "SHARDS.Izir.RecentRolls"}}</span>
+        {{#each temptation.recent}}
+        <span class="izir-pill outcome-{{this.outcome}}">{{this.label}} <small>{{this.slide}}</small></span>
+        {{/each}}
         {{#each temptation.chips}}
-        <button type="button" class="izir-chip" data-action="chip" data-chip="{{this.chip}}">{{this.label}}</button>
+        <button type="button" class="izir-sugg" data-action="chip" data-chip="{{this.chip}}">✦ {{this.label}}</button>
         {{/each}}
       </div>
-      {{/if}}
-
-      <div class="izir-tempt-recent">
-        <h4>{{localize "SHARDS.Izir.RecentRolls"}}</h4>
-        {{#if temptation.recent.length}}
-        <ul>
-          {{#each temptation.recent}}
-          <li>
-            <span class="izir-outcome-pill outcome-{{this.outcomeClass}}">{{this.outcome}}</span>
-            <span class="izir-tempt-when">DC {{this.dc}} · {{this.when}}</span>
-            {{#if this.reason}} — <em>{{this.reason}}</em>{{/if}}
-          </li>
-          {{/each}}
-        </ul>
-        {{else}}
-        <p class="izir-empty">{{localize "SHARDS.Izir.NoRollsYet"}}</p>
-        {{/if}}
-      </div>
-    </div>
-    {{/if}}
-
-    {{#if isArt}}
-    <div class="izir-art">
-      <p class="izir-effects-hint">{{localize "SHARDS.Izir.ArtHint"}}</p>
-      {{#each art.rows}}
-      <div class="izir-art-row {{#if this.applied}}applied{{/if}}">
-        <div class="izir-art-row-head">
-          <strong>{{this.label}}</strong>
-          {{#if this.applied}}<span class="izir-art-applied">{{localize "SHARDS.Izir.ArtApplied"}}</span>{{/if}}
-        </div>
-        <div class="izir-art-field">
-          <label>{{localize "SHARDS.Izir.ArtPortrait"}}</label>
-          <span class="izir-art-path">{{#if this.portrait}}{{this.portrait}}{{else}}—{{/if}}</span>
-          <button type="button" class="izir-icon-btn" data-action="artBrowse" data-threshold="{{this.threshold}}" data-field="portrait"
-            data-tooltip="{{localize 'SHARDS.Izir.ArtBrowse'}}"><i class="fa-solid fa-folder-open"></i></button>
-        </div>
-        <div class="izir-art-field">
-          <label>{{localize "SHARDS.Izir.ArtToken"}}</label>
-          <span class="izir-art-path">{{#if this.token}}{{this.token}}{{else}}—{{/if}}</span>
-          <button type="button" class="izir-icon-btn" data-action="artBrowse" data-threshold="{{this.threshold}}" data-field="token"
-            data-tooltip="{{localize 'SHARDS.Izir.ArtBrowse'}}"><i class="fa-solid fa-folder-open"></i></button>
-        </div>
-        <div class="izir-art-actions">
-          <button type="button" data-action="artApply" data-threshold="{{this.threshold}}" {{#unless this.hasArt}}disabled{{/unless}}>{{localize "SHARDS.Izir.ArtApply"}}</button>
-          <button type="button" class="izir-icon-btn" data-action="artClear" data-threshold="{{this.threshold}}"
-            data-tooltip="{{localize 'SHARDS.Izir.ArtClear'}}"><i class="fa-solid fa-eraser"></i></button>
-        </div>
-      </div>
-      {{/each}}
-      {{#if art.hasOriginal}}
-      <button type="button" class="izir-art-revert" data-action="artRevert">
-        <i class="fa-solid fa-rotate-left"></i> {{localize "SHARDS.Izir.ArtRevert"}}
-      </button>
-      {{/if}}
-    </div>
-    {{/if}}
-
-    {{#if isHistory}}
-    <div class="izir-history">
-      <div class="izir-history-head">
-        <h4>{{localize "SHARDS.Izir.HistoryTitle"}}</h4>
-        <button type="button" class="izir-icon-btn" data-action="exportJournal">
-          <i class="fa-solid fa-book"></i> {{localize "SHARDS.Izir.ExportJournal"}}
-        </button>
-      </div>
-      {{#if history.hasEntries}}
-      <ul class="izir-log">
-        {{#each history.entries}}
-        <li class="log-{{this.type}}">
-          <span class="izir-log-when">{{this.when}}</span>
-          <span class="izir-log-desc">{{this.desc}}{{#if this.note}} — <em>{{this.note}}</em>{{/if}}</span>
-        </li>
-        {{/each}}
-      </ul>
       {{else}}
-      <p class="izir-empty">{{localize "SHARDS.Izir.NoHistory"}}</p>
+      {{#if temptation.chips.length}}
+      <div class="izir-tempt-row">
+        {{#each temptation.chips}}
+        <button type="button" class="izir-sugg" data-action="chip" data-chip="{{this.chip}}">✦ {{this.label}}</button>
+        {{/each}}
+      </div>
+      {{/if}}
       {{/if}}
     </div>
-    {{/if}}
+    {{/unless}}
+
+    <div class="izir-footer">
+      <button type="button" class="izir-ghost" data-action="openArt"><i class="fa-solid fa-image"></i> {{localize "SHARDS.Izir.ArtTitle"}}…</button>
+      <button type="button" class="izir-ghost" data-action="openHistory"><i class="fa-solid fa-book"></i> {{localize "SHARDS.Izir.HistoryTitle"}}…</button>
+      <button type="button" class="izir-ghost" data-action="exportJournal"><i class="fa-solid fa-file-export"></i> {{localize "SHARDS.Izir.ExportJournal"}}</button>
+      <span class="izir-spacer"></span>
+      <span class="izir-hint">{{localize "SHARDS.Izir.EffectsHint"}}</span>
+    </div>
     {{else}}
-    <p class="izir-empty izir-detail-empty">{{localize "SHARDS.Izir.SelectPrompt"}}</p>
+    <p class="izir-empty izir-dash-empty">{{localize "SHARDS.Izir.SelectPrompt"}}</p>
     {{/if}}
   </section>
 </div>

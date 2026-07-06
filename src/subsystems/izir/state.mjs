@@ -28,9 +28,10 @@ async function setNamelessTrait(actor, on) {
 /** A fresh, fully-defaulted state object (level 0, marked, nothing suppressed). */
 export function emptyIzirState() {
   return {
-    v: 1,
+    v: 2,
     enabled: true,
     level: 0,
+    slide: 0, // progress toward the next level (needs 3 × level to rise)
     terminal: null, // null | "nineveh" | "subjugated"
     suppressed: [], // [{ id: <family>, reason: string, at: ts }]  — boons AND banes
     revealed: [], // [<family>] — banes identified to the player

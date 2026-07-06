@@ -1,147 +1,193 @@
 import { describe, it, expect } from "vitest";
-import { computeDesired, diffItems, hashEntry } from "../src/subsystems/izir/logic/reconcile.mjs";
+import {
+  selectEntries,
+  composeEffect,
+  composeActions,
+  diffAll,
+  injectNumbers,
+  EFFECT_ENTRY_ID,
+} from "../src/subsystems/izir/logic/reconcile.mjs";
+import { izirAttack, izirDC } from "../src/subsystems/izir/logic/model.mjs";
 import { emptyIzirState } from "../src/subsystems/izir/state.mjs";
 
 const CONTENT = {
   entries: [
-    { id: "voidsight", family: "voidsight", rank: 1, level: 1, kind: "boon", form: "effect", name: "Voidsight", rules: [] },
-    { id: "mark", family: "mark", rank: 1, level: 2, kind: "bane", form: "effect", name: "Mark", rules: [] },
-    { id: "wave1", family: "wave", rank: 1, level: 3, kind: "boon", form: "action", name: "Wave I", actionData: {} },
-    { id: "wave2", family: "wave", rank: 2, level: 5, kind: "boon", form: "action", name: "Wave II", actionData: {} },
-    { id: "sovereign", family: "sovereign", rank: 1, level: 10, kind: "boon", form: "effect", name: "Sovereign", gate: "subjugated", rules: [] },
+    {
+      id: "voidsight", family: "voidsight", rank: 1, level: 1, kind: "boon", form: "effect",
+      name: "Voidsight", description: "<p>See.</p>", rules: [{ key: "Sense", selector: "darkvision" }],
+    },
+    {
+      id: "void-lash", family: "void-lash", rank: 1, level: 1, kind: "boon", form: "strike",
+      name: "Void Lash", description: "<p>Lash at {{izirAttack}}.</p>", rules: [],
+      strikeData: { range: 30, die: "d4", damageType: "void" },
+    },
+    {
+      id: "mark", family: "mark", rank: 1, level: 2, kind: "bane", form: "effect",
+      name: "The Mark", description: "<p>Marked.</p>",
+      rules: [{ key: "FlatModifier", selector: "diplomacy", type: "circumstance", value: -1, label: "SHARDS.Izir.MaskedLabel" }],
+    },
+    {
+      id: "wave1", family: "wave", rank: 1, level: 3, kind: "boon", form: "action",
+      name: "Wave I", description: "<p>DC {{izirDC}}.</p>", rules: [],
+      actionData: { actionType: "action", actions: 2, recharge: "1d6" },
+    },
+    {
+      id: "wave2", family: "wave", rank: 2, level: 5, kind: "boon", form: "action",
+      name: "Wave II", description: "<p>Bigger, DC {{izirDC}}.</p>", rules: [],
+      actionData: { actionType: "action", actions: 2, recharge: "1d6" },
+    },
+    {
+      id: "sovereign", family: "sovereign", rank: 1, level: 10, kind: "boon", form: "effect",
+      name: "Sovereign Will", description: "<p>Master.</p>", gate: "subjugated",
+      rules: [{ key: "Immunity", type: "void" }],
+    },
   ],
 };
 
 const at = (over) => ({ ...emptyIzirState(), ...over });
-const ids = (state, opts) => computeDesired(state, CONTENT, opts).map((d) => d.entryId);
 
-describe("computeDesired — level gating", () => {
-  it("level 0 produces nothing (marked but dormant)", () => {
-    expect(ids(at({ level: 0 }))).toEqual([]);
+describe("selectEntries", () => {
+  it("unlocks by level and keeps the best rank per family", () => {
+    const { live, replacedIds } = selectEntries(at({ level: 5 }), CONTENT);
+    const ids = live.map((e) => e.id);
+    expect(ids).toContain("wave2");
+    expect(ids).not.toContain("wave1");
+    expect(replacedIds).toContain("wave1");
   });
-  it("prepends the marker once at least one power exists", () => {
-    expect(ids(at({ level: 1 }))).toEqual(["izir-marker", "voidsight"]);
+  it("drops suppressed families (boon or bane)", () => {
+    const { live } = selectEntries(at({ level: 5, suppressed: [{ id: "mark" }, { id: "voidsight" }] }), CONTENT);
+    const ids = live.map((e) => e.id);
+    expect(ids).not.toContain("mark");
+    expect(ids).not.toContain("voidsight");
   });
-  it("accumulates entries by level, ordered", () => {
-    expect(ids(at({ level: 2 }))).toEqual(["izir-marker", "voidsight", "mark"]);
+  it("gated entries need subjugation", () => {
+    expect(selectEntries(at({ level: 10 }), CONTENT).live.map((e) => e.id)).not.toContain("sovereign");
+    expect(selectEntries(at({ level: 10, terminal: "subjugated" }), CONTENT).live.map((e) => e.id)).toContain("sovereign");
   });
 });
 
-describe("computeDesired — family replacement", () => {
-  it("keeps only the highest unlocked rank of a family", () => {
-    expect(ids(at({ level: 3 }))).toContain("wave1");
-    const five = ids(at({ level: 5 }));
-    expect(five).toContain("wave2");
-    expect(five).not.toContain("wave1");
+describe("injectNumbers", () => {
+  it("replaces all runtime tokens", () => {
+    const out = injectNumbers("DC {{izirDC}} atk {{izirAttack}} lv {{izirLevel}}", { dc: 21, attack: 11, level: 5 });
+    expect(out).toBe("DC 21 atk 11 lv 5");
   });
 });
 
-describe("computeDesired — suppression", () => {
-  it("drops a suppressed family (bane or boon)", () => {
-    expect(ids(at({ level: 2, suppressed: [{ id: "mark", reason: "earned" }] }))).not.toContain("mark");
-    expect(ids(at({ level: 2, suppressed: [{ id: "voidsight" }] }))).not.toContain("voidsight");
+describe("composeEffect", () => {
+  it("is null when unmarked or dormant", () => {
+    expect(composeEffect(at({ level: 0 }), CONTENT, { charLevel: 5 })).toBeNull();
+    expect(composeEffect(at({ level: 5, enabled: false }), CONTENT, { charLevel: 5 })).toBeNull();
+  });
+
+  it("carries marker roll options, badge = level, and composed rules", () => {
+    const c = composeEffect(at({ level: 2 }), CONTENT, { charLevel: 5 });
+    expect(c.badge.value).toBe(2);
+    const opts = c.rules.filter((r) => r.key === "RollOption").map((r) => r.option);
+    expect(opts).toContain("self:shards:izir");
+    expect(opts).toContain("self:shards:izir:level:2");
+    expect(c.rules.some((r) => r.key === "Sense")).toBe(true);
+  });
+
+  it("masks hidden bane labels and unmasks revealed ones", () => {
+    const hidden = composeEffect(at({ level: 2 }), CONTENT, { charLevel: 5 });
+    const fm1 = hidden.rules.find((r) => r.key === "FlatModifier");
+    expect(fm1.label).toBe("SHARDS.Izir.MaskedLabel");
+    expect(hidden.priceLines).toHaveLength(0);
+    expect(hidden.hiddenPrices).toBe(1);
+
+    const shown = composeEffect(at({ level: 2, revealed: ["mark"] }), CONTENT, { charLevel: 5 });
+    const fm2 = shown.rules.find((r) => r.key === "FlatModifier");
+    expect(fm2.label).toBe("The Mark");
+    expect(shown.priceLines.map((p) => p.name)).toContain("The Mark");
+  });
+
+  it("transparency reveals every price", () => {
+    const c = composeEffect(at({ level: 2 }), CONTENT, { charLevel: 5, transparency: true });
+    expect(c.hiddenPrices).toBe(0);
+    expect(c.priceLines).toHaveLength(1);
+  });
+
+  it("builds the strike with the fixed Izir attack modifier and level-scaled dice", () => {
+    const c = composeEffect(at({ level: 5 }), CONTENT, { charLevel: 5 });
+    const strike = c.rules.find((r) => r.key === "Strike");
+    expect(strike.attackModifier).toBe(izirAttack(5, 5));
+    expect(strike.damage.base.dice).toBe(Math.ceil(5 / 2));
+    expect(strike.range).toBe(30);
+  });
+
+  it("nineveh strips to a terminal marker", () => {
+    const c = composeEffect(at({ level: 10, terminal: "nineveh" }), CONTENT, { charLevel: 5 });
+    expect(c.boonLines).toHaveLength(0);
+    expect(c.rules.every((r) => r.key === "RollOption")).toBe(true);
+    expect(c.tier).toBe("nineveh");
+  });
+
+  it("subjugation includes the gated capstone", () => {
+    const c = composeEffect(at({ level: 10, terminal: "subjugated" }), CONTENT, { charLevel: 5 });
+    expect(c.rules.some((r) => r.key === "Immunity")).toBe(true);
+    expect(c.tier).toBe("subjugated");
+  });
+
+  it("hash reacts to reveal/suppress/level changes", () => {
+    const a = composeEffect(at({ level: 2 }), CONTENT, { charLevel: 5 });
+    const b = composeEffect(at({ level: 2, revealed: ["mark"] }), CONTENT, { charLevel: 5 });
+    const c = composeEffect(at({ level: 3 }), CONTENT, { charLevel: 5 });
+    expect(a.hash).not.toBe(b.hash);
+    expect(a.hash).not.toBe(c.hash);
   });
 });
 
-describe("computeDesired — visibility", () => {
-  it("boons are always identified; banes hidden by default", () => {
-    const d = computeDesired(at({ level: 2 }), CONTENT);
-    expect(d.find((x) => x.entryId === "voidsight").identified).toBe(true);
-    expect(d.find((x) => x.entryId === "mark").identified).toBe(false);
+describe("composeActions", () => {
+  it("returns only unlocked action-form actives with injected numbers", () => {
+    const acts = composeActions(at({ level: 5 }), CONTENT, { charLevel: 5 });
+    expect(acts.map((a) => a.entryId)).toEqual(["wave2"]);
+    expect(acts[0].description).toContain(`DC ${izirDC(5, 5)}`);
   });
-  it("revealed banes become identified", () => {
-    const d = computeDesired(at({ level: 2, revealed: ["mark"] }), CONTENT);
-    expect(d.find((x) => x.entryId === "mark").identified).toBe(true);
-  });
-  it("transparency mode identifies every bane", () => {
-    const d = computeDesired(at({ level: 2 }), CONTENT, { transparency: true });
-    expect(d.find((x) => x.entryId === "mark").identified).toBe(true);
+  it("is empty for nineveh and level 0", () => {
+    expect(composeActions(at({ level: 10, terminal: "nineveh" }), CONTENT, { charLevel: 5 })).toEqual([]);
+    expect(composeActions(at({ level: 0 }), CONTENT, { charLevel: 5 })).toEqual([]);
   });
 });
 
-describe("computeDesired — terminal fork", () => {
-  it("nineveh strips everything to the terminal marker", () => {
-    const d = computeDesired(at({ level: 10, terminal: "nineveh" }), CONTENT);
-    expect(d.map((x) => x.entryId)).toEqual(["izir-marker"]);
-    expect(d[0].marker.terminal).toBe("nineveh");
-  });
-  it("gated capstone appears only under subjugation", () => {
-    expect(ids(at({ level: 10, terminal: null }))).not.toContain("sovereign");
-    expect(ids(at({ level: 10, terminal: "subjugated" }))).toContain("sovereign");
-  });
-  it("disabled actor desires nothing", () => {
-    expect(ids(at({ level: 5, enabled: false }))).toEqual([]);
-  });
-});
-
-describe("diffItems", () => {
-  const desired = [
-    { entryId: "izir-marker", hash: "m1", identified: true },
-    { entryId: "voidsight", hash: "h1", identified: true },
-  ];
+describe("diffAll", () => {
+  const effect = { entryId: EFFECT_ENTRY_ID, hash: "e1" };
+  const wave = { entryId: "wave2", hash: "w1" };
 
   it("creates everything against an empty actor", () => {
-    const { toCreate, toDelete, toUpdate } = diffItems(desired, []);
-    expect(toCreate.map((d) => d.entryId)).toEqual(["izir-marker", "voidsight"]);
-    expect(toDelete).toEqual([]);
+    const { toCreate, toUpdate, toDeleteIds } = diffAll(effect, [wave], []);
+    expect(toCreate.map((d) => d.entryId)).toEqual([EFFECT_ENTRY_ID, "wave2"]);
     expect(toUpdate).toEqual([]);
+    expect(toDeleteIds).toEqual([]);
   });
 
-  it("is a no-op when tags match", () => {
+  it("is a no-op when hashes match", () => {
     const tagged = [
-      { itemId: "i1", entryId: "izir-marker", contentHash: "m1", identified: true },
-      { itemId: "i2", entryId: "voidsight", contentHash: "h1", identified: true },
+      { itemId: "i1", entryId: EFFECT_ENTRY_ID, contentHash: "e1" },
+      { itemId: "i2", entryId: "wave2", contentHash: "w1" },
     ];
-    const { toCreate, toDelete, toUpdate } = diffItems(desired, tagged);
-    expect(toCreate).toEqual([]);
-    expect(toDelete).toEqual([]);
-    expect(toUpdate).toEqual([]);
+    const r = diffAll(effect, [wave], tagged);
+    expect(r.toCreate).toEqual([]);
+    expect(r.toUpdate).toEqual([]);
+    expect(r.toDeleteIds).toEqual([]);
   });
 
-  it("deletes orphaned tagged items", () => {
+  it("updates in place on hash drift and deletes orphans", () => {
     const tagged = [
-      { itemId: "i1", entryId: "izir-marker", contentHash: "m1", identified: true },
-      { itemId: "i2", entryId: "voidsight", contentHash: "h1", identified: true },
-      { itemId: "i9", entryId: "old-thing", contentHash: "z", identified: true },
+      { itemId: "i1", entryId: EFFECT_ENTRY_ID, contentHash: "STALE" },
+      { itemId: "i9", entryId: "wave1", contentHash: "z" },
     ];
-    const { toDelete } = diffItems(desired, tagged);
-    expect(toDelete.map((t) => t.itemId)).toEqual(["i9"]);
+    const r = diffAll(effect, [wave], tagged);
+    expect(r.toUpdate.map((u) => u.itemId)).toEqual(["i1"]);
+    expect(r.toCreate.map((d) => d.entryId)).toEqual(["wave2"]);
+    expect(r.toDeleteIds).toEqual(["i9"]);
   });
 
-  it("rebuilds (delete+create) when the content hash changed", () => {
+  it("deletes everything when nothing is desired", () => {
     const tagged = [
-      { itemId: "i1", entryId: "izir-marker", contentHash: "m1", identified: true },
-      { itemId: "i2", entryId: "voidsight", contentHash: "STALE", identified: true },
+      { itemId: "i1", entryId: EFFECT_ENTRY_ID, contentHash: "e1" },
+      { itemId: "i2", entryId: "wave2", contentHash: "w1" },
     ];
-    const { toCreate, toDelete } = diffItems(desired, tagged);
-    expect(toDelete.map((t) => t.itemId)).toEqual(["i2"]);
-    expect(toCreate.map((d) => d.entryId)).toEqual(["voidsight"]);
-  });
-
-  it("cheaply updates when only the reveal flag differs", () => {
-    const halfHidden = [
-      { entryId: "izir-marker", hash: "m1", identified: true },
-      { entryId: "voidsight", hash: "h1", identified: false },
-    ];
-    const tagged = [
-      { itemId: "i1", entryId: "izir-marker", contentHash: "m1", identified: true },
-      { itemId: "i2", entryId: "voidsight", contentHash: "h1", identified: true },
-    ];
-    const { toCreate, toDelete, toUpdate } = diffItems(halfHidden, tagged);
-    expect(toCreate).toEqual([]);
-    expect(toDelete).toEqual([]);
-    expect(toUpdate).toHaveLength(1);
-    expect(toUpdate[0].tagged.itemId).toBe("i2");
-    expect(toUpdate[0].desired.identified).toBe(false);
-  });
-});
-
-describe("hashEntry", () => {
-  it("is stable and reacts to content changes", () => {
-    const a = { name: "X", form: "effect", kind: "boon", rules: [{ key: "FlatModifier", value: 1 }] };
-    const b = { name: "X", form: "effect", kind: "boon", rules: [{ key: "FlatModifier", value: 1 }] };
-    const c = { name: "X", form: "effect", kind: "boon", rules: [{ key: "FlatModifier", value: 2 }] };
-    expect(hashEntry(a)).toBe(hashEntry(b));
-    expect(hashEntry(a)).not.toBe(hashEntry(c));
+    const r = diffAll(null, [], tagged);
+    expect(r.toDeleteIds.sort()).toEqual(["i1", "i2"]);
   });
 });

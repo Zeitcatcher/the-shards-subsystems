@@ -1,135 +1,233 @@
 /**
- * Pure reconciliation core. No Foundry imports — fully vitest-covered.
+ * Pure composition core. No Foundry imports — fully vitest-covered.
  *
- * `computeDesired` turns (flag state + indexed content) into the exact set of items
- * that SHOULD be on the actor. `diffItems` compares that against what IS on the actor
- * (projected by sync.mjs) and returns the minimal create/delete/update operations.
+ * v0.2.0 model: instead of one item per boon/bane, the actor carries ONE composed
+ * effect ("Izir — Immersion") holding every active rule element, plus one action
+ * item per unlocked active ability. `composeAll` turns (flag state + content +
+ * character level) into that desired set; `diffAll` compares it against what is on
+ * the actor and returns minimal create/update/delete operations (updates happen
+ * in place — no delete-and-recreate churn).
  */
 
-const MARKER_ID = "izir-marker";
-export const MARKER_FAMILY = "izir-marker";
+import { clampLevel, tierForLevel, izirAttack, izirDC, MAX_LEVEL } from "./model.mjs";
+
+export const EFFECT_ENTRY_ID = "izir-immersion";
+const MASKED_LABEL = "SHARDS.Izir.MaskedLabel";
+
+/* ------------------------------------------------------------------ */
+/* Entry selection                                                     */
+/* ------------------------------------------------------------------ */
 
 /**
- * The desired item set for an actor, most-significant first (marker, then by level).
- * @param {object} state    healed Izir flag state
- * @param {object} content  indexed content ({ entries, ... })
- * @param {object} [opts]   { transparency:boolean }
- * @returns {Array} desired entries: { entryId, family, kind, form, identified, hash, entry?, marker? }
+ * Which content entries are live for this state: unlocked by level (or gate),
+ * highest rank per family, not suppressed.
+ * Returns { live, replacedIds } where replacedIds are lower ranks shadowed by a
+ * higher unlocked rank (useful for UI).
  */
-export function computeDesired(state, content, opts = {}) {
-  const transparency = Boolean(opts.transparency);
-
-  // Consumed: nothing but the terminal marker remains.
-  if (state.terminal === "nineveh") return [markerDesired(state)];
-  if (!state.enabled) return [];
-
+export function selectEntries(state, content) {
   const subjugated = state.terminal === "subjugated";
-  if (state.level < 1 && !subjugated) return [];
-
+  const level = clampLevel(state.level);
   const suppressed = new Set((state.suppressed ?? []).map((s) => s.id));
-  const revealed = new Set(state.revealed ?? []);
-  const entries = content?.entries ?? [];
 
-  // 1. candidates: unlocked by level, gate satisfied.
-  const candidates = entries.filter((e) => {
+  const unlocked = (content?.entries ?? []).filter((e) => {
     if (e.gate === "subjugated") return subjugated;
-    return e.level <= state.level;
+    return e.level <= level;
   });
 
-  // 2. per family, keep the highest rank (replacement: Izir Wave I → II).
   const bestByFamily = new Map();
-  for (const e of candidates) {
+  for (const e of unlocked) {
     const cur = bestByFamily.get(e.family);
     if (!cur || (e.rank ?? 0) > (cur.rank ?? 0)) bestByFamily.set(e.family, e);
   }
 
-  // 3. drop suppressed families; annotate identified.
-  const desired = [];
-  for (const e of bestByFamily.values()) {
-    if (suppressed.has(e.family)) continue;
-    const identified = e.kind === "boon" || transparency || revealed.has(e.family);
-    desired.push({
-      entryId: e.id,
-      family: e.family,
-      kind: e.kind,
-      form: e.form,
-      identified,
-      hash: hashEntry(e),
-      entry: e,
-    });
-  }
+  const replacedIds = unlocked.filter((e) => bestByFamily.get(e.family) !== e).map((e) => e.id);
+  const live = [...bestByFamily.values()]
+    .filter((e) => !suppressed.has(e.family))
+    .sort((a, b) => a.level - b.level || a.id.localeCompare(b.id));
 
-  // stable order for deterministic sync + tests
-  desired.sort((a, b) => (a.entry.level - b.entry.level) || a.entryId.localeCompare(b.entryId));
-
-  // 4. marker first.
-  desired.unshift(markerDesired(state));
-  return desired;
+  return { live, replacedIds };
 }
 
-function markerDesired(state) {
-  const marker = { level: state.level, terminal: state.terminal ?? null };
+/* ------------------------------------------------------------------ */
+/* Number injection                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Replace {{izirDC}} / {{izirAttack}} / {{izirLevel}} tokens in a string. */
+export function injectNumbers(text, ctx) {
+  if (typeof text !== "string") return text;
+  return text
+    .replaceAll("{{izirDC}}", String(ctx.dc))
+    .replaceAll("{{izirAttack}}", String(ctx.attack))
+    .replaceAll("{{izirLevel}}", String(ctx.level));
+}
+
+function deepInject(value, ctx) {
+  if (typeof value === "string") return injectNumbers(value, ctx);
+  if (Array.isArray(value)) return value.map((v) => deepInject(v, ctx));
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = deepInject(v, ctx);
+    return out;
+  }
+  return value;
+}
+
+/* ------------------------------------------------------------------ */
+/* The composed effect                                                 */
+/* ------------------------------------------------------------------ */
+
+function isRevealed(entry, state, opts) {
+  if (entry.kind !== "bane") return true;
+  return Boolean(opts.transparency) || (state.revealed ?? []).includes(entry.family);
+}
+
+/** Rule elements contributed by one entry, with labels masked or unmasked. */
+function rulesFor(entry, revealed, ctx) {
+  const rules = Array.isArray(entry.rules) ? deepInject(entry.rules, ctx) : [];
+  if (entry.kind !== "bane") return rules;
+  return rules.map((r) => {
+    if (!("label" in r) && !["FlatModifier", "DamageDice"].includes(r.key)) return r;
+    return { ...r, label: revealed ? entry.name : MASKED_LABEL };
+  });
+}
+
+/** The Strike rule element for a strike-form active (fixed Izir attack modifier). */
+function strikeRuleFor(entry, ctx) {
+  const s = entry.strikeData ?? {};
+  const diceNumber = Math.max(1, Math.ceil(ctx.charLevel / 2));
   return {
-    entryId: MARKER_ID,
-    family: MARKER_FAMILY,
-    kind: "boon",
-    form: "marker",
-    identified: true,
-    hash: hashString(`marker:${marker.level}:${marker.terminal ?? ""}`),
-    marker,
+    key: "Strike",
+    slug: `shards-izir-${entry.id}`,
+    label: entry.name,
+    img: entry.img,
+    category: s.category ?? "unarmed",
+    group: s.group ?? "brawling",
+    traits: s.traits ?? ["magical", "void"],
+    range: s.range ?? null,
+    attackModifier: ctx.attack,
+    damage: { base: { damageType: s.damageType ?? "void", dice: diceNumber, die: s.die ?? "d4" } },
   };
 }
 
 /**
- * Minimal ops to converge the actor's tagged items to `desired`.
- * @param {Array} desired  output of computeDesired
- * @param {Array} tagged   [{ itemId, entryId, family, contentHash, identified }]
- * @returns {{toCreate:Array, toDelete:Array, toUpdate:Array}}
+ * Compose the single "Izir — Immersion" effect source for a state.
+ * Returns null when nothing should exist (unmarked / level 0 without terminal).
  */
-export function diffItems(desired, tagged) {
+export function composeEffect(state, content, opts = {}) {
+  const level = clampLevel(state.level);
+  if (state.enabled === false) return null;
+  const subjugated = state.terminal === "subjugated";
+  const consumed = state.terminal === "nineveh";
+  if (level < 1 && !subjugated && !consumed) return null;
+
+  const charLevel = Math.max(1, Math.trunc(opts.charLevel) || 1);
+  const ctx = { charLevel, level, attack: izirAttack(charLevel, level), dc: izirDC(charLevel, level) };
+  const tier = consumed ? "nineveh" : subjugated ? "subjugated" : tierForLevel(level).id;
+
+  const rules = [
+    { key: "RollOption", domain: "all", option: "self:shards:izir" },
+    { key: "RollOption", domain: "all", option: `self:shards:izir:level:${level}` },
+    { key: "RollOption", domain: "all", option: `self:shards:izir:tier:${tier}` },
+  ];
+
+  const boonLines = [];
+  const priceLines = [];
+  let hiddenPrices = 0;
+
+  if (!consumed) {
+    const { live } = selectEntries(state, content);
+    for (const e of live) {
+      const revealed = isRevealed(e, state, opts);
+      if (e.form === "effect" || e.form === "strike") {
+        rules.push(...rulesFor(e, revealed, ctx));
+        if (e.form === "strike") rules.push(strikeRuleFor(e, ctx));
+      }
+      // action-form entries contribute no rules here — they become sheet items.
+      if (e.kind === "boon" && e.form !== "action") {
+        boonLines.push({ name: e.name, description: injectNumbers(e.description ?? "", ctx) });
+      } else if (e.kind === "bane") {
+        if (revealed) priceLines.push({ name: e.name, description: injectNumbers(e.description ?? "", ctx) });
+        else hiddenPrices += 1;
+      }
+    }
+  }
+
+  return {
+    entryId: EFFECT_ENTRY_ID,
+    kind: "composed-effect",
+    level,
+    tier,
+    terminal: state.terminal ?? null,
+    badge: { value: Math.max(1, Math.min(level, MAX_LEVEL)), max: consumed || subjugated ? MAX_LEVEL : MAX_LEVEL - 1 },
+    rules,
+    boonLines,
+    priceLines,
+    hiddenPrices,
+    ctx,
+    hash: hashString(
+      stableStringify({ level, tier, terminal: state.terminal ?? null, rules, boonLines, priceLines, hiddenPrices }),
+    ),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Desired action items                                                */
+/* ------------------------------------------------------------------ */
+
+/** Action-form actives that should exist as sheet items. */
+export function composeActions(state, content, opts = {}) {
+  if (state.enabled === false || state.terminal === "nineveh") return [];
+  const level = clampLevel(state.level);
+  if (level < 1 && state.terminal !== "subjugated") return [];
+
+  const charLevel = Math.max(1, Math.trunc(opts.charLevel) || 1);
+  const ctx = { charLevel, level, attack: izirAttack(charLevel, level), dc: izirDC(charLevel, level) };
+
+  const { live } = selectEntries(state, content);
+  return live
+    .filter((e) => e.form === "action")
+    .map((e) => {
+      const description = injectNumbers(e.description ?? "", ctx);
+      const actionData = deepInject(e.actionData ?? {}, ctx);
+      const data = { entryId: e.id, family: e.family, name: e.name, img: e.img, description, actionData, entry: e };
+      return { ...data, hash: hashString(stableStringify({ name: e.name, img: e.img, description, actionData })) };
+    });
+}
+
+/* ------------------------------------------------------------------ */
+/* Diff                                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Minimal ops to converge the actor.
+ * @param {object|null} desiredEffect   composeEffect result
+ * @param {Array} desiredActions        composeActions result
+ * @param {Array} tagged                [{ itemId, entryId, contentHash }]
+ * @returns {{toCreate:Array, toUpdate:Array, toDeleteIds:Array}}
+ */
+export function diffAll(desiredEffect, desiredActions, tagged) {
+  const desired = [...(desiredEffect ? [desiredEffect] : []), ...desiredActions];
   const desiredById = new Map(desired.map((d) => [d.entryId, d]));
   const taggedById = new Map(tagged.map((t) => [t.entryId, t]));
 
   const toCreate = [];
-  const toDelete = [];
   const toUpdate = [];
+  const toDeleteIds = [];
 
   for (const d of desired) {
     const t = taggedById.get(d.entryId);
-    if (!t) {
-      toCreate.push(d);
-    } else if (t.contentHash !== d.hash) {
-      // content changed → rebuild
-      toDelete.push(t);
-      toCreate.push(d);
-    } else if (Boolean(t.identified) !== Boolean(d.identified)) {
-      // only the reveal flag changed → cheap in-place update
-      toUpdate.push({ tagged: t, desired: d });
-    }
+    if (!t) toCreate.push(d);
+    else if (t.contentHash !== d.hash) toUpdate.push({ itemId: t.itemId, desired: d });
   }
-
   for (const t of tagged) {
-    if (!desiredById.has(t.entryId)) toDelete.push(t);
+    if (!desiredById.has(t.entryId)) toDeleteIds.push(t.itemId);
   }
-
-  return { toCreate, toDelete, toUpdate };
+  return { toCreate, toUpdate, toDeleteIds };
 }
 
-/** Stable content hash of an entry's build-relevant fields. Pure. */
-export function hashEntry(entry) {
-  const relevant = {
-    name: entry.name ?? "",
-    description: entry.description ?? "",
-    img: entry.img ?? "",
-    form: entry.form ?? "",
-    kind: entry.kind ?? "",
-    rules: entry.rules ?? [],
-    actionData: entry.actionData ?? null,
-    spellData: entry.spellData ?? null,
-    auraEffectId: entry.auraEffectId ?? null,
-  };
-  return hashString(stableStringify(relevant));
-}
+/* ------------------------------------------------------------------ */
+/* Hashing                                                             */
+/* ------------------------------------------------------------------ */
 
 /** Deterministic JSON with sorted object keys. */
 export function stableStringify(value) {

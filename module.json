@@ -2,7 +2,7 @@
   "id": "the-shards-subsystems",
   "title": "The Shards — Campaign Subsystems",
   "description": "GM-side campaign subsystems for The Shards (Pathfinder 2e). Subsystem 1 — Izir: a ten-level immersion tracker for the Nameless, granting scaling powers and prices, with per-effect suppression, temptation checks, and an append-only history log.",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "authors": [
     {
       "name": "Zeitcatcher"
@@ -61,7 +61,7 @@
   ],
   "url": "https://github.com/Zeitcatcher/the-shards-subsystems",
   "manifest": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/latest/download/module.json",
-  "download": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/download/v0.1.3/module.zip",
+  "download": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/download/v0.2.0/module.zip",
   "license": "PolyForm-Noncommercial-1.0.0",
   "readme": "https://github.com/Zeitcatcher/the-shards-subsystems#readme"
 }

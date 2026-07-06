@@ -10,6 +10,8 @@ import { openIzirPanel, refreshIzirPanel } from "./apps/izir-panel.mjs";
 import { loadContent } from "./content.mjs";
 import { registerSyncHooks, syncAllMarked } from "./sync.mjs";
 import { registerTemptationHooks } from "./temptation.mjs";
+import { registerRechargeHooks } from "./recharge.mjs";
+import { setImmersion } from "./transform.mjs";
 import { registerIzirTraits } from "./traits.mjs";
 
 const IZIR_SETTINGS = [
@@ -21,8 +23,8 @@ const IZIR_SETTINGS = [
       refreshIzirPanel();
     },
   },
-  { key: SETTINGS.IZIR_DC_BASE, scope: "world", type: "Number", default: 14, config: true },
-  { key: SETTINGS.IZIR_DC_STEP, scope: "world", type: "Number", default: 2, config: true },
+  { key: SETTINGS.IZIR_DC_BASE, scope: "world", type: "Number", default: 20, config: true },
+  { key: SETTINGS.IZIR_DC_STEP, scope: "world", type: "Number", default: 3, config: true },
   {
     key: SETTINGS.IZIR_SHOW_DC, scope: "world", type: "String", default: "gm", config: true,
     choices: {
@@ -56,7 +58,12 @@ registerSubsystem({
       console.error(`${MODULE_ID} | Izir content failed to load`, err);
       ui.notifications?.error(game.i18n.localize("SHARDS.Izir.ContentError"));
     }
-    registerSyncHooks();
+    // Token-badge edits are level changes; refresh the panel afterwards.
+    registerSyncHooks(async (actor, _from, next) => {
+      await setImmersion(actor, next, game.i18n.localize("SHARDS.Izir.BadgeNote"));
+      refreshIzirPanel();
+    });
     registerTemptationHooks();
+    registerRechargeHooks();
   },
 });

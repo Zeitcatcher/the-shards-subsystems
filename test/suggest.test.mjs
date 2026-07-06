@@ -29,9 +29,10 @@ describe("suggestChips", () => {
     expect(keys([t("criticalSuccess"), t("success")], { streak: 3 })).toContain("suppress");
   });
 
-  it("offers escalation chips on a critical failure", () => {
+  it("offers flavor chips on a critical failure (escalation is the slide's job now)", () => {
     const k = keys([t("criticalFailure")], { streak: 3 });
-    expect(k).toEqual(expect.arrayContaining(["deepen", "unsuppress", "surge"]));
+    expect(k).toEqual(expect.arrayContaining(["unsuppress", "surge"]));
+    expect(k).not.toContain("deepen");
   });
 
   it("offers a gentle reminder on a plain failure", () => {

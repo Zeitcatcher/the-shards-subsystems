@@ -1,0 +1,20 @@
+<div class="izir-history">
+  <div class="izir-history-head">
+    <h4>{{name}}</h4>
+    <button type="button" class="izir-ghost" data-action="exportJournal">
+      <i class="fa-solid fa-file-export"></i> {{localize "SHARDS.Izir.ExportJournal"}}
+    </button>
+  </div>
+  {{#if hasEntries}}
+  <ul class="izir-log">
+    {{#each entries}}
+    <li class="log-{{this.type}}">
+      <span class="izir-log-when">{{this.when}}</span>
+      <span class="izir-log-desc">{{this.desc}}{{#if this.note}} — <em>{{this.note}}</em>{{/if}}</span>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="izir-empty">{{localize "SHARDS.Izir.NoHistory"}}</p>
+  {{/if}}
+</div>

@@ -3,7 +3,7 @@
 
 .the-shards-subsystems .izir-panel {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 224px 1fr;
   gap: 0;
   height: 100%;
   min-height: 0;
@@ -11,11 +11,67 @@
 }
 
 .the-shards-subsystems .izir-panel.compact {
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 196px 1fr;
   font-size: var(--font-size-13, 0.85rem);
 }
 
-/* Roster column */
+/* ---------- shared controls ---------- */
+.the-shards-subsystems .izir-ghost {
+  width: auto;
+  flex: 0 0 auto;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--color-text-secondary, #4b4a44);
+  font-size: var(--font-size-12, 0.8rem);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.the-shards-subsystems .izir-ghost:hover {
+  border-color: var(--color-border-light-primary, #b5b3a4);
+  color: var(--color-text-primary, #191813);
+}
+.the-shards-subsystems .izir-primary {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 0.8rem);
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid #b5892a;
+  background: rgba(181, 137, 42, 0.12);
+  white-space: nowrap;
+}
+.the-shards-subsystems .izir-primary:disabled {
+  opacity: 0.5;
+}
+.the-shards-subsystems .izir-spacer {
+  flex: 1 1 auto;
+}
+.the-shards-subsystems .izir-hint {
+  font-size: var(--font-size-11, 0.72rem);
+  color: var(--color-text-secondary, #4b4a44);
+  opacity: 0.8;
+  font-style: italic;
+}
+.the-shards-subsystems .izir-lbl {
+  font-size: var(--font-size-10, 0.68rem);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.65;
+}
+.the-shards-subsystems .izir-empty {
+  padding: 1rem;
+  opacity: 0.7;
+  font-style: italic;
+  text-align: center;
+}
+.the-shards-subsystems .izir-dash-empty {
+  margin: auto;
+}
+
+/* ---------- roster column ---------- */
 .the-shards-subsystems .izir-roster {
   display: flex;
   flex-direction: column;
@@ -23,7 +79,6 @@
   border-right: 1px solid var(--color-border-light-tertiary, #c9c7b8);
   background: rgba(0, 0, 0, 0.03);
 }
-
 .the-shards-subsystems .izir-roster-head {
   display: flex;
   align-items: center;
@@ -32,22 +87,21 @@
   padding: 0.5rem 0.6rem;
   border-bottom: 1px solid var(--color-border-light-tertiary, #c9c7b8);
 }
-
 .the-shards-subsystems .izir-roster-head h3 {
   margin: 0;
-  font-size: var(--font-size-14, 0.9rem);
+  font-size: var(--font-size-12, 0.8rem);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   border: none;
 }
-
 .the-shards-subsystems .izir-mark-btn {
   width: auto;
   flex: 0 0 auto;
-  font-size: var(--font-size-12, 0.8rem);
+  font-size: var(--font-size-11, 0.72rem);
   line-height: 1.2;
   padding: 0.25rem 0.4rem;
   white-space: nowrap;
 }
-
 .the-shards-subsystems .izir-roster-list {
   list-style: none;
   margin: 0;
@@ -58,7 +112,6 @@
   flex-direction: column;
   gap: 0.3rem;
 }
-
 .the-shards-subsystems .izir-roster-item {
   display: flex;
   align-items: center;
@@ -67,17 +120,13 @@
   border-radius: 4px;
   cursor: pointer;
   border-left: 3px solid transparent;
-  transition: background-color 120ms ease;
 }
-
 .the-shards-subsystems .izir-roster-item:hover {
   background: rgba(0, 0, 0, 0.06);
 }
-
 .the-shards-subsystems .izir-roster-item.selected {
   background: rgba(0, 0, 0, 0.09);
 }
-
 .the-shards-subsystems .izir-roster-item img {
   width: 34px;
   height: 34px;
@@ -86,95 +135,116 @@
   border: none;
   flex: 0 0 auto;
 }
-
 .the-shards-subsystems .izir-roster-meta {
   display: flex;
   flex-direction: column;
   min-width: 0;
   flex: 1 1 auto;
 }
-
 .the-shards-subsystems .izir-roster-name {
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .the-shards-subsystems .izir-roster-tier {
   font-size: var(--font-size-11, 0.72rem);
   opacity: 0.75;
   white-space: nowrap;
 }
-
 .the-shards-subsystems .izir-dot {
   flex: 0 0 auto;
   font-size: 0.8rem;
 }
-.the-shards-subsystems .izir-dot-terminal {
-  color: #a11;
-}
-.the-shards-subsystems .izir-dot-pending {
-  color: #b5892a;
-}
+.the-shards-subsystems .izir-dot-terminal { color: #a11; }
+.the-shards-subsystems .izir-dot-pending { color: #b5892a; }
 
-/* Detail column */
-.the-shards-subsystems .izir-detail {
+/* ---------- dashboard column ---------- */
+.the-shards-subsystems .izir-dash {
   display: flex;
   flex-direction: column;
+  gap: 0.65rem;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
-  padding: 0.6rem 0.8rem;
+  padding: 0.7rem 0.85rem 0.8rem;
 }
 
-.the-shards-subsystems .izir-detail-head {
+.the-shards-subsystems .izir-id {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  padding-bottom: 0.6rem;
+  padding-bottom: 0.55rem;
   border-bottom: 2px solid var(--izir-tier-color, #6a5acd);
-  margin-bottom: 0.8rem;
 }
-
-.the-shards-subsystems .izir-detail-head img {
-  width: 52px;
-  height: 52px;
+.the-shards-subsystems .izir-id img {
+  width: 46px;
+  height: 46px;
   border-radius: 6px;
   object-fit: cover;
   border: none;
 }
-
-.the-shards-subsystems .izir-detail-title {
+.the-shards-subsystems .izir-id-title {
   flex: 1 1 auto;
   min-width: 0;
 }
-
-.the-shards-subsystems .izir-detail-title h2 {
+.the-shards-subsystems .izir-id-title h2 {
   margin: 0;
   border: none;
-  font-size: var(--font-size-18, 1.15rem);
+  font-size: var(--font-size-18, 1.1rem);
 }
-
-.the-shards-subsystems .izir-tier-banner {
-  font-size: var(--font-size-12, 0.8rem);
-  letter-spacing: 0.04em;
+.the-shards-subsystems .izir-tier-pill {
+  display: inline-block;
+  font-size: var(--font-size-10, 0.66rem);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--izir-tier-color, #6a5acd);
+  border: 1px solid var(--izir-tier-color, #6a5acd);
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-top: 3px;
   font-weight: 600;
 }
 
-.the-shards-subsystems .izir-unmark {
-  flex: 0 0 auto;
-  width: auto;
-  padding: 0.25rem 0.5rem;
+/* stat chips */
+.the-shards-subsystems .izir-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
+.the-shards-subsystems .izir-stat {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  border-radius: 4px;
+  padding: 0.3rem 0.65rem;
+  min-width: 82px;
+  display: flex;
+  flex-direction: column;
+}
+.the-shards-subsystems .izir-stat .l {
+  font-size: var(--font-size-10, 0.64rem);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+.the-shards-subsystems .izir-stat .n {
+  font-size: var(--font-size-16, 1.05rem);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.the-shards-subsystems .izir-stat .n small {
+  font-size: var(--font-size-11, 0.72rem);
+  opacity: 0.6;
+  font-weight: 400;
+}
+.the-shards-subsystems .izir-stat.hot .n { color: #8a6417; }
+.the-shards-subsystems .izir-stat.slide-n .n { color: #a5473f; }
 
-.the-shards-subsystems .izir-empty {
-  padding: 1rem;
-  opacity: 0.7;
-  font-style: italic;
-  text-align: center;
-}
-.the-shards-subsystems .izir-detail-empty {
-  margin: auto;
+/* footer */
+.the-shards-subsystems .izir-footer {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--color-border-light-tertiary, #c9c7b8);
 }

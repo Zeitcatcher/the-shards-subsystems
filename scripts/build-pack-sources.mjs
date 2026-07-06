@@ -47,6 +47,14 @@ function tierKeyFor(entry) {
   return "nineveh";
 }
 
+/** Pack copies are static: replace the runtime number tokens with readable text. */
+function scrub(text) {
+  return String(text ?? "")
+    .replaceAll("{{izirDC}}", "your Izir DC")
+    .replaceAll("{{izirAttack}}", "your Izir attack modifier")
+    .replaceAll("{{izirLevel}}", "your immersion level");
+}
+
 function folderDoc(f, index) {
   const id = folderId(f.key);
   return { _id: id, _key: `!folders!${id}`, name: f.name, type: "Item", sorting: "m", folder: null, sort: (index + 1) * 100000 };
@@ -54,7 +62,7 @@ function folderDoc(f, index) {
 
 function baseSystemEffect(entry) {
   return {
-    description: { value: entry.description ?? "" },
+    description: { value: scrub(entry.description) },
     slug: `shards-izir-${entry.id}`,
     duration: { value: -1, unit: "unlimited", sustained: false, expiry: null },
     unidentified: false,
@@ -95,7 +103,7 @@ function actionItem(entry) {
     folder: folderId(tierKeyFor(entry)),
     sort: entry.level * 1000 + 250,
     system: {
-      description: { value: entry.description ?? "" },
+      description: { value: scrub(entry.description) },
       slug: `shards-izir-${entry.id}`,
       actionType: { value: a.actionType ?? "action" },
       actions: { value: a.actions ?? null },
@@ -111,6 +119,27 @@ function actionItem(entry) {
 
 function entryItem(entry) {
   if (entry.form === "action") return actionItem(entry);
+  if (entry.form === "strike") {
+    // Reusable copy grants the Strike via rule element; without the tracker there is
+    // no Izir attack modifier, so the strike falls back to the actor's own math.
+    const s = entry.strikeData ?? {};
+    const doc = effectItem(entry);
+    doc.system.rules = [
+      ...(Array.isArray(entry.rules) ? entry.rules : []),
+      {
+        key: "Strike",
+        slug: `shards-izir-${entry.id}`,
+        label: entry.name,
+        img: entry.img,
+        category: s.category ?? "unarmed",
+        group: s.group ?? "brawling",
+        traits: s.traits ?? ["magical", "void"],
+        range: s.range ?? null,
+        damage: { base: { damageType: s.damageType ?? "void", dice: 1, die: s.die ?? "d4" } },
+      },
+    ];
+    return doc;
+  }
   // effect + (future) spell fall back to a browsable effect card
   return effectItem(entry);
 }

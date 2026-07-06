@@ -25,4 +25,6 @@ export const SETTINGS = Object.freeze({
 
 export const TEMPLATES = Object.freeze({
   IZIR_PANEL: `modules/${MODULE_ID}/templates/izir/panel.hbs`,
+  IZIR_ART: `modules/${MODULE_ID}/templates/izir/art-dialog.hbs`,
+  IZIR_HISTORY: `modules/${MODULE_ID}/templates/izir/history-dialog.hbs`,
 });

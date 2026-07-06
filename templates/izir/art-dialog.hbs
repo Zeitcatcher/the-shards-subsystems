@@ -1,0 +1,33 @@
+<div class="izir-art">
+  <p class="izir-hint">{{localize "SHARDS.Izir.ArtHint"}}</p>
+  {{#each rows}}
+  <div class="izir-art-row {{#if this.applied}}applied{{/if}}">
+    <div class="izir-art-head">
+      <strong>{{this.label}}</strong>
+      {{#if this.applied}}<span class="izir-art-applied">{{localize "SHARDS.Izir.ArtApplied"}}</span>{{/if}}
+    </div>
+    <div class="izir-art-field">
+      <label>{{localize "SHARDS.Izir.ArtPortrait"}}</label>
+      <span class="izir-art-path">{{#if this.portrait}}{{this.portrait}}{{else}}—{{/if}}</span>
+      <button type="button" class="izir-ghost" data-action="artBrowse" data-threshold="{{this.threshold}}" data-field="portrait"
+        data-tooltip="{{localize 'SHARDS.Izir.ArtBrowse'}}"><i class="fa-solid fa-folder-open"></i></button>
+    </div>
+    <div class="izir-art-field">
+      <label>{{localize "SHARDS.Izir.ArtToken"}}</label>
+      <span class="izir-art-path">{{#if this.token}}{{this.token}}{{else}}—{{/if}}</span>
+      <button type="button" class="izir-ghost" data-action="artBrowse" data-threshold="{{this.threshold}}" data-field="token"
+        data-tooltip="{{localize 'SHARDS.Izir.ArtBrowse'}}"><i class="fa-solid fa-folder-open"></i></button>
+    </div>
+    <div class="izir-art-actions">
+      <button type="button" data-action="artApply" data-threshold="{{this.threshold}}" {{#unless this.hasArt}}disabled{{/unless}}>{{localize "SHARDS.Izir.ArtApply"}}</button>
+      <button type="button" class="izir-ghost" data-action="artClear" data-threshold="{{this.threshold}}"
+        data-tooltip="{{localize 'SHARDS.Izir.ArtClear'}}"><i class="fa-solid fa-eraser"></i></button>
+    </div>
+  </div>
+  {{/each}}
+  {{#if hasOriginal}}
+  <button type="button" class="izir-art-revert" data-action="artRevert">
+    <i class="fa-solid fa-rotate-left"></i> {{localize "SHARDS.Izir.ArtRevert"}}
+  </button>
+  {{/if}}
+</div>

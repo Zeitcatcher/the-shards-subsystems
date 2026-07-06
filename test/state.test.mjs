@@ -2,10 +2,11 @@ import { describe, it, expect } from "vitest";
 import { emptyIzirState, healDefaults } from "../src/subsystems/izir/state.mjs";
 
 describe("emptyIzirState", () => {
-  it("starts a marked actor at level 0 with nothing suppressed", () => {
+  it("starts a marked actor at level 0 with nothing suppressed and an empty slide", () => {
     const s = emptyIzirState();
     expect(s.enabled).toBe(true);
     expect(s.level).toBe(0);
+    expect(s.slide).toBe(0);
     expect(s.terminal).toBeNull();
     expect(s.suppressed).toEqual([]);
     expect(s.revealed).toEqual([]);
@@ -21,12 +22,13 @@ describe("healDefaults", () => {
     expect(healDefaults(42).suppressed).toEqual([]);
   });
 
-  it("preserves stored values and fills missing keys", () => {
-    const healed = healDefaults({ level: 6, terminal: "subjugated", suppressed: [{ id: "izir-wave" }] });
+  it("preserves stored values and fills missing keys (v1 data gains the slide)", () => {
+    const healed = healDefaults({ v: 1, level: 6, terminal: "subjugated", suppressed: [{ id: "izir-wave" }] });
     expect(healed.level).toBe(6);
     expect(healed.terminal).toBe("subjugated");
     expect(healed.suppressed).toEqual([{ id: "izir-wave" }]);
-    // untouched keys still present
+    // untouched/new keys still present
+    expect(healed.slide).toBe(0);
     expect(healed.revealed).toEqual([]);
     expect(healed.journalId).toBeNull();
     expect(healed.art.applied).toBeNull();

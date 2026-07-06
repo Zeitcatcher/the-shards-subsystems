@@ -22,8 +22,11 @@ export function describeEntry(entry) {
       return game.i18n.format(d.on === false ? "SHARDS.Izir.Log.hide" : "SHARDS.Izir.Log.reveal", { id: d.id ?? "?" });
     case "temptation": {
       const outcome = d.outcome ? game.i18n.localize(`SHARDS.Izir.Outcome.${d.outcome}`) : "—";
-      return game.i18n.format("SHARDS.Izir.Log.temptation", { dc: d.dc ?? "?", outcome });
+      const slide = d.slideDelta > 0 ? ` (+${d.slideDelta} ${game.i18n.localize("SHARDS.Izir.SlideShort")})` : "";
+      return game.i18n.format("SHARDS.Izir.Log.temptation", { dc: d.dc ?? "?", outcome }) + slide;
     }
+    case "slide":
+      return game.i18n.format("SHARDS.Izir.Log.slide", { from: d.from ?? 0, to: d.to ?? 0 });
     case "transform":
       return game.i18n.format("SHARDS.Izir.Log.transform", {
         path: game.i18n.localize(d.path === "subjugated" ? "SHARDS.Izir.Tier.subjugated" : "SHARDS.Izir.Tier.nineveh"),
