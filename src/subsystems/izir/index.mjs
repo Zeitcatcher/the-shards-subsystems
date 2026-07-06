@@ -10,6 +10,7 @@ import { openIzirPanel, refreshIzirPanel } from "./apps/izir-panel.mjs";
 import { loadContent } from "./content.mjs";
 import { registerSyncHooks, syncAllMarked } from "./sync.mjs";
 import { registerTemptationHooks } from "./temptation.mjs";
+import { registerIzirTraits } from "./traits.mjs";
 
 const IZIR_SETTINGS = [
   {
@@ -47,6 +48,7 @@ registerSubsystem({
   settings: IZIR_SETTINGS,
   openPanel: (actorUuid) => openIzirPanel(actorUuid),
   refresh: () => refreshIzirPanel(),
+  onSetup: () => registerIzirTraits(),
   onReady: async () => {
     try {
       await loadContent();

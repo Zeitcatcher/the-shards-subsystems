@@ -34,6 +34,7 @@ Hooks.once("init", () => {
 
 Hooks.once("setup", async () => {
   await foundry.applications.handlebars.loadTemplates(Object.values(TEMPLATES));
+  for (const sub of getSubsystems()) sub.onSetup?.();
 });
 
 Hooks.once("ready", async () => {
