@@ -1,0 +1,19 @@
+{
+  "name": "the-shards-subsystems",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "The Shards — Campaign Subsystems (Foundry VTT, Pathfinder 2e).",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate:content": "node scripts/validate-content.mjs",
+    "build:pack-sources": "node scripts/build-pack-sources.mjs",
+    "build:packs": "node scripts/build-packs.mjs",
+    "build": "npm run build:pack-sources && npm run build:packs"
+  },
+  "devDependencies": {
+    "@foundryvtt/foundryvtt-cli": "^3.0.3",
+    "vitest": "^2.1.8"
+  }
+}

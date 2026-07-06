@@ -1,0 +1,353 @@
+{
+  "version": 1,
+  "_note": "Single source of truth for Izir boons/banes. Names + descriptions are authored in English (GM directive). Bane rule-element labels use the neutral i18n key SHARDS.Izir.MaskedLabel so hidden prices don't leak their name through roll breakdowns.",
+  "_activesNote": "PASSIVE boons and PRICE banes below are standard pf2e effects (senses, resistances, weaknesses, flat modifiers, damage dice, reminder notes). The ACTIVE abilities (Void Lash, Umbral Grasp, Izir Wave I/II, Predator's Lunge, Void Step, Rend the Veil, Devour Light, Herald of Ruin, Perfect Stillness) are NEW actions/spells that do not exist in Pathfinder; per GM directive they are authored via the create-spell / create-item skills (full pf2e JSON + Obsidian vault notes) and their output is pasted in here. izir-wave-1 / izir-wave-2 are working action-form SEEDS demonstrating the replacement family until the skill pass finalizes them.",
+  "tiers": [
+    { "id": "whisper", "levels": [1, 3], "labelKey": "SHARDS.Izir.Tier.whisper" },
+    { "id": "grip", "levels": [4, 6], "labelKey": "SHARDS.Izir.Tier.grip" },
+    { "id": "call", "levels": [7, 9], "labelKey": "SHARDS.Izir.Tier.call" },
+    { "id": "nineveh", "levels": [10, 10], "labelKey": "SHARDS.Izir.Tier.nineveh" }
+  ],
+  "entries": [
+    {
+      "id": "voidsight",
+      "family": "voidsight",
+      "rank": 1,
+      "level": 1,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Voidsight",
+      "description": "<p>The black in your eyes drinks the dark. You gain darkvision, and you can sense other bearers of Izir and Izir-touched artifacts within 60 feet (imprecise).</p>",
+      "img": "icons/magic/perception/eye-ringed-glow-angry-red.webp",
+      "rules": [
+        { "key": "Sense", "selector": "darkvision" },
+        { "key": "RollOption", "domain": "all", "option": "self:shards:izir:voidsight" }
+      ]
+    },
+    {
+      "id": "dreams-of-void",
+      "family": "dreams-of-void",
+      "rank": 1,
+      "level": 1,
+      "kind": "bane",
+      "form": "effect",
+      "name": "Dreams of the Void",
+      "description": "<p>Sleep opens a door. After daily preparations, attempt a DC 4 flat check; on a failure you are fatigued until you spend 10 minutes communing with Izir — which may itself invite temptation.</p>",
+      "img": "icons/magic/unholy/silhouette-robe-evil-power.webp",
+      "rules": [
+        { "key": "Note", "selector": "all", "title": "Dreams of the Void", "text": "After daily preparations: DC 4 flat check or fatigued until 10 minutes of communion with Izir.", "visibility": "gm" }
+      ]
+    },
+    {
+      "id": "strength-of-void",
+      "family": "strength-of-void",
+      "rank": 1,
+      "level": 2,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Strength of the Void",
+      "description": "<p>Unnatural power floods your limbs. You gain a +1 status bonus to Athletics and a +5-foot status bonus to your Speed.</p>",
+      "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
+      "rules": [
+        { "key": "FlatModifier", "selector": "athletics", "type": "status", "value": 1 },
+        { "key": "FlatModifier", "selector": "speed", "type": "status", "value": 5 }
+      ]
+    },
+    {
+      "id": "mark-spreads",
+      "family": "mark-spreads",
+      "rank": 1,
+      "level": 2,
+      "kind": "bane",
+      "form": "effect",
+      "name": "The Mark Spreads",
+      "description": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen them.</p>",
+      "img": "icons/magic/unholy/strike-hand-glowing-red.webp",
+      "rules": [
+        { "key": "FlatModifier", "selector": ["diplomacy", "deception"], "type": "circumstance", "value": -1, "label": "SHARDS.Izir.MaskedLabel" }
+      ]
+    },
+    {
+      "id": "void-resilience",
+      "family": "void-resilience",
+      "rank": 1,
+      "level": 3,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Void Resilience",
+      "description": "<p>Void becomes a second skin. You gain resistance to void damage equal to half your level.</p>",
+      "img": "icons/magic/unholy/orb-glowing-purple.webp",
+      "rules": [
+        { "key": "Resistance", "type": "void", "value": "floor(@actor.level/2)" }
+      ]
+    },
+    {
+      "id": "izir-wave-1",
+      "family": "izir-wave",
+      "rank": 1,
+      "level": 3,
+      "kind": "boon",
+      "form": "action",
+      "name": "Izir Wave I",
+      "description": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> A 15-foot cone deals @Damage[(floor(@actor.level/2))d6[void]] damage; each creature attempts a basic Reflex save against your class DC or spell DC (whichever is higher).</p>",
+      "img": "icons/magic/unholy/beam-impact-purple.webp",
+      "rules": [],
+      "actionData": { "actionType": "action", "actions": 2, "traits": ["void", "manipulate"], "frequency": { "max": 1, "per": "PT10M" } }
+    },
+    {
+      "id": "anathema-to-the-holy",
+      "family": "anathema-to-the-holy",
+      "rank": 1,
+      "level": 3,
+      "kind": "bane",
+      "form": "effect",
+      "name": "Anathema to the Holy",
+      "description": "<p>The void in you recoils from light and the sacred. You gain weakness 2 to holy damage, and sudden bright light dazzles you for 1 round.</p>",
+      "img": "icons/magic/light/explosion-star-glow-yellow.webp",
+      "rules": [
+        { "key": "Weakness", "type": "holy", "value": 2 },
+        { "key": "Note", "selector": "all", "title": "Anathema to the Holy", "text": "Sudden bright light dazzles you for 1 round.", "visibility": "gm" }
+      ]
+    },
+    {
+      "id": "lethality-1",
+      "family": "lethality",
+      "rank": 1,
+      "level": 4,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Lethality I",
+      "description": "<p>Your blows carry the hunger of the void. Your Strikes deal an extra 1d6 void damage.</p>",
+      "img": "icons/magic/unholy/strike-beam-blood-red-purple.webp",
+      "rules": [
+        { "key": "DamageDice", "selector": "strike-damage", "diceNumber": 1, "dieSize": "d6", "damageType": "void" }
+      ]
+    },
+    {
+      "id": "hunger-for-the-kill",
+      "family": "hunger-for-the-kill",
+      "rank": 1,
+      "level": 4,
+      "kind": "bane",
+      "form": "effect",
+      "name": "Hunger for the Kill",
+      "description": "<p>When you drop a foe, the void demands you finish it. Attempt a Will save against your temptation DC or you must spend your next action to Strike it (or the nearest hostile). You take a -2 circumstance penalty on nonlethal attacks.</p>",
+      "img": "icons/skills/melee/strike-dagger-blood-red.webp",
+      "rules": [
+        { "key": "FlatModifier", "selector": "attack", "type": "circumstance", "value": -2, "predicate": ["nonlethal"], "label": "SHARDS.Izir.MaskedLabel" },
+        { "key": "Note", "selector": "all", "title": "Hunger for the Kill", "text": "On dropping a foe: Will vs temptation DC or compelled to Strike it (or the nearest hostile).", "visibility": "gm" }
+      ]
+    },
+    {
+      "id": "unnatural-vigor",
+      "family": "unnatural-vigor",
+      "rank": 1,
+      "level": 5,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Unnatural Vigor",
+      "description": "<p>The void stitches you back together mid-fight. Once per hour, when you roll initiative, gain temporary Hit Points equal to your level.</p>",
+      "img": "icons/magic/life/heart-shadow-red.webp",
+      "rules": [
+        { "key": "Note", "selector": "initiative", "title": "Unnatural Vigor", "text": "1/hour, on rolling initiative: gain temporary HP equal to your level.", "visibility": "owner" }
+      ]
+    },
+    {
+      "id": "izir-wave-2",
+      "family": "izir-wave",
+      "rank": 2,
+      "level": 5,
+      "kind": "boon",
+      "form": "action",
+      "name": "Izir Wave II",
+      "description": "<p>The wave widens into a torrent of annihilation.</p><hr /><p><strong>Effect</strong> A 30-foot cone deals @Damage[(floor(@actor.level/2))d8[void]] damage; each creature attempts a basic Reflex save against your class DC or spell DC (whichever is higher).</p>",
+      "img": "icons/magic/unholy/beam-impact-purple.webp",
+      "rules": [],
+      "actionData": { "actionType": "action", "actions": 2, "traits": ["void", "manipulate"], "frequency": { "max": 1, "per": "PT10M" } }
+    },
+    {
+      "id": "the-face-fades",
+      "family": "mark-spreads",
+      "rank": 2,
+      "level": 5,
+      "kind": "bane",
+      "form": "effect",
+      "name": "The Face Fades",
+      "description": "<p>Your features blur toward something wrong. You take a -2 circumstance penalty to Diplomacy and Deception against strangers, and concealing your nature at close range now requires magic.</p>",
+      "img": "icons/magic/unholy/strike-hand-glowing-red.webp",
+      "rules": [
+        { "key": "FlatModifier", "selector": ["diplomacy", "deception"], "type": "circumstance", "value": -2, "label": "SHARDS.Izir.MaskedLabel" }
+      ]
+    },
+    {
+      "id": "anathema-2",
+      "family": "anathema-to-the-holy",
+      "rank": 2,
+      "level": 6,
+      "kind": "bane",
+      "form": "effect",
+      "name": "Anathema to the Holy (Deeper)",
+      "description": "<p>The holy bites deeper. You gain weakness 4 to holy damage.</p>",
+      "img": "icons/magic/light/explosion-star-glow-yellow.webp",
+      "rules": [
+        { "key": "Weakness", "type": "holy", "value": 4 }
+      ]
+    },
+    {
+      "id": "grip-of-the-void",
+      "family": "grip-of-the-void",
+      "rank": 1,
+      "level": 6,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Grip of the Void",
+      "description": "<p>Where you wound, the void lingers. Your critical hits deal an extra 1d6 persistent void damage.</p>",
+      "img": "icons/magic/unholy/strike-beam-blood-large-purple.webp",
+      "rules": [
+        { "key": "DamageDice", "selector": "strike-damage", "diceNumber": 1, "dieSize": "d6", "damageType": "void", "category": "persistent", "critical": true }
+      ]
+    },
+    {
+      "id": "whisper-in-the-blood",
+      "family": "whisper-in-the-blood",
+      "rank": 1,
+      "level": 6,
+      "kind": "bane",
+      "form": "effect",
+      "name": "Whisper in the Blood",
+      "description": "<p>When your guard breaks, the void slips in. The first time you critically fail a save in combat, you are off-guard until the end of your next turn, and the GM may call for a temptation check.</p>",
+      "img": "icons/magic/unholy/strike-hand-glowing-red.webp",
+      "rules": [
+        { "key": "Note", "selector": "all", "title": "Whisper in the Blood", "text": "On a critical failure on a save in combat: off-guard until end of your next turn; GM may call a temptation check.", "visibility": "gm" }
+      ]
+    },
+    {
+      "id": "terror-mantle",
+      "family": "terror-mantle",
+      "rank": 1,
+      "level": 7,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Terror's Mantle",
+      "description": "<p>Dread pours off you like cold. Enemies that enter or begin their turn within 10 feet must succeed at a Will save against your temptation DC or become frightened 1 (once per target per 10 minutes).</p>",
+      "img": "icons/magic/unholy/orb-glowing-purple.webp",
+      "auraEffectId": "izirterroraura00",
+      "rules": [
+        { "key": "Aura", "slug": "izir-terror", "radius": 10, "effects": [ { "uuid": "Compendium.the-shards-subsystems.izir-effects.Item.izirterroraura00", "affects": "enemies", "events": ["enter"], "removeOnExit": true } ] }
+      ]
+    },
+    {
+      "id": "slipping-control",
+      "family": "slipping-control",
+      "rank": 1,
+      "level": 7,
+      "kind": "bane",
+      "form": "effect",
+      "name": "Slipping Control",
+      "description": "<p>The first time you are bloodied each combat, attempt a Will save against your temptation DC or be compelled to Strike the nearest creature (allies included) for 1 round. While below half Hit Points, you are doomed 1.</p>",
+      "img": "icons/magic/unholy/strike-hand-glowing-red.webp",
+      "rules": [
+        { "key": "Note", "selector": "all", "title": "Slipping Control", "text": "First time bloodied each combat: Will vs temptation DC or compelled to Strike the nearest creature (allies included) for 1 round. Doomed 1 while below half HP.", "visibility": "gm" }
+      ]
+    },
+    {
+      "id": "izir-does-not-let-go",
+      "family": "izir-does-not-let-go",
+      "rank": 1,
+      "level": 8,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Izir Does Not Let Go",
+      "description": "<p>The void refuses to release its vessel. Once per day, when you would be reduced to 0 Hit Points, you stay at 1 Hit Point instead.</p>",
+      "img": "icons/magic/life/heart-shadow-red.webp",
+      "rules": [
+        { "key": "Note", "selector": "all", "title": "Izir Does Not Let Go", "text": "1/day: when reduced to 0 HP, stay at 1 HP instead.", "visibility": "owner" }
+      ]
+    },
+    {
+      "id": "anathema-3",
+      "family": "anathema-to-the-holy",
+      "rank": 3,
+      "level": 8,
+      "kind": "bane",
+      "form": "effect",
+      "name": "Anathema to the Holy (Profound)",
+      "description": "<p>The sacred is agony. You gain weakness 6 to holy damage.</p>",
+      "img": "icons/magic/light/explosion-star-glow-yellow.webp",
+      "rules": [
+        { "key": "Weakness", "type": "holy", "value": 6 }
+      ]
+    },
+    {
+      "id": "the-body-betrays",
+      "family": "the-body-betrays",
+      "rank": 1,
+      "level": 8,
+      "kind": "bane",
+      "form": "effect",
+      "name": "The Body Betrays",
+      "description": "<p>The void reshapes your flesh into something visibly wrong. Only magic can disguise it; you take a -2 circumstance penalty to Diplomacy and Deception against those who are not Nameless, and wards against Izir always detect you.</p>",
+      "img": "icons/magic/unholy/strike-body-explode-disintegrate.webp",
+      "rules": [
+        { "key": "FlatModifier", "selector": ["diplomacy", "deception"], "type": "circumstance", "value": -2, "label": "SHARDS.Izir.MaskedLabel" },
+        { "key": "RollOption", "domain": "all", "option": "self:shards:izir:visible" }
+      ]
+    },
+    {
+      "id": "lethality-2",
+      "family": "lethality",
+      "rank": 2,
+      "level": 9,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Lethality II",
+      "description": "<p>The hunger is a torrent. Your Strikes deal an extra 2d6 void damage, and when you drop a foe, adjacent enemies are frightened 1.</p>",
+      "img": "icons/magic/unholy/strike-beam-blood-large-purple.webp",
+      "rules": [
+        { "key": "DamageDice", "selector": "strike-damage", "diceNumber": 2, "dieSize": "d6", "damageType": "void" },
+        { "key": "Note", "selector": "all", "title": "Lethality II", "text": "When you drop a foe, adjacent enemies are frightened 1.", "visibility": "owner" }
+      ]
+    },
+    {
+      "id": "the-voice-of-izir",
+      "family": "the-voice-of-izir",
+      "rank": 1,
+      "level": 9,
+      "kind": "bane",
+      "form": "effect",
+      "name": "The Voice of Izir",
+      "description": "<p>It speaks now, and part of you always listens. You are permanently stupefied 1 and doomed 1. This is the last step before the fall.</p>",
+      "img": "icons/magic/unholy/silhouette-robe-evil-power.webp",
+      "rules": [
+        { "key": "Note", "selector": "all", "title": "The Voice of Izir", "text": "Permanent stupefied 1 and doomed 1 while immersed at this depth.", "visibility": "gm" }
+      ]
+    },
+    {
+      "id": "sovereign-will",
+      "family": "sovereign-will",
+      "rank": 1,
+      "level": 10,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Sovereign Will",
+      "description": "<p>You are the master now, not the mastered. You are immune to void damage and to Izir's compulsions, and you gain a +1 status bonus to Will saves.</p>",
+      "img": "icons/magic/control/buff-flight-wings-runes-purple.webp",
+      "gate": "subjugated",
+      "rules": [
+        { "key": "Immunity", "type": "void" },
+        { "key": "FlatModifier", "selector": "will", "type": "status", "value": 1 }
+      ]
+    }
+  ],
+  "packEffects": [
+    {
+      "_id": "izirterroraura00",
+      "name": "Izir's Terror",
+      "img": "icons/magic/unholy/orb-glowing-purple.webp",
+      "description": "<p>The void presses close. You are frightened 1 (Will save against the bearer's temptation DC negates).</p>",
+      "rules": [
+        { "key": "Note", "selector": "all", "title": "Izir's Terror", "text": "Frightened 1 unless you succeed at a Will save against the bearer's temptation DC.", "visibility": "all" }
+      ]
+    }
+  ]
+}

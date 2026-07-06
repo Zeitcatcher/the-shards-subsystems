@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: npm test
+      - name: Syntax check every .mjs
+        run: find src test scripts -name '*.mjs' -print0 | xargs -0 -r -n1 node --check
+      - name: JSON validity
+        run: |
+          for f in module.json lang/en.json lang/ru.json data/izir/content.json; do
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" || exit 1
+          done
+      - name: Validate Izir content
+        run: npm run validate:content
+      - name: Pack sources up to date
+        run: |
+          npm run build:pack-sources
+          git diff --exit-code src/packs || (echo "src/packs is stale — run npm run build:pack-sources and commit." && exit 1)
+      - name: en/ru localization parity
+        run: |
+          node -e "
+            const en = Object.keys(require('./lang/en.json'));
+            const ru = Object.keys(require('./lang/ru.json'));
+            const es = new Set(en), rs = new Set(ru);
+            const missing = en.filter(k => !rs.has(k));
+            const extra = ru.filter(k => !es.has(k));
+            if (missing.length || extra.length) {
+              console.error('i18n parity mismatch. missing in ru:', missing, '| extra in ru:', extra);
+              process.exit(1);
+            }
+            console.log('i18n parity ok:', en.length, 'keys');
+          "

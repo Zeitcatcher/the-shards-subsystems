@@ -1,0 +1,72 @@
+{
+  "id": "the-shards-subsystems",
+  "title": "The Shards — Campaign Subsystems",
+  "description": "GM-side campaign subsystems for The Shards (Pathfinder 2e). Subsystem 1 — Izir: a ten-level immersion tracker for the Nameless, granting scaling powers and prices, with per-effect suppression, temptation checks, and an append-only history log.",
+  "version": "0.1.0",
+  "authors": [
+    {
+      "name": "Zeitcatcher"
+    }
+  ],
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.364"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "8.2.0"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "src/main.mjs"
+  ],
+  "styles": [
+    "styles/core.css",
+    "styles/izir.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "ru",
+      "name": "Русский",
+      "path": "lang/ru.json"
+    }
+  ],
+  "packs": [
+    {
+      "name": "izir-effects",
+      "label": "The Shards: Izir",
+      "type": "Item",
+      "system": "pf2e",
+      "path": "packs/izir-effects",
+      "ownership": {
+        "PLAYER": "NONE",
+        "TRUSTED": "NONE",
+        "ASSISTANT": "OWNER",
+        "GAMEMASTER": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "The Shards",
+      "sorting": "m",
+      "packs": ["izir-effects"]
+    }
+  ],
+  "url": "https://github.com/Zeitcatcher/the-shards-subsystems",
+  "manifest": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/latest/download/module.json",
+  "download": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/download/v0.1.0/module.zip",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "readme": "https://github.com/Zeitcatcher/the-shards-subsystems#readme"
+}
