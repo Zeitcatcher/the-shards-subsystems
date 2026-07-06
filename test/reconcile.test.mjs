@@ -5,6 +5,7 @@ import {
   composeActions,
   diffAll,
   injectNumbers,
+  buildCtx,
   EFFECT_ENTRY_ID,
 } from "../src/subsystems/izir/logic/reconcile.mjs";
 import { izirAttack, izirDC } from "../src/subsystems/izir/logic/model.mjs";
@@ -66,10 +67,21 @@ describe("selectEntries", () => {
   });
 });
 
-describe("injectNumbers", () => {
+describe("injectNumbers + buildCtx", () => {
   it("replaces all runtime tokens", () => {
     const out = injectNumbers("DC {{izirDC}} atk {{izirAttack}} lv {{izirLevel}}", { dc: 21, attack: 11, level: 5 });
     expect(out).toBe("DC 21 atk 11 lv 5");
+  });
+  it("computes the deepening holy weakness (2 → 4 at 6 → 6 at 8)", () => {
+    expect(buildCtx(5, 3).holyWeak).toBe(2);
+    expect(buildCtx(5, 5).holyWeak).toBe(2);
+    expect(buildCtx(5, 6).holyWeak).toBe(4);
+    expect(buildCtx(5, 8).holyWeak).toBe(6);
+    expect(injectNumbers("holy {{izirHolyWeak}}", buildCtx(5, 6))).toBe("holy 4");
+  });
+  it("anchors dc/attack to the caster baseline", () => {
+    expect(buildCtx(5, 5).attack).toBe(11);
+    expect(buildCtx(5, 5).dc).toBe(21);
   });
 });
 
@@ -113,6 +125,19 @@ describe("composeEffect", () => {
     expect(strike.attackModifier).toBe(izirAttack(5, 5));
     expect(strike.damage.base.dice).toBe(Math.ceil(5 / 2));
     expect(strike.range).toBe(30);
+    // official Strike shape: no category field (pf2e drops invalid REs silently)
+    expect("category" in strike).toBe(false);
+  });
+
+  it("lists unlocked actives in abilityLines so the card shows upgrades", () => {
+    const c3 = composeEffect(at({ level: 3 }), CONTENT, { charLevel: 5 });
+    expect(c3.abilityLines.map((a) => a.name)).toEqual(["Wave I"]);
+    const c5 = composeEffect(at({ level: 5 }), CONTENT, { charLevel: 5 });
+    expect(c5.abilityLines.map((a) => a.name)).toEqual(["Wave II"]);
+    expect(c5.abilityLines[0].glyph).toBe("◆◆");
+    expect(c5.abilityLines[0].tag).toBe("R 1d6");
+    // actions are not duplicated into the Gifts list
+    expect(c5.boonLines.map((b) => b.name)).not.toContain("Wave II");
   });
 
   it("nineveh strips to a terminal marker", () => {

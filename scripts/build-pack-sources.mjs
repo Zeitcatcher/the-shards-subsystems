@@ -52,7 +52,19 @@ function scrub(text) {
   return String(text ?? "")
     .replaceAll("{{izirDC}}", "your Izir DC")
     .replaceAll("{{izirAttack}}", "your Izir attack modifier")
-    .replaceAll("{{izirLevel}}", "your immersion level");
+    .replaceAll("{{izirLevel}}", "your immersion level")
+    .replaceAll("{{izirHolyWeak}}", "2 (4 at immersion 6, 6 at 8)");
+}
+
+/** Pack-copy rules with number tokens neutralized (static docs can't compute). */
+function scrubRules(rules) {
+  return (Array.isArray(rules) ? rules : []).map((r) => {
+    const out = { ...r };
+    for (const [k, v] of Object.entries(out)) {
+      if (typeof v === "string" && v.includes("{{izirHolyWeak}}")) out[k] = 2;
+    }
+    return out;
+  });
 }
 
 function folderDoc(f, index) {
@@ -70,7 +82,7 @@ function baseSystemEffect(entry) {
     tokenIcon: { show: true },
     badge: null,
     traits: { value: [], rarity: "common" },
-    rules: Array.isArray(entry.rules) ? entry.rules : [],
+    rules: scrubRules(entry.rules),
     start: { value: 0, initiative: null },
     publication: PUBLICATION,
   };
@@ -122,18 +134,18 @@ function entryItem(entry) {
   if (entry.form === "strike") {
     // Reusable copy grants the Strike via rule element; without the tracker there is
     // no Izir attack modifier, so the strike falls back to the actor's own math.
+    // Official Strike RE shape (dragonet jaws): no category field.
     const s = entry.strikeData ?? {};
     const doc = effectItem(entry);
     doc.system.rules = [
-      ...(Array.isArray(entry.rules) ? entry.rules : []),
+      ...scrubRules(entry.rules),
       {
         key: "Strike",
         slug: `shards-izir-${entry.id}`,
         label: entry.name,
         img: entry.img,
-        category: s.category ?? "unarmed",
         group: s.group ?? "brawling",
-        traits: s.traits ?? ["magical", "void"],
+        traits: s.traits ?? ["magical", "unarmed", "void"],
         range: s.range ?? null,
         damage: { base: { damageType: s.damageType ?? "void", dice: 1, die: s.die ?? "d4" } },
       },
@@ -145,6 +157,9 @@ function entryItem(entry) {
 }
 
 function packEffectItem(pe) {
+  const duration = Number.isInteger(pe.durationMinutes)
+    ? { value: pe.durationMinutes, unit: "minutes", sustained: false, expiry: "turn-end" }
+    : { value: -1, unit: "unlimited", sustained: false, expiry: null };
   return {
     _id: pe._id,
     _key: `!items!${pe._id}`,
@@ -156,7 +171,7 @@ function packEffectItem(pe) {
     system: {
       description: { value: pe.description ?? "" },
       slug: `shards-izir-pack-${pe._id}`,
-      duration: { value: -1, unit: "unlimited", sustained: false, expiry: null },
+      duration,
       unidentified: false,
       level: { value: 1 },
       tokenIcon: { show: true },

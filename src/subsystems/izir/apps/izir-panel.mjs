@@ -17,10 +17,10 @@ import {
   unmarkActor,
 } from "../state.mjs";
 import { tierForLevel, izirAttack, izirDC, slideNeeded, MAX_LEVEL } from "../logic/model.mjs";
-import { selectEntries } from "../logic/reconcile.mjs";
+import { selectEntries, buildCtx, injectNumbers } from "../logic/reconcile.mjs";
 import { suggestChips } from "../logic/suggest.mjs";
 import { loadContent } from "../content.mjs";
-import { syncActor } from "../sync.mjs";
+import { syncActor, syncAllMarked } from "../sync.mjs";
 import {
   callTemptation,
   suggestedDC,
@@ -259,6 +259,19 @@ async function onExportJournal() {
   if (actor) await exportLog(actor);
 }
 
+async function onResync(event) {
+  if (event?.shiftKey) {
+    await syncAllMarked();
+    ui.notifications?.info(game.i18n.localize("SHARDS.Izir.ResyncAllDone"));
+  } else {
+    const actor = resolveActor(this._actorUuid);
+    if (!actor) return;
+    await syncActor(actor);
+    ui.notifications?.info(game.i18n.format("SHARDS.Izir.ResyncDone", { name: actor.name }));
+  }
+  this.render();
+}
+
 async function onOpenArt() {
   if (this._actorUuid) openArtDialog(this._actorUuid);
 }
@@ -286,12 +299,13 @@ async function promptText(initial, titleKey) {
 /* View-model builders                                                 */
 /* ------------------------------------------------------------------ */
 
-function chipFor(entry, st, replacedIds, transparency) {
+function chipFor(entry, st, replacedIds, transparency, ctx) {
   const suppressedRec = st.suppressed.find((s) => s.id === entry.family);
   const isBane = entry.kind === "bane";
   const isActive = entry.form === "action" || entry.form === "strike";
   let tag = null;
-  if (entry.form === "strike") tag = game.i18n.localize("SHARDS.Izir.TagStrike");
+  if (entry.chipTag) tag = injectNumbers(entry.chipTag, ctx);
+  else if (entry.form === "strike") tag = game.i18n.localize("SHARDS.Izir.TagStrike");
   else if (entry.actionData?.recharge) tag = `R ${entry.actionData.recharge}`;
   else if (entry.actionData?.frequency?.per === "day") tag = "1/day";
   if (replacedIds.includes(entry.id)) tag = game.i18n.format("SHARDS.Izir.TagReplaced", { rank: "" }).trim();
@@ -312,8 +326,9 @@ function chipFor(entry, st, replacedIds, transparency) {
   };
 }
 
-function buildLadder(st, content, transparency) {
+function buildLadder(st, content, transparency, charLevel) {
   const { replacedIds } = selectEntries({ ...st, suppressed: [] }, content);
+  const ctx = buildCtx(charLevel, Math.max(1, st.level));
   const groups = TIER_GROUPS.map((g) => ({
     tierId: g.id,
     label: game.i18n.localize(`SHARDS.Izir.Tier.${g.id}`),
@@ -325,13 +340,13 @@ function buildLadder(st, content, transparency) {
       chips: content.entries
         .filter((e) => e.level === lvl && !e.gate)
         .sort((a, b) => Number(a.kind === "bane") - Number(b.kind === "bane") || a.id.localeCompare(b.id))
-        .map((e) => chipFor(e, st, replacedIds, transparency)),
+        .map((e) => chipFor(e, st, replacedIds, transparency, ctx)),
     })),
   }));
 
   const gateChips = content.entries
     .filter((e) => e.gate === "subjugated")
-    .map((e) => chipFor(e, st, replacedIds, transparency));
+    .map((e) => chipFor(e, st, replacedIds, transparency, ctx));
 
   return { groups, gateChips };
 }
@@ -413,6 +428,7 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       clearPending: onClearPending,
       chip: onChip,
       exportJournal: onExportJournal,
+      resync: onResync,
       openArt: onOpenArt,
       openHistory: onOpenHistory,
     },
@@ -486,7 +502,7 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       detail.temptDc = this._dcDraft ?? dcPreview;
       const content = await loadContent().catch(() => null);
       const transparency = game.settings.get(MODULE_ID, SETTINGS.IZIR_TRANSPARENCY) === true;
-      if (content) ladder = buildLadder(st, content, transparency);
+      if (content) ladder = buildLadder(st, content, transparency, charLevel);
       slide = buildSlide(st);
       temptation = buildTemptation(st, dcPreview);
     }

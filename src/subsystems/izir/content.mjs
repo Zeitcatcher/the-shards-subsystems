@@ -92,12 +92,19 @@ export function validateContent(raw) {
     if (e.auraEffectId && !packIds.has(e.auraEffectId)) {
       problems.push(`${at}: auraEffectId "${e.auraEffectId}" has no matching packEffect._id`);
     }
+    if (e.actionData?.selfEffectId && !packIds.has(e.actionData.selfEffectId)) {
+      problems.push(`${at}: actionData.selfEffectId "${e.actionData.selfEffectId}" has no matching packEffect._id`);
+    }
+    if (e.chipTag != null && typeof e.chipTag !== "string") problems.push(`${at}: chipTag must be a string`);
   }
 
   for (const [i, p] of (raw.packEffects ?? []).entries()) {
     const at = `packEffect[${i}]${p?._id ? ` (${p._id})` : ""}`;
     if (typeof p?._id !== "string" || p._id.length !== 16) problems.push(`${at}: _id must be a 16-char string`);
     if (typeof p?.name !== "string" || !p.name) problems.push(`${at}: missing name`);
+    if (p?.durationMinutes != null && !Number.isInteger(p.durationMinutes)) {
+      problems.push(`${at}: durationMinutes must be an integer`);
+    }
   }
 
   return problems;

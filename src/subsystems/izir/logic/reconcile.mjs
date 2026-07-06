@@ -52,17 +52,36 @@ export function selectEntries(state, content) {
 /* Number injection                                                    */
 /* ------------------------------------------------------------------ */
 
-/** Replace {{izirDC}} / {{izirAttack}} / {{izirLevel}} tokens in a string. */
+/** The injection context for a (character level, immersion) pair. */
+export function buildCtx(charLevel, level) {
+  const cl = Math.max(1, Math.trunc(charLevel) || 1);
+  const l = clampLevel(level);
+  return {
+    charLevel: cl,
+    level: l,
+    attack: izirAttack(cl, l),
+    dc: izirDC(cl, l),
+    // Anathema to the Holy deepens with immersion: 2 → 4 at 6 → 6 at 8.
+    holyWeak: l >= 8 ? 6 : l >= 6 ? 4 : 2,
+  };
+}
+
+/** Replace {{izirDC}} / {{izirAttack}} / {{izirLevel}} / {{izirHolyWeak}} tokens. */
 export function injectNumbers(text, ctx) {
   if (typeof text !== "string") return text;
   return text
     .replaceAll("{{izirDC}}", String(ctx.dc))
     .replaceAll("{{izirAttack}}", String(ctx.attack))
-    .replaceAll("{{izirLevel}}", String(ctx.level));
+    .replaceAll("{{izirLevel}}", String(ctx.level))
+    .replaceAll("{{izirHolyWeak}}", String(ctx.holyWeak));
 }
 
 function deepInject(value, ctx) {
-  if (typeof value === "string") return injectNumbers(value, ctx);
+  if (typeof value === "string") {
+    const out = injectNumbers(value, ctx);
+    // A fully-numeric result becomes a number so schema-typed RE fields stay valid.
+    return out !== value && /^-?\d+$/.test(out) ? Number(out) : out;
+  }
   if (Array.isArray(value)) return value.map((v) => deepInject(v, ctx));
   if (value && typeof value === "object") {
     const out = {};
@@ -91,7 +110,11 @@ function rulesFor(entry, revealed, ctx) {
   });
 }
 
-/** The Strike rule element for a strike-form active (fixed Izir attack modifier). */
+/**
+ * The Strike rule element for a strike-form active, matching the official shape
+ * (dragonet jaws / grab-debris: plain attackModifier, no category field — pf2e
+ * silently drops rule elements that fail schema validation).
+ */
 function strikeRuleFor(entry, ctx) {
   const s = entry.strikeData ?? {};
   const diceNumber = Math.max(1, Math.ceil(ctx.charLevel / 2));
@@ -100,9 +123,8 @@ function strikeRuleFor(entry, ctx) {
     slug: `shards-izir-${entry.id}`,
     label: entry.name,
     img: entry.img,
-    category: s.category ?? "unarmed",
     group: s.group ?? "brawling",
-    traits: s.traits ?? ["magical", "void"],
+    traits: s.traits ?? ["magical", "unarmed", "void"],
     range: s.range ?? null,
     attackModifier: ctx.attack,
     damage: { base: { damageType: s.damageType ?? "void", dice: diceNumber, die: s.die ?? "d4" } },
@@ -120,8 +142,7 @@ export function composeEffect(state, content, opts = {}) {
   const consumed = state.terminal === "nineveh";
   if (level < 1 && !subjugated && !consumed) return null;
 
-  const charLevel = Math.max(1, Math.trunc(opts.charLevel) || 1);
-  const ctx = { charLevel, level, attack: izirAttack(charLevel, level), dc: izirDC(charLevel, level) };
+  const ctx = buildCtx(opts.charLevel, level);
   const tier = consumed ? "nineveh" : subjugated ? "subjugated" : tierForLevel(level).id;
 
   const rules = [
@@ -131,6 +152,7 @@ export function composeEffect(state, content, opts = {}) {
   ];
 
   const boonLines = [];
+  const abilityLines = [];
   const priceLines = [];
   let hiddenPrices = 0;
 
@@ -142,8 +164,15 @@ export function composeEffect(state, content, opts = {}) {
         rules.push(...rulesFor(e, revealed, ctx));
         if (e.form === "strike") rules.push(strikeRuleFor(e, ctx));
       }
-      // action-form entries contribute no rules here — they become sheet items.
-      if (e.kind === "boon" && e.form !== "action") {
+      if (e.kind === "boon" && e.form === "action") {
+        // Actions live as sheet items, but the card lists them so upgrades are visible.
+        const a = e.actionData ?? {};
+        abilityLines.push({
+          name: e.name,
+          glyph: a.actions ? "◆".repeat(a.actions) : "",
+          tag: a.recharge ? `R ${a.recharge}` : a.frequency?.per === "day" ? "1/day" : "",
+        });
+      } else if (e.kind === "boon") {
         boonLines.push({ name: e.name, description: injectNumbers(e.description ?? "", ctx) });
       } else if (e.kind === "bane") {
         if (revealed) priceLines.push({ name: e.name, description: injectNumbers(e.description ?? "", ctx) });
@@ -161,11 +190,21 @@ export function composeEffect(state, content, opts = {}) {
     badge: { value: Math.max(1, Math.min(level, MAX_LEVEL)), max: consumed || subjugated ? MAX_LEVEL : MAX_LEVEL - 1 },
     rules,
     boonLines,
+    abilityLines,
     priceLines,
     hiddenPrices,
     ctx,
     hash: hashString(
-      stableStringify({ level, tier, terminal: state.terminal ?? null, rules, boonLines, priceLines, hiddenPrices }),
+      stableStringify({
+        level,
+        tier,
+        terminal: state.terminal ?? null,
+        rules,
+        boonLines,
+        abilityLines,
+        priceLines,
+        hiddenPrices,
+      }),
     ),
   };
 }
@@ -180,8 +219,7 @@ export function composeActions(state, content, opts = {}) {
   const level = clampLevel(state.level);
   if (level < 1 && state.terminal !== "subjugated") return [];
 
-  const charLevel = Math.max(1, Math.trunc(opts.charLevel) || 1);
-  const ctx = { charLevel, level, attack: izirAttack(charLevel, level), dc: izirDC(charLevel, level) };
+  const ctx = buildCtx(opts.charLevel, level);
 
   const { live } = selectEntries(state, content);
   return live

@@ -33,7 +33,7 @@ function tagFlags(entryId, hash) {
 /* ------------------------------------------------------------------ */
 
 function effectDescription(composed) {
-  const t = (k, d) => game.i18n.localize(k) ?? d;
+  const t = (k) => game.i18n.localize(k);
   const parts = [];
   const tierName = game.i18n.localize(`SHARDS.Izir.Tier.${composed.tier}`);
   parts.push(`<p><em>${t("SHARDS.Izir.Immersion")} ${composed.level} — ${tierName}.</em></p>`);
@@ -46,9 +46,21 @@ function effectDescription(composed) {
     parts.push(`<h3>${t("SHARDS.Izir.Gifts")}</h3>`);
     for (const b of composed.boonLines) parts.push(`<p><strong>${b.name}.</strong></p>${b.description}`);
   }
+  if (composed.abilityLines.length) {
+    parts.push(`<h3>${t("SHARDS.Izir.Abilities")}</h3><ul>`);
+    for (const a of composed.abilityLines) {
+      const glyph = a.glyph ? ` <strong>${a.glyph}</strong>` : "";
+      const tag = a.tag ? ` <em>· ${a.tag}</em>` : "";
+      parts.push(`<li><strong>${a.name}</strong>${glyph}${tag}</li>`);
+    }
+    parts.push("</ul>");
+  }
   if (composed.priceLines.length) {
     parts.push(`<h3>${t("SHARDS.Izir.Prices")}</h3>`);
     for (const p of composed.priceLines) parts.push(`<p><strong>${p.name}.</strong></p>${p.description}`);
+  }
+  if (composed.hiddenPrices > 0) {
+    parts.push(`<p><em>${game.i18n.format("SHARDS.Izir.UnseenPrices", { n: composed.hiddenPrices })}</em></p>`);
   }
   return parts.join("\n");
 }
@@ -85,21 +97,29 @@ export function buildEffectSource(composed) {
 /** Full item source for an action-form active. */
 export function buildActionSource(desired) {
   const a = desired.actionData ?? {};
+  const system = {
+    description: { value: desired.description ?? "" },
+    slug: `shards-izir-${desired.entryId}`,
+    actionType: { value: a.actionType ?? "action" },
+    actions: { value: a.actions ?? null },
+    category: a.category ?? null,
+    traits: { value: a.traits ?? [], rarity: "common" },
+    frequency: a.frequency ?? null,
+    rules: [],
+    publication: PUBLICATION,
+  };
+  // Rage-pattern self-applied effect (e.g. Herald of Ruin's flight minute).
+  if (a.selfEffectId) {
+    system.selfEffect = {
+      uuid: `Compendium.${MODULE_ID}.izir-effects.Item.${a.selfEffectId}`,
+      name: desired.name,
+    };
+  }
   return {
     name: desired.name,
     type: "action",
     img: desired.img || DEFAULT_ACTION_IMG,
-    system: {
-      description: { value: desired.description ?? "" },
-      slug: `shards-izir-${desired.entryId}`,
-      actionType: { value: a.actionType ?? "action" },
-      actions: { value: a.actions ?? null },
-      category: a.category ?? null,
-      traits: { value: a.traits ?? [], rarity: "common" },
-      frequency: a.frequency ?? null,
-      rules: [],
-      publication: PUBLICATION,
-    },
+    system,
     flags: tagFlags(desired.entryId, desired.hash),
   };
 }
@@ -158,6 +178,32 @@ export async function syncActor(actor) {
     }
   } finally {
     syncing.delete(actor.id);
+  }
+  warnDroppedRules(actor, effect);
+}
+
+/**
+ * Diagnostic: pf2e silently drops rule elements that fail schema validation. After a
+ * sync, compare what we composed against what actually applied and name the missing
+ * keys, so "something isn't showing" is a console line instead of a mystery.
+ */
+function warnDroppedRules(actor, composed) {
+  try {
+    if (!composed) return;
+    const item = actor.items.find((i) => i.getFlag?.(MODULE_ID, IZIR)?.entryId === EFFECT_ENTRY_ID);
+    if (!item) return;
+    const applied = (actor.rules ?? []).filter((r) => r.item?.id === item.id && !r.ignored);
+    if (applied.length >= composed.rules.length) return;
+    const missing = composed.rules.map((r) => r.key);
+    for (const r of applied) {
+      const i = missing.indexOf(r.key);
+      if (i >= 0) missing.splice(i, 1);
+    }
+    console.warn(
+      `${MODULE_ID} | ${missing.length} rule element(s) on "${actor.name}" were rejected by pf2e validation: ${missing.join(", ")} — see pf2e's own warning above for the field it disliked.`,
+    );
+  } catch {
+    /* diagnostic only — never break a sync */
   }
 }
 
