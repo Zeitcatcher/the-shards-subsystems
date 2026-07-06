@@ -4,3 +4,4 @@ packs/
 *.log
 .DS_Store
 Thumbs.db
+.icon-cache.txt

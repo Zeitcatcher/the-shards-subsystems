@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULE_ID = "the-shards-subsystems";
 const DEFAULT_EFFECT_IMG = "icons/magic/unholy/orb-glowing-purple.webp";
-const DEFAULT_ACTION_IMG = "icons/magic/unholy/strike-beam-blood-red-purple.webp";
+const DEFAULT_ACTION_IMG = "icons/magic/unholy/projectile-helix-blood-red.webp";
 const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "OGL", remaster: true };
 
 const content = JSON.parse(readFileSync(resolve(ROOT, "data/izir/content.json"), "utf8"));

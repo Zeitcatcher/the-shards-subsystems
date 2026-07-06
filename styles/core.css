@@ -1,12 +1,19 @@
 /* The Shards Subsystems — shared panel chrome. Theme-variable based so it follows
    Foundry's light/dark UI themes. */
 
+/* The window must always be wide enough for the ladder chips + their hover kits —
+   a too-narrow panel made revealed controls wrap and the layout jump. */
+#the-shards-subsystems-izir {
+  min-width: 900px;
+}
+
 .the-shards-subsystems .izir-panel {
   display: grid;
   grid-template-columns: 224px 1fr;
   gap: 0;
   height: 100%;
   min-height: 0;
+  min-width: 0;
   color: var(--color-text-primary, #191813);
 }
 

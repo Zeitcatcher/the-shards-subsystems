@@ -46,7 +46,7 @@ registerSubsystem({
   id: IZIR,
   titleKey: "SHARDS.Izir.PanelTitle",
   icon: "fa-solid fa-eye",
-  macroImg: "icons/svg/eye.svg",
+  macroImg: "icons/abilities/purple-eye.webp",
   settings: IZIR_SETTINGS,
   openPanel: (actorUuid) => openIzirPanel(actorUuid),
   refresh: () => refreshIzirPanel(),

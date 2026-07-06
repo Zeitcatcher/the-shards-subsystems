@@ -10,7 +10,7 @@ import { MODULE_ID, IZIR } from "../../core/constants.mjs";
 import { isPrimaryGM } from "../../core/platform.mjs";
 import { loadContent } from "./content.mjs";
 
-const RECHARGE_IMG = "icons/magic/time/hourglass-yellow.webp";
+const RECHARGE_IMG = "icons/magic/time/hourglass-tilted-glowing-gold.webp";
 
 /** Is this actor currently in the active, started combat? */
 function inActiveCombat(actor) {

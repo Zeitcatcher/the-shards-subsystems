@@ -17,7 +17,7 @@ const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "OGL
 const MARKER_IMG = "icons/magic/perception/eye-ringed-glow-angry-red.webp";
 const NINEVEH_IMG = "icons/magic/death/skull-horned-worn-fire-blue.webp";
 const SUBJUGATED_IMG = "icons/magic/control/buff-flight-wings-runes-purple.webp";
-const DEFAULT_ACTION_IMG = "icons/magic/unholy/strike-beam-blood-red-purple.webp";
+const DEFAULT_ACTION_IMG = "icons/magic/unholy/projectile-helix-blood-red.webp";
 
 const transparencyOn = () => game.settings.get(MODULE_ID, SETTINGS.IZIR_TRANSPARENCY) === true;
 const tokenIconsOn = () => game.settings.get(MODULE_ID, SETTINGS.IZIR_TOKEN_ICONS) === true;

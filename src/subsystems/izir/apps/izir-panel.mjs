@@ -409,7 +409,7 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     classes: [MODULE_ID, "izir-panel-app"],
     tag: "div",
     window: { title: "SHARDS.Izir.PanelTitle", icon: "fa-solid fa-eye", resizable: true },
-    position: { width: 840, height: 760 },
+    position: { width: 960, height: 760 },
     actions: {
       selectActor: onSelectActor,
       markSelected: onMarkSelected,

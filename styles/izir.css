@@ -308,9 +308,11 @@
   font-size: 0.7rem;
 }
 
-/* chip hover controls */
+/* chip hover controls — space is RESERVED (visibility, not display) so revealing
+   the kit can never reflow the chips and yank the hover target away. */
 .the-shards-subsystems .izir-chip .kit {
-  display: none;
+  display: inline-flex;
+  visibility: hidden;
   gap: 2px;
   align-items: center;
   margin-left: 2px;
@@ -318,7 +320,10 @@
   padding-left: 5px;
 }
 .the-shards-subsystems .izir-lrow:not(.locked) .izir-chip:hover .kit {
-  display: inline-flex;
+  visibility: visible;
+}
+.the-shards-subsystems .izir-lrow.locked .izir-chip .kit {
+  display: none; /* locked rows have no controls and don't need the width */
 }
 .the-shards-subsystems .izir-chip .kit button {
   all: unset;

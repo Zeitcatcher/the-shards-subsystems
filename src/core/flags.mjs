@@ -45,5 +45,11 @@ export async function patchSubsystemFlag(actor, sub, patch) {
 
 /** Remove a subsystem's entire flag namespace from the actor. */
 export async function deleteSubsystemFlag(actor, sub) {
-  await actor.update({ [`flags.${MODULE_ID}.-=${sub}`]: null });
+  // v14 deprecates the "-=key" deletion syntax in favor of the ForcedDeletion operator.
+  const ForcedDeletion = foundry.data?.operators?.ForcedDeletion;
+  if (ForcedDeletion) {
+    await actor.update({ [`flags.${MODULE_ID}`]: { [sub]: ForcedDeletion } });
+  } else {
+    await actor.update({ [`flags.${MODULE_ID}.-=${sub}`]: null });
+  }
 }
