@@ -4,9 +4,12 @@
  * Done at `setup`, after pf2e has populated CONFIG.PF2E and before any sheet renders.
  */
 
+/** The pf2e creature-trait slug this module registers and auto-applies on marking. */
+export const NAMELESS_TRAIT = "nameless";
+
 const TRAITS = [
   {
-    slug: "nameless",
+    slug: NAMELESS_TRAIT,
     label: "Nameless",
     description:
       "A being whose First Name has been severed and who now carries Izir. Registered by The Shards — Campaign Subsystems.",

@@ -11,6 +11,19 @@ import {
   patchSubsystemFlag,
   deleteSubsystemFlag,
 } from "../../core/flags.mjs";
+import { NAMELESS_TRAIT } from "./traits.mjs";
+
+/** Add or remove the pf2e "nameless" creature trait, keeping it in sync with marking. */
+async function setNamelessTrait(actor, on) {
+  const traits = actor.system?.traits?.value;
+  if (!Array.isArray(traits)) return;
+  const has = traits.includes(NAMELESS_TRAIT);
+  if (on && !has) {
+    await actor.update({ "system.traits.value": [...traits, NAMELESS_TRAIT] });
+  } else if (!on && has) {
+    await actor.update({ "system.traits.value": traits.filter((t) => t !== NAMELESS_TRAIT) });
+  }
+}
 
 /** A fresh, fully-defaulted state object (level 0, marked, nothing suppressed). */
 export function emptyIzirState() {
@@ -90,13 +103,15 @@ export function listMarkedActors() {
   return [...byUuid.values()];
 }
 
-/** Mark an actor as Безымянный (creates the flag at level 0). */
+/** Mark an actor as Nameless (creates the flag at level 0, applies the trait). */
 export async function markActor(actor) {
   await actor.setFlag(MODULE_ID, IZIR, emptyIzirState());
+  await setNamelessTrait(actor, true);
 }
 
-/** Remove the Izir flag namespace entirely (callers strip items first). */
+/** Remove the Izir flag namespace and the trait (callers strip items first). */
 export async function unmarkActor(actor) {
+  await setNamelessTrait(actor, false);
   await deleteSubsystemFlag(actor, IZIR);
 }
 
