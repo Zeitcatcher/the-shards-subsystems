@@ -39,11 +39,11 @@ export function tierForLevel(level) {
 
 /**
  * Will-save DC to end Communion: base + step × min(attunement, cap).
- * Defaults (GM decision): 14 + 2 × min(N, 5) → 16 / 18 / 20 / 22 / 24.
+ * Defaults (GM decision, rev 3): 20 + 2 × min(N, 5) → 22 / 24 / 26 / 28 / 30.
  * Level 0 is treated as 1; at attunement 10 no save is ever rolled (callers gate).
  */
-export function releaseDC(level, base = 14, step = 2, cap = 5) {
-  const b = Number.isFinite(Math.trunc(Number(base))) ? Math.trunc(Number(base)) : 14;
+export function releaseDC(level, base = 20, step = 2, cap = 5) {
+  const b = Number.isFinite(Math.trunc(Number(base))) ? Math.trunc(Number(base)) : 20;
   const s = Number.isFinite(Math.trunc(Number(step))) ? Math.trunc(Number(step)) : 2;
   const c = Math.max(1, Math.trunc(Number(cap)) || 5);
   const n = Math.max(1, clampLevel(level));
@@ -72,14 +72,27 @@ export function durationRounds(level) {
 /* Numbers baked into rule elements.                                    */
 /* ------------------------------------------------------------------ */
 
-/** Temporary Hit Points granted on invoke: 2 × attunement. */
+/** Temporary Hit Points granted on invoke: 3 × attunement. */
 export function tempHpFor(level) {
+  return 3 * Math.max(1, clampLevel(level));
+}
+
+/** Salbarine Skin physical resistance: ⌈attunement / 2⌉ (3 at 5, 4 at 7, 5 at 9). */
+export function resistFor(level) {
+  return Math.ceil(Math.max(1, clampLevel(level)) / 2);
+}
+
+/** Salbarine Parry: resistance against one triggering attack = 2 × attunement. */
+export function parryFor(level) {
   return 2 * Math.max(1, clampLevel(level));
 }
 
-/** Salbarine Skin physical resistance: ⌈attunement / 3⌉ (2 at 5, 3 at 7, 4 at 10). */
-export function resistFor(level) {
-  return Math.ceil(Math.max(1, clampLevel(level)) / 3);
+/** Maker's Wrath extra dice: one d6 per tier (Trial 1 / Discipline 2 / Union+ 3). */
+export function tierDiceFor(level) {
+  const l = Math.max(1, clampLevel(level));
+  if (l <= 3) return 1;
+  if (l <= 6) return 2;
+  return 3;
 }
 
 /* ------------------------------------------------------------------ */

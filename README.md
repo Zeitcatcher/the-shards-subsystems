@@ -22,9 +22,9 @@ A mastery track for murkhor bearers. The GM attunes an actor and grows their bon
 
 - Ten levels in four tiers: Trial, Discipline, Union, and the terminal tenth step, where the GM chooses Mastery (the Ansu subjugated) or Taken (the Ansu wins the body — and at the GM's call that can happen at any level).
 - Communion lasts 1 round at Trial, 3 rounds at Discipline, a minute at Union, and forever at Mastery. In combat the countdown and the Release save on expiry run on their own.
-- Ending Communion takes a Will save: DC 14 + 2 per attunement level, frozen from level 5 — growing out of the save is the point. Failure means the Ansu lingers with the boons still on; a critical failure hands the body to the GM for a round.
+- Ending Communion takes a Will save: DC 20 + 2 per attunement level, frozen at 30 from level 5 — the wrestle stays real deep into the campaign. Failure means the Ansu lingers with the boons still on; a critical failure hands the body to the GM for a round.
 - Clean releases fill the Climb (2 + level points); a full bar raises attunement on its own, and the token badge doubles as a level control.
-- Two knowledge passives stay on even while the power sleeps; every other boon exists only inside Communion.
+- Two knowledge passives live as bonus feats in the Feats tab and stay on even while the power sleeps; every other boon and active materializes only inside Communion.
 - A GM override seizes the body at any attunement with the full level-10 kit and restores the exact prior state on return.
 - One window serves both subsystems: tabs at the top switch between Izir and Ansu, and an actor can sit on both tracks at once.
 - A second compendium ships every Ansu ability as a browsable item.

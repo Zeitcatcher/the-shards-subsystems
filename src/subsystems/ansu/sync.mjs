@@ -13,6 +13,7 @@ import {
   composeAttunement,
   composeCommunion,
   composeActions,
+  composeFeats,
   diffAll,
   durationLabel,
   ATTUNEMENT_ENTRY_ID,
@@ -35,7 +36,7 @@ const charLevelOf = (actor) => Math.max(1, Number(actor?.system?.details?.level?
 /** The GM-tunable number dials, read once per sync. */
 export function readDials() {
   return {
-    dcBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_BASE)) || 14,
+    dcBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_BASE)) || 20,
     dcStep: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_STEP)) || 2,
     dcCap: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_CAP)) || 5,
     climbBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CLIMB_BASE)) || 2,
@@ -180,11 +181,39 @@ export function buildActionSource(desired) {
     rules: [],
     publication: PUBLICATION,
   };
+  // Module-owned cooldowns bake the remaining uses (0 while cooling down);
+  // ordinary frequencies leave `value` to pf2e so a resync can't refund a use.
+  if (system.frequency && a.frequencyValue !== undefined && a.frequencyValue !== null) {
+    system.frequency = { ...system.frequency, value: a.frequencyValue };
+  }
   return {
     name: desired.name,
     type: "action",
     img: desired.img || DEFAULT_ACTION_IMG,
     system,
+    flags: tagFlags(desired.entryId, desired.hash),
+  };
+}
+
+/** Full item source for an Inheritance bonus feat (official pf2e feat shape). */
+export function buildFeatSource(desired) {
+  return {
+    name: desired.name,
+    type: "feat",
+    img: desired.img || MARKER_IMG,
+    system: {
+      description: { value: desired.description ?? "" },
+      slug: `shards-ansu-${desired.entryId}`,
+      category: "bonus",
+      level: { value: desired.level ?? 1 },
+      actionType: { value: "passive" },
+      actions: { value: null },
+      prerequisites: { value: [] },
+      traits: { value: [], rarity: "common" },
+      frequency: null,
+      rules: desired.rules ?? [],
+      publication: PUBLICATION,
+    },
     flags: tagFlags(desired.entryId, desired.hash),
   };
 }
@@ -227,12 +256,18 @@ export async function syncActor(actor) {
   }
 
   const state = readAnsu(actor);
-  const opts = { charLevel: charLevelOf(actor), dials: readDials() };
+  const opts = {
+    charLevel: charLevelOf(actor),
+    dials: readDials(),
+    marker: game.settings.get(MODULE_ID, SETTINGS.ANSU_MARKER) !== false,
+    now: game.time?.worldTime ?? 0,
+  };
   const attuned = isAttuned(actor);
   const attunement = attuned ? composeAttunement(state, content, opts) : null;
   const communion = attuned ? composeCommunion(state, content, opts) : null;
+  const feats = attuned ? composeFeats(state, content, opts) : [];
   const actions = attuned ? composeActions(state, content, opts) : [];
-  const desired = [...(attunement ? [attunement] : []), ...(communion ? [communion] : []), ...actions];
+  const desired = [...(attunement ? [attunement] : []), ...(communion ? [communion] : []), ...feats, ...actions];
   const { toCreate, toUpdate, toDeleteIds } = diffAll(desired, projectTagged(actor));
   if (!toCreate.length && !toUpdate.length && !toDeleteIds.length) return;
 
@@ -240,6 +275,7 @@ export async function syncActor(actor) {
   const build = (d) => {
     if (d.entryId === ATTUNEMENT_ENTRY_ID) return buildAttunementSource(d);
     if (d.entryId === COMMUNION_ENTRY_ID) return buildCommunionSource(d, { inCombat });
+    if (d.kind === "feat") return buildFeatSource(d);
     return buildActionSource(d);
   };
 

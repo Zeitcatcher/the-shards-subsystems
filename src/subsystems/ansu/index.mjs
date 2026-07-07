@@ -21,7 +21,7 @@ const resyncOnChange = () => {
 };
 
 const ANSU_SETTINGS = [
-  { key: SETTINGS.ANSU_DC_BASE, scope: "world", type: "Number", default: 14, config: true, onChange: resyncOnChange },
+  { key: SETTINGS.ANSU_DC_BASE, scope: "world", type: "Number", default: 20, config: true, onChange: resyncOnChange },
   { key: SETTINGS.ANSU_DC_STEP, scope: "world", type: "Number", default: 2, config: true, onChange: resyncOnChange },
   {
     key: SETTINGS.ANSU_DC_CAP, scope: "world", type: "Number", default: 5, config: true,
@@ -40,6 +40,8 @@ const ANSU_SETTINGS = [
   { key: SETTINGS.ANSU_SUGGESTIONS, scope: "world", type: "Boolean", default: true, config: true },
   { key: SETTINGS.ANSU_ART_SWAP, scope: "world", type: "Boolean", default: true, config: true },
   { key: SETTINGS.ANSU_TOKEN_ICONS, scope: "world", type: "Boolean", default: true, config: true },
+  // The persistent Attunement marker (badge effect) is optional — GM undecided.
+  { key: SETTINGS.ANSU_MARKER, scope: "world", type: "Boolean", default: true, config: true, onChange: resyncOnChange },
 ];
 
 registerSubsystem({

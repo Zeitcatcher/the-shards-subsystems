@@ -6,6 +6,8 @@ import {
   durationRounds,
   tempHpFor,
   resistFor,
+  parryFor,
+  tierDiceFor,
   climbNeeded,
   climbDeltaFor,
   applyClimb,
@@ -39,18 +41,18 @@ describe("tierForLevel", () => {
   });
 });
 
-describe("releaseDC (GM formula B: 14 + 2 × min(N, 5))", () => {
-  it("grows to attunement 5 and freezes after", () => {
-    expect(releaseDC(1)).toBe(16);
-    expect(releaseDC(2)).toBe(18);
-    expect(releaseDC(3)).toBe(20);
-    expect(releaseDC(4)).toBe(22);
-    expect(releaseDC(5)).toBe(24);
-    expect(releaseDC(6)).toBe(24);
-    expect(releaseDC(9)).toBe(24);
+describe("releaseDC (rev 3: 20 + 2 × min(N, 5))", () => {
+  it("grows to attunement 5 and freezes at 30", () => {
+    expect(releaseDC(1)).toBe(22);
+    expect(releaseDC(2)).toBe(24);
+    expect(releaseDC(3)).toBe(26);
+    expect(releaseDC(4)).toBe(28);
+    expect(releaseDC(5)).toBe(30);
+    expect(releaseDC(6)).toBe(30);
+    expect(releaseDC(9)).toBe(30);
   });
   it("treats level 0 as 1 and honours custom dials", () => {
-    expect(releaseDC(0)).toBe(16);
+    expect(releaseDC(0)).toBe(22);
     expect(releaseDC(4, 15, 1, 5)).toBe(19);
     expect(releaseDC(9, 15, 1, 5)).toBe(20);
     expect(releaseDC(9, 14, 2, 9)).toBe(32); // cap raised: keeps growing
@@ -73,18 +75,30 @@ describe("communion duration by tier", () => {
   });
 });
 
-describe("baked numbers", () => {
-  it("temp HP = 2 × attunement (minimum level 1)", () => {
-    expect(tempHpFor(1)).toBe(2);
-    expect(tempHpFor(4)).toBe(8);
-    expect(tempHpFor(10)).toBe(20);
-    expect(tempHpFor(0)).toBe(2);
+describe("baked numbers (rev 3)", () => {
+  it("temp HP = 3 × attunement (minimum level 1)", () => {
+    expect(tempHpFor(1)).toBe(3);
+    expect(tempHpFor(4)).toBe(12);
+    expect(tempHpFor(10)).toBe(30);
+    expect(tempHpFor(0)).toBe(3);
   });
-  it("Salbarine resistance = ⌈attunement / 3⌉", () => {
-    expect(resistFor(5)).toBe(2);
-    expect(resistFor(7)).toBe(3);
-    expect(resistFor(9)).toBe(3);
-    expect(resistFor(10)).toBe(4);
+  it("Salbarine resistance = ⌈attunement / 2⌉", () => {
+    expect(resistFor(5)).toBe(3);
+    expect(resistFor(7)).toBe(4);
+    expect(resistFor(9)).toBe(5);
+    expect(resistFor(10)).toBe(5);
+  });
+  it("Salbarine Parry = 2 × attunement", () => {
+    expect(parryFor(5)).toBe(10);
+    expect(parryFor(9)).toBe(18);
+  });
+  it("Maker's Wrath dice = one per tier", () => {
+    expect(tierDiceFor(1)).toBe(1);
+    expect(tierDiceFor(3)).toBe(1);
+    expect(tierDiceFor(4)).toBe(2);
+    expect(tierDiceFor(6)).toBe(2);
+    expect(tierDiceFor(7)).toBe(3);
+    expect(tierDiceFor(10)).toBe(3);
   });
 });
 

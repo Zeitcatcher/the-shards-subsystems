@@ -41,6 +41,7 @@ export function emptyAnsuState() {
     },
     pendingRelease: null, // { id, dc, reason, createdAt }
     seizure: null, // { snapshot, at, auto, returnAt: { combatId, round, turn } }
+    cooldowns: [], // [{ id: <entryId>, until: worldTime }] — module-owned ability cooldowns (array: replaced wholesale on patch)
     art: {
       thresholds: {
         4: { portrait: "", token: "" },

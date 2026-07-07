@@ -1,0 +1,45 @@
+{
+  "_id": "ansur1hurlthebla",
+  "_key": "!items!ansur1hurlthebla",
+  "name": "Hurl the Blade",
+  "type": "action",
+  "img": "icons/weapons/axes/axe-battle-black.webp",
+  "folder": "ansufolderdiscip",
+  "sort": 6250,
+  "system": {
+    "description": {
+      "value": "<p>Афина leaves your hands the way a verdict leaves a judge. Throw your held melee weapon at an enemy within 30 feet as a ranged Strike using your melee attack modifier, with no penalty for the throw. On a critical hit the blade punches through — the target takes 1d6 persistent bleed damage. However it lands, the weapon instantly flies back to your grasp: the Ansu never lets it go.</p>"
+    },
+    "slug": "shards-ansu-hurl-the-blade",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "magical"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "hurl-the-blade",
+        "family": "hurl-the-blade",
+        "kind": "boon"
+      }
+    }
+  }
+}

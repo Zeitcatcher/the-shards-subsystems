@@ -32,6 +32,7 @@ export const SETTINGS = Object.freeze({
   ANSU_SUGGESTIONS: "ansuSuggestions",
   ANSU_ART_SWAP: "ansuArtSwap",
   ANSU_TOKEN_ICONS: "ansuTokenIcons",
+  ANSU_MARKER: "ansuMarker",
 });
 
 export const TEMPLATES = Object.freeze({

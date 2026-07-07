@@ -287,8 +287,10 @@ function ansuTierKeyFor(entry) {
 function ansuScrub(text) {
   return String(text ?? "")
     .replaceAll("{{ansuReleaseDC}}", "your Release DC")
-    .replaceAll("{{ansuTempHp}}", "twice your attunement")
-    .replaceAll("{{ansuResist}}", "⌈attunement / 3⌉")
+    .replaceAll("{{ansuTempHp}}", "three times your attunement")
+    .replaceAll("{{ansuResist}}", "⌈attunement / 2⌉")
+    .replaceAll("{{ansuParry}}", "twice your attunement")
+    .replaceAll("{{ansuTierDice}}", "1-per-tier")
     .replaceAll("{{ansuLevel}}", "your attunement")
     .replaceAll("{{ansuDuration}}", "1 round / 3 rounds / 1 minute by tier");
 }
@@ -298,8 +300,9 @@ function ansuScrubRules(rules) {
   return (Array.isArray(rules) ? rules : []).map((r) => {
     const out = { ...r };
     for (const [k, v] of Object.entries(out)) {
-      if (typeof v === "string" && v.includes("{{ansuTempHp}}")) out[k] = 2;
-      if (typeof v === "string" && v.includes("{{ansuResist}}")) out[k] = 2;
+      if (typeof v === "string" && v.includes("{{ansuTempHp}}")) out[k] = 3;
+      if (typeof v === "string" && v.includes("{{ansuResist}}")) out[k] = 3;
+      if (typeof v === "string" && v.includes("{{ansuParry}}")) out[k] = 2;
     }
     return out;
   });
@@ -367,7 +370,35 @@ function ansuActionItem(entry) {
   };
 }
 
+function ansuFeatItem(entry) {
+  const id = ansuDocId(entry);
+  return {
+    _id: id,
+    _key: `!items!${id}`,
+    name: entry.name,
+    type: "feat",
+    img: entry.img || ANSU_DEFAULT_EFFECT_IMG,
+    folder: ansuFolderId(ansuTierKeyFor(entry)),
+    sort: entry.level * 1000 + 500,
+    system: {
+      description: { value: ansuScrub(entry.description) },
+      slug: `shards-ansu-${entry.id}`,
+      category: "bonus",
+      level: { value: entry.level },
+      actionType: { value: "passive" },
+      actions: { value: null },
+      prerequisites: { value: [] },
+      traits: { value: [], rarity: "common" },
+      frequency: null,
+      rules: ansuScrubRules(entry.rules),
+      publication: PUBLICATION,
+    },
+    flags: { [MODULE_ID]: { ansuPack: { entryId: entry.id, family: entry.family, kind: entry.kind } } },
+  };
+}
+
 function ansuEntryItem(entry) {
+  if (entry.form === "feat") return ansuFeatItem(entry);
   if (entry.form === "action") return ansuActionItem(entry);
   if (entry.form === "strike") {
     // Reusable copy grants the Strike via rule element; no attackModifier — the

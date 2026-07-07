@@ -8,7 +8,7 @@
   "sort": 4000,
   "system": {
     "description": {
-      "value": "<p>What the Ansu broke, the Ansu rebuilds — while it's close. During Communion your shattered horns knit into whole ridged weapons: you gain a horns unarmed Strike (1d8 piercing). When Communion ends, they crumble back to stumps.</p>"
+      "value": "<p>What the Ansu broke, the Ansu rebuilds — while it's close. During Communion your shattered horns knit into whole ridged weapons: you gain a horns unarmed Strike (1d10 piercing, shove). When Communion ends, they crumble back to stumps.</p>"
     },
     "slug": "shards-ansu-horns-reforged",
     "duration": {
@@ -37,14 +37,15 @@
         "img": "icons/commodities/bones/horn-curved-orange.webp",
         "group": "brawling",
         "traits": [
-          "unarmed"
+          "unarmed",
+          "shove"
         ],
         "range": null,
         "damage": {
           "base": {
             "damageType": "piercing",
             "dice": 1,
-            "die": "d8"
+            "die": "d10"
           }
         }
       }

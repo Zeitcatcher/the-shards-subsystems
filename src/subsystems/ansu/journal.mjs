@@ -29,6 +29,8 @@ export function describeEntry(entry) {
       const climb = d.climbDelta > 0 ? ` (+${d.climbDelta} ${game.i18n.localize("SHARDS.Ansu.ClimbShort")})` : "";
       return game.i18n.format("SHARDS.Ansu.Log.release", { dc: d.dc ?? "?", outcome }) + climb;
     }
+    case "refuses":
+      return game.i18n.format("SHARDS.Ansu.Log.refuses", { id: d.entryId ?? "?", minutes: d.minutes ?? "?" });
     case "seizure":
       if (d.on) return game.i18n.localize(d.auto ? "SHARDS.Ansu.Log.seizureAuto" : "SHARDS.Ansu.Log.seizureOn");
       return game.i18n.localize("SHARDS.Ansu.Log.seizureOff");

@@ -7,12 +7,13 @@ describe("healDefaults", () => {
     expect(healDefaults(null)).toEqual(emptyAnsuState());
     expect(healDefaults(42)).toEqual(emptyAnsuState());
   });
-  it("keeps raw values and heals missing keys (old data gains communion/seizure)", () => {
+  it("keeps raw values and heals missing keys (old data gains communion/seizure/cooldowns)", () => {
     const healed = healDefaults({ level: 4, climb: 3 });
     expect(healed.level).toBe(4);
     expect(healed.climb).toBe(3);
     expect(healed.communion).toEqual({ mode: "none", rounds: null });
     expect(healed.seizure).toBeNull();
+    expect(healed.cooldowns).toEqual([]);
     expect(healed.art.thresholds[7]).toEqual({ portrait: "", token: "" });
   });
   it("recurses into nested objects without dropping siblings", () => {

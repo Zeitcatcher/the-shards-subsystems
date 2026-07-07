@@ -9,7 +9,7 @@
 import { MODULE_ID } from "../../core/constants.mjs";
 
 const KINDS = new Set(["boon"]);
-const FORMS = new Set(["effect", "action", "strike"]);
+const FORMS = new Set(["effect", "action", "strike", "feat"]);
 const GATES = new Set([null, undefined, "subjugated"]);
 
 let cached = null;
@@ -80,7 +80,8 @@ export function validateContent(raw) {
     if (typeof e.name !== "string" || !e.name) problems.push(`${at}: missing name`);
     if (e.rules != null && !Array.isArray(e.rules)) problems.push(`${at}: rules must be an array`);
     if (e.always != null && typeof e.always !== "boolean") problems.push(`${at}: always must be a boolean`);
-    if (e.always && e.form !== "effect") problems.push(`${at}: only effect-form entries can be always-on`);
+    if (e.always && e.form !== "feat") problems.push(`${at}: always-on entries must be feat-form (bonus feats, not buffs)`);
+    if (e.form === "feat" && !e.always) problems.push(`${at}: feat form is for always-on Inheritance — set always: true`);
     if (e.form === "action" && e.actionData == null) problems.push(`${at}: action form needs actionData`);
     if (e.form === "strike" && (e.strikeData == null || typeof e.strikeData !== "object")) {
       problems.push(`${at}: strike form needs strikeData`);
@@ -90,6 +91,15 @@ export function validateContent(raw) {
     }
     if (e.actionData?.perCommunion && !e.actionData?.frequency) {
       problems.push(`${at}: perCommunion needs a frequency (the Use button + the counter the module resets)`);
+    }
+    if (e.actionData?.alwaysAvailable != null && typeof e.actionData.alwaysAvailable !== "boolean") {
+      problems.push(`${at}: actionData.alwaysAvailable must be a boolean`);
+    }
+    if (e.actionData?.cooldownMinutes != null && !Number.isInteger(e.actionData.cooldownMinutes)) {
+      problems.push(`${at}: actionData.cooldownMinutes must be an integer`);
+    }
+    if (Number.isInteger(e.actionData?.cooldownMinutes) && !e.actionData?.frequency) {
+      problems.push(`${at}: cooldownMinutes needs a frequency (the Use button the cooldown disables)`);
     }
     if (e.chipTag != null && typeof e.chipTag !== "string") problems.push(`${at}: chipTag must be a string`);
   }

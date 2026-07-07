@@ -1,7 +1,7 @@
 {
-  "version": 1,
-  "_note": "Single source of truth for Ansu boons (there are no banes — the system's teeth are control, not prices). Names and descriptions are authored in English (GM directive). Number tokens: {{ansuReleaseDC}}, {{ansuTempHp}}, {{ansuResist}}, {{ansuLevel}}, {{ansuDuration}} — baked at compose time and recomputed on attunement or character-level change.",
-  "_designNote": "GM-approved ladder (2026-07-06): rev-2 artifact text verbatim. `always: true` = Inheritance (persistent knowledge, lives on the Attunement marker); everything else lives on the Communion effect and exists only while it runs. Gate `subjugated` = Mastery-only. The metal is Salbarium (Сальбарий).",
+  "version": 2,
+  "_note": "Single source of truth for Ansu boons (there are no banes — the system's teeth are control, not prices). Names and descriptions are authored in English (GM directive). Number tokens: {{ansuReleaseDC}}, {{ansuTempHp}}, {{ansuResist}}, {{ansuParry}}, {{ansuTierDice}}, {{ansuLevel}}, {{ansuDuration}} — baked at compose time and recomputed on attunement or character-level change.",
+  "_designNote": "GM-approved ladder rev 3.2 (2026-07-07). `form: feat` + `always: true` = Inheritance (permanent bonus feats in the Feats tab); everything else exists only during Communion — actives materialize on Invoke and vanish on release, except `alwaysAvailable` (the Invoke action itself). `perCommunion` frequency resets via item recreation; `cooldownMinutes` is a module-owned world-time cooldown that survives re-invokes. The metal is Salbarium (Сальбарий).",
   "tiers": [
     { "id": "trial", "levels": [1, 3], "labelKey": "SHARDS.Ansu.Tier.trial" },
     { "id": "discipline", "levels": [4, 6], "labelKey": "SHARDS.Ansu.Tier.discipline" },
@@ -17,7 +17,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Invoke the Ansu",
-      "description": "<p>You stop holding the door shut. The presence in your blood floods through you: you gain the Communion benefits of your attunement rank.</p><hr /><p><strong>Duration</strong> {{ansuDuration}} (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). When Communion ends — or when you try to end it early — attempt a Will save against the Release DC ({{ansuReleaseDC}}).</p><p>You can Invoke at will, but not while Communion is already running.</p>",
+      "description": "<p>You stop holding the door shut. The presence in your blood floods through you: you gain the Communion benefits of your attunement rank, and every Communion active materializes on your sheet alongside the buff — they vanish when Communion ends.</p><hr /><p><strong>Duration</strong> {{ansuDuration}} (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). When Communion ends — or when you try to end it early — attempt a Will save against the Release DC ({{ansuReleaseDC}}).</p><p>You can Invoke at will, but not while Communion is already running. From attunement 2, Invoking includes a free Stride (Bull's Footing).</p>",
       "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
       "rules": [],
       "chipTag": "enter communion",
@@ -25,7 +25,8 @@
         "actionType": "action",
         "actions": 1,
         "traits": ["concentrate"],
-        "frequency": { "max": 1, "per": "round" }
+        "frequency": { "max": 1, "per": "round" },
+        "alwaysAvailable": true
       }
     },
     {
@@ -55,13 +56,31 @@
       "kind": "boon",
       "form": "effect",
       "name": "Ancestral Vigor",
-      "description": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain {{ansuTempHp}} temporary Hit Points, and you gain a +1 status bonus to melee damage rolls while Communion lasts.</p>",
+      "description": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain {{ansuTempHp}} temporary Hit Points, and you gain a +2 status bonus to melee damage rolls while Communion lasts.</p>",
       "img": "icons/magic/control/buff-strength-muscle-damage-red.webp",
       "chipTag": "temp HP + damage",
       "rules": [
         { "key": "TempHP", "value": "{{ansuTempHp}}" },
-        { "key": "FlatModifier", "selector": "melee-strike-damage", "type": "status", "value": 1, "label": "Ancestral Vigor" }
+        { "key": "FlatModifier", "selector": "melee-strike-damage", "type": "status", "value": 2, "label": "Ancestral Vigor" }
       ]
+    },
+    {
+      "id": "makers-wrath",
+      "family": "makers-wrath",
+      "rank": 1,
+      "level": 1,
+      "kind": "boon",
+      "form": "action",
+      "name": "Maker's Wrath",
+      "description": "<p>The arena blow, learned. Make a melee Strike that deals {{ansuTierDice}}d6 extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.Prone].</p>",
+      "img": "icons/abilities/yellow-fist.webp",
+      "rules": [],
+      "chipTag": "+{{ansuTierDice}}d6 strike",
+      "actionData": {
+        "actionType": "action",
+        "actions": 2,
+        "traits": ["flourish"]
+      }
     },
     {
       "id": "bulls-footing",
@@ -71,12 +90,12 @@
       "kind": "boon",
       "form": "effect",
       "name": "Bull's Footing",
-      "description": "<p>Hooves strike the ground like hammers on an anvil. You gain a +10-foot status bonus to your Speed, and when you Stride in a straight line toward an enemy you ignore non-magical difficult terrain.</p>",
+      "description": "<p>Hooves strike the ground like hammers on an anvil. You gain a +10-foot status bonus to your Speed, and when you Invoke the Ansu you immediately Stride as a free action — the Ansu lunges into the world. When you Stride in a straight line toward an enemy you ignore non-magical difficult terrain.</p>",
       "img": "icons/equipment/worn-items/other-worn-items/boots-of-speed.webp",
-      "chipTag": "speed",
+      "chipTag": "speed + invoke stride",
       "rules": [
         { "key": "FlatModifier", "selector": "land-speed", "type": "status", "value": 10, "label": "Bull's Footing" },
-        { "key": "Note", "selector": "all", "title": "Bull's Footing", "text": "Striding in a straight line toward an enemy: ignore non-magical difficult terrain." }
+        { "key": "Note", "selector": "all", "title": "Bull's Footing", "text": "Invoking the Ansu includes a free Stride. Striding in a straight line toward an enemy: ignore non-magical difficult terrain." }
       ]
     },
     {
@@ -85,7 +104,7 @@
       "rank": 1,
       "level": 2,
       "kind": "boon",
-      "form": "effect",
+      "form": "feat",
       "always": true,
       "name": "Tongue of the Makers",
       "description": "<p>The Ansu murmurs the old words until they are yours. You can speak, read and write Murkhor and recognize the maker-glyphs of your people. You gain a +1 circumstance bonus to Decipher Writing and to Recall Knowledge about murkhor works, ruins and devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>",
@@ -121,17 +140,35 @@
       "kind": "boon",
       "form": "strike",
       "name": "Horns Reforged",
-      "description": "<p>What the Ansu broke, the Ansu rebuilds — while it's close. During Communion your shattered horns knit into whole ridged weapons: you gain a horns unarmed Strike (1d8 piercing). When Communion ends, they crumble back to stumps.</p>",
+      "description": "<p>What the Ansu broke, the Ansu rebuilds — while it's close. During Communion your shattered horns knit into whole ridged weapons: you gain a horns unarmed Strike (1d10 piercing, shove). When Communion ends, they crumble back to stumps.</p>",
       "img": "icons/commodities/bones/horn-curved-orange.webp",
       "chipTag": "horn strike · art",
       "rules": [],
       "strikeData": {
-        "die": "d8",
+        "die": "d10",
         "dice": 1,
         "damageType": "piercing",
-        "traits": ["unarmed"],
+        "traits": ["unarmed", "shove"],
         "group": "brawling",
         "range": null
+      }
+    },
+    {
+      "id": "fair-battle",
+      "family": "fair-battle",
+      "rank": 1,
+      "level": 4,
+      "kind": "boon",
+      "form": "action",
+      "name": "Fair Battle",
+      "description": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair — it was arithmetic. Make one melee Strike and compare the attack roll against every enemy within your reach. The Strike deals 10 extra damage; roll damage once and apply it to each target you hit. Your multiple attack penalty counts this as one attack.</p>",
+      "img": "icons/abilities/solar-fist-mirrored.webp",
+      "rules": [],
+      "chipTag": "3+ foes · hits all · +10",
+      "actionData": {
+        "actionType": "action",
+        "actions": 3,
+        "traits": ["flourish"]
       }
     },
     {
@@ -142,7 +179,7 @@
       "kind": "boon",
       "form": "effect",
       "name": "Salbarine Skin",
-      "description": "<p>A pale metal sheen spreads over hide and scar — the same gleam as the Ansu's ornaments. You gain resistance {{ansuResist}} to physical damage (2 at attunement 5, 3 at 7, 4 at 10).</p>",
+      "description": "<p>A pale metal sheen spreads over hide and scar — the same gleam as the Ansu's ornaments. You gain resistance {{ansuResist}} to physical damage (3 at attunement 5, 4 at 7, 5 at 9).</p>",
       "img": "icons/commodities/metal/mail-scale-steel.webp",
       "chipTag": "resistance {{ansuResist}}",
       "rules": [
@@ -150,12 +187,30 @@
       ]
     },
     {
+      "id": "salbarine-parry",
+      "family": "salbarine-parry",
+      "rank": 1,
+      "level": 5,
+      "kind": "boon",
+      "form": "action",
+      "name": "Salbarine Parry",
+      "description": "<p><strong>Trigger</strong> An attack hits you.</p><hr /><p>The sheen hardens into plate where the blow lands: you gain resistance {{ansuParry}} against the triggering attack.</p>",
+      "img": "icons/commodities/metal/mail-plate-steel.webp",
+      "rules": [],
+      "chipTag": "resist {{ansuParry}} vs one hit",
+      "actionData": {
+        "actionType": "reaction",
+        "actions": null,
+        "traits": []
+      }
+    },
+    {
       "id": "engineers-eye",
       "family": "engineers-eye",
       "rank": 1,
       "level": 5,
       "kind": "boon",
-      "form": "effect",
+      "form": "feat",
       "always": true,
       "name": "Engineer's Eye",
       "description": "<p>You begin to see the world the way your people built it: as mechanism. You gain a +1 circumstance bonus to Recall Knowledge about constructs, traps and mechanisms, and to Crafting checks to Disable a Device on mechanical devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>",
@@ -174,14 +229,67 @@
       "kind": "boon",
       "form": "action",
       "name": "Overwhelm",
-      "description": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, immediately attempt an Athletics check to Shove or Trip the target; this check doesn't count toward your multiple attack penalty, and the Ansu's mass is behind it — +1 circumstance bonus.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>",
+      "description": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, the target is automatically Shoved 5 feet or knocked @UUID[Compendium.pf2e.conditionitems.Item.Prone] (your choice — no check). On a critical hit, both, and the shove is 10 feet.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>",
       "img": "icons/abilities/solar-fist.webp",
       "rules": [],
-      "chipTag": "strike + shove/trip",
+      "chipTag": "auto shove/prone",
       "actionData": {
         "actionType": "action",
         "actions": 2,
         "traits": ["flourish"]
+      }
+    },
+    {
+      "id": "hurl-the-blade",
+      "family": "hurl-the-blade",
+      "rank": 1,
+      "level": 6,
+      "kind": "boon",
+      "form": "action",
+      "name": "Hurl the Blade",
+      "description": "<p>Афина leaves your hands the way a verdict leaves a judge. Throw your held melee weapon at an enemy within 30 feet as a ranged Strike using your melee attack modifier, with no penalty for the throw. On a critical hit the blade punches through — the target takes 1d6 persistent bleed damage. However it lands, the weapon instantly flies back to your grasp: the Ansu never lets it go.</p>",
+      "img": "icons/weapons/axes/axe-battle-black.webp",
+      "rules": [],
+      "chipTag": "thrown 30 ft · returns",
+      "actionData": {
+        "actionType": "action",
+        "actions": 2,
+        "traits": ["magical"]
+      }
+    },
+    {
+      "id": "ansus-stature",
+      "family": "ansus-stature",
+      "rank": 1,
+      "level": 7,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Ansu's Stature",
+      "description": "<p>You carry the Ansu's presence rather than its bulk. Your reach with melee Strikes increases by 5 feet — the space around you belongs to something larger than your body. Your size, square, and gear stay unchanged.</p>",
+      "img": "icons/equipment/worn-items/apex-items/belt-of-giant-strength.webp",
+      "chipTag": "reach +5",
+      "rules": [
+        { "key": "Note", "selector": "all", "title": "Ansu's Stature", "text": "Melee reach +5 feet while Communion lasts (no size change)." }
+      ]
+    },
+    {
+      "id": "the-ansu-refuses",
+      "family": "the-ansu-refuses",
+      "rank": 1,
+      "level": 7,
+      "kind": "boon",
+      "form": "action",
+      "name": "The Ansu Refuses",
+      "description": "<p><strong>Trigger</strong> You would be reduced to 0 Hit Points while Communion lasts.</p><hr /><p>The Ansu does not permit the vessel to break — and it answers. You remain at 1 Hit Point, you immediately make one melee Strike against the creature that downed you (if it's within your reach), and you increase your @UUID[Compendium.pf2e.conditionitems.Item.Wounded] condition by 1 — the body keeps the bill.</p><p><em>Cooldown: 10 minutes.</em></p>",
+      "img": "icons/abilities/blue-fist-in-the-air.webp",
+      "rules": [],
+      "chipTag": "1 / 10 min · strike back",
+      "actionData": {
+        "actionType": "reaction",
+        "actions": null,
+        "traits": [],
+        "frequency": { "max": 1, "per": "day" },
+        "cooldownMinutes": 10
       }
     },
     {
@@ -192,27 +300,12 @@
       "kind": "boon",
       "form": "effect",
       "name": "Ancestral Vigor (Union)",
-      "description": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain {{ansuTempHp}} temporary Hit Points, and you gain a +2 status bonus to melee damage rolls while Communion lasts.</p>",
+      "description": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain {{ansuTempHp}} temporary Hit Points, and you gain a +3 status bonus to melee damage rolls while Communion lasts.</p>",
       "img": "icons/magic/control/buff-strength-muscle-damage-red.webp",
-      "chipTag": "temp HP + damage 2",
+      "chipTag": "temp HP + damage 3",
       "rules": [
         { "key": "TempHP", "value": "{{ansuTempHp}}" },
-        { "key": "FlatModifier", "selector": "melee-strike-damage", "type": "status", "value": 2, "label": "Ancestral Vigor" }
-      ]
-    },
-    {
-      "id": "ansus-stature",
-      "family": "ansus-stature",
-      "rank": 1,
-      "level": 7,
-      "kind": "boon",
-      "form": "effect",
-      "name": "Ansu's Stature",
-      "description": "<p>For a minute at a time, you are the thing that stood over you in your mind. When you Invoke the Ansu you grow to Large size: your reach increases by 5 feet, and your gear grows with you. Your Ancestral Vigor bonus improves to +2.</p>",
-      "img": "icons/equipment/worn-items/apex-items/belt-of-giant-strength.webp",
-      "chipTag": "Large · reach",
-      "rules": [
-        { "key": "CreatureSize", "value": "large", "resizeEquipment": true, "reach": { "override": 10 } }
+        { "key": "FlatModifier", "selector": "melee-strike-damage", "type": "status", "value": 3, "label": "Ancestral Vigor" }
       ]
     },
     {
@@ -223,7 +316,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Roar of the Old Blood",
-      "description": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize each enemy within 30 feet. You don't take the penalty for not sharing a language — fear this old needs no translation.</p><p><em>Once per Communion.</em></p>",
+      "description": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize every enemy within 30 feet. You don't take the penalty for not sharing a language, and each target treats its result one degree of success worse. On what becomes a critical failure the target is @UUID[Compendium.pf2e.conditionitems.Item.Frightened] 3 and @UUID[Compendium.pf2e.conditionitems.Item.Fleeing] for 1 round.</p><p><em>Once per Communion.</em></p>",
       "img": "icons/creatures/unholy/demon-fire-horned-winged-roar.webp",
       "rules": [],
       "chipTag": "1/communion",
@@ -274,7 +367,7 @@
       "form": "action",
       "gate": "subjugated",
       "name": "Hand of the Ansu",
-      "description": "<p>The mind-summons perfected. You Interact with an object at a distance — up to 120 feet, through walls and barriers: seize it, drag it to your hand, shove it, turn a wheel, throw a bolt. Call the Blade now works anywhere on the scene, no range limit. Creatures holding an object still keep their grip.</p>",
+      "description": "<p>The mind-summons perfected. You Interact with an object at a distance — up to 120 feet, through walls and barriers: seize it, drag it to your hand, shove it, turn a wheel, throw a bolt. Call the Blade now works anywhere on the scene, and you can Disarm or Shove a creature at range with the telekinetic grip (Athletics vs. Reflex DC). Creatures holding an object otherwise keep their grip.</p>",
       "img": "icons/equipment/worn-items/other-worn-items/hand-of-the-mage.webp",
       "rules": [],
       "chipTag": "capstone",

@@ -12,7 +12,7 @@
  * delete ops, updates in place.
  */
 
-import { clampLevel, tierForLevel, releaseDC, durationRounds, tempHpFor, resistFor, MAX_LEVEL } from "./model.mjs";
+import { clampLevel, tierForLevel, releaseDC, durationRounds, tempHpFor, resistFor, parryFor, tierDiceFor, MAX_LEVEL } from "./model.mjs";
 
 export const ATTUNEMENT_ENTRY_ID = "ansu-attunement";
 export const COMMUNION_ENTRY_ID = "ansu-communion";
@@ -66,6 +66,8 @@ export function buildCtx(charLevel, level, dials = {}) {
     releaseDc: releaseDC(l, dials.dcBase, dials.dcStep, dials.dcCap),
     tempHp: tempHpFor(l),
     resist: resistFor(l),
+    parry: parryFor(l),
+    tierDice: tierDiceFor(l),
     durationRounds: durationRounds(l),
   };
 }
@@ -79,13 +81,15 @@ export function durationLabel(rounds) {
   return `${rounds} rounds`;
 }
 
-/** Replace {{ansuReleaseDC}} / {{ansuTempHp}} / {{ansuResist}} / {{ansuLevel}} / {{ansuDuration}}. */
+/** Replace every {{ansu*}} number token with the baked value. */
 export function injectNumbers(text, ctx) {
   if (typeof text !== "string") return text;
   return text
     .replaceAll("{{ansuReleaseDC}}", String(ctx.releaseDc))
     .replaceAll("{{ansuTempHp}}", String(ctx.tempHp))
     .replaceAll("{{ansuResist}}", String(ctx.resist))
+    .replaceAll("{{ansuParry}}", String(ctx.parry))
+    .replaceAll("{{ansuTierDice}}", String(ctx.tierDice))
     .replaceAll("{{ansuLevel}}", String(ctx.level))
     .replaceAll("{{ansuDuration}}", durationLabel(ctx.durationRounds));
 }
@@ -137,12 +141,14 @@ export function communionMode(state) {
 }
 
 /**
- * Compose the persistent "Ansu — Attunement" marker: badge (two-way level),
- * roll options, and the always-on Inheritance rules. Null when nothing should
- * exist (unmarked / level 0 without a terminal).
+ * Compose the persistent "Ansu — Attunement" marker: badge (two-way level) and
+ * roll options. Inheritance rules live on their own bonus-feat items now — the
+ * marker only NAMES them in its description. Null when nothing should exist
+ * (unmarked / level 0 without a terminal / the marker world-setting is off).
  */
 export function composeAttunement(state, content, opts = {}) {
   if (state.enabled === false) return null;
+  if (opts.marker === false) return null;
   const level = clampLevel(state.level);
   const terminal = state.terminal ?? null;
   if (level < 1 && !terminal) return null;
@@ -159,9 +165,8 @@ export function composeAttunement(state, content, opts = {}) {
   const inheritanceLines = [];
   const { live } = selectEntries(state, content, opts);
   for (const e of live) {
-    if (!e.always || e.form !== "effect") continue;
-    rules.push(...deepInject(Array.isArray(e.rules) ? e.rules : [], ctx));
-    inheritanceLines.push({ name: e.name, description: injectNumbers(e.description ?? "", ctx) });
+    if (e.form !== "feat") continue;
+    inheritanceLines.push({ name: e.name, description: "" });
   }
 
   const composed = {
@@ -208,7 +213,7 @@ export function composeCommunion(state, content, opts = {}) {
   const abilityLines = [];
   const { live } = selectEntries(state, content, { ...opts, unlockAll });
   for (const e of live) {
-    if (e.always) continue;
+    if (e.always || e.form === "feat") continue;
     if (e.form === "effect" || e.form === "strike") {
       rules.push(...deepInject(Array.isArray(e.rules) ? e.rules : [], ctx));
       if (e.form === "strike") rules.push(strikeRuleFor(e));
@@ -244,13 +249,47 @@ export function composeCommunion(state, content, opts = {}) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Desired feat items (Inheritance — permanent knowledge)              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Feat-form entries become bonus feats in the Feats tab: permanent once their
+ * level unlocks, independent of Communion — knowledge stays while the power
+ * sleeps.
+ */
+export function composeFeats(state, content, opts = {}) {
+  if (state.enabled === false) return [];
+  const mode = communionMode(state);
+  const unlockAll = mode === "seized" || mode === "taken";
+  const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
+  if (level < 1 && !state.terminal) return [];
+
+  const ctx = buildCtx(opts.charLevel, level, opts.dials);
+  const { live } = selectEntries(state, content, { ...opts, unlockAll });
+  return live
+    .filter((e) => e.form === "feat")
+    .map((e) => {
+      const description = injectNumbers(e.description ?? "", ctx);
+      const rules = deepInject(Array.isArray(e.rules) ? e.rules : [], ctx);
+      const data = { entryId: e.id, family: e.family, kind: "feat", name: e.name, img: e.img, description, rules, level: e.level, entry: e };
+      return { ...data, hash: hashString(stableStringify({ name: e.name, img: e.img, description, rules, level: e.level })) };
+    });
+}
+
+/* ------------------------------------------------------------------ */
 /* Desired action items                                                */
 /* ------------------------------------------------------------------ */
 
-/** Action-form actives that should exist as sheet items (always present once unlocked). */
+/**
+ * Action-form actives materialize ONLY while Communion runs; the sole exception
+ * is `alwaysAvailable` (Invoke the Ansu — the door in). Entries with
+ * `cooldownMinutes` get their frequency uses zeroed while the module-owned
+ * world-time cooldown (state.cooldowns[entryId] = until) is running.
+ */
 export function composeActions(state, content, opts = {}) {
   if (state.enabled === false) return [];
   const mode = communionMode(state);
+  const running = mode !== "none" && mode !== "off";
   const unlockAll = mode === "seized" || mode === "taken";
   const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
   if (level < 1 && !state.terminal) return [];
@@ -260,9 +299,15 @@ export function composeActions(state, content, opts = {}) {
   const { live } = selectEntries(state, content, { ...opts, unlockAll });
   return live
     .filter((e) => e.form === "action")
+    .filter((e) => running || e.actionData?.alwaysAvailable === true)
     .map((e) => {
       const description = injectNumbers(e.description ?? "", ctx);
       const actionData = deepInject(e.actionData ?? {}, ctx);
+      if (Number.isInteger(e.actionData?.cooldownMinutes)) {
+        const until = Number((state.cooldowns ?? []).find((c) => c?.id === e.id)?.until) || 0;
+        const onCooldown = Number.isFinite(opts.now) && opts.now < until;
+        actionData.frequencyValue = onCooldown ? 0 : (e.actionData?.frequency?.max ?? null);
+      }
       const data = { entryId: e.id, family: e.family, name: e.name, img: e.img, description, actionData, entry: e };
       return { ...data, hash: hashString(stableStringify({ name: e.name, img: e.img, description, actionData })) };
     });

@@ -8,7 +8,7 @@
   "sort": 1250,
   "system": {
     "description": {
-      "value": "<p>You stop holding the door shut. The presence in your blood floods through you: you gain the Communion benefits of your attunement rank.</p><hr /><p><strong>Duration</strong> 1 round / 3 rounds / 1 minute by tier (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). When Communion ends — or when you try to end it early — attempt a Will save against the Release DC (your Release DC).</p><p>You can Invoke at will, but not while Communion is already running.</p>"
+      "value": "<p>You stop holding the door shut. The presence in your blood floods through you: you gain the Communion benefits of your attunement rank, and every Communion active materializes on your sheet alongside the buff — they vanish when Communion ends.</p><hr /><p><strong>Duration</strong> 1 round / 3 rounds / 1 minute by tier (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). When Communion ends — or when you try to end it early — attempt a Will save against the Release DC (your Release DC).</p><p>You can Invoke at will, but not while Communion is already running. From attunement 2, Invoking includes a free Stride (Bull's Footing).</p>"
     },
     "slug": "shards-ansu-invoke-the-ansu",
     "actionType": {

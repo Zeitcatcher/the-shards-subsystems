@@ -1,0 +1,43 @@
+{
+  "_id": "ansur1salbarinep",
+  "_key": "!items!ansur1salbarinep",
+  "name": "Salbarine Parry",
+  "type": "action",
+  "img": "icons/commodities/metal/mail-plate-steel.webp",
+  "folder": "ansufolderdiscip",
+  "sort": 5250,
+  "system": {
+    "description": {
+      "value": "<p><strong>Trigger</strong> An attack hits you.</p><hr /><p>The sheen hardens into plate where the blow lands: you gain resistance twice your attunement against the triggering attack.</p>"
+    },
+    "slug": "shards-ansu-salbarine-parry",
+    "actionType": {
+      "value": "reaction"
+    },
+    "actions": {
+      "value": null
+    },
+    "category": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "salbarine-parry",
+        "family": "salbarine-parry",
+        "kind": "boon"
+      }
+    }
+  }
+}

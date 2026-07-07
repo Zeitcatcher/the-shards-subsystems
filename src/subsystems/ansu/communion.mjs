@@ -11,7 +11,7 @@
 
 import { MODULE_ID, ANSU } from "../../core/constants.mjs";
 import { isPrimaryGM } from "../../core/platform.mjs";
-import { readAnsu, patchAnsu, appendLog, isAttuned } from "./state.mjs";
+import { readAnsu, patchAnsu, appendLog, isAttuned, listAttunedActors } from "./state.mjs";
 import { durationRounds } from "./logic/model.mjs";
 import { COMMUNION_ENTRY_ID } from "./logic/reconcile.mjs";
 import { syncActor } from "./sync.mjs";
@@ -41,27 +41,10 @@ export function remainingRounds(effect) {
 /* Entering and leaving the state                                       */
 /* ------------------------------------------------------------------ */
 
-/** Reset per-Communion actives' frequency uses (Roar comes back on each invoke). */
-async function resetPerCommunionUses(actor) {
-  const content = await loadContent().catch(() => null);
-  if (!content) return;
-  const updates = [];
-  for (const item of actor.items) {
-    const tag = item.getFlag?.(MODULE_ID, ANSU);
-    if (!tag?.entryId || item.type !== "action") continue;
-    // Only actives the content marks per-communion carry a counter the module owns.
-    if (!content.byId.get(tag.entryId)?.actionData?.perCommunion) continue;
-    const max = item.system?.frequency?.max;
-    if (Number.isFinite(max) && item.system?.frequency?.value !== max) {
-      updates.push({ _id: item.id, "system.frequency.value": max });
-    }
-  }
-  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
-}
-
 /**
  * Enter Communion. For a subjugated master this is the free toggle (no saves,
  * unlimited); otherwise the tier's duration applies. No-op while already running.
+ * Per-communion counters need no reset: the actives are created fresh on invoke.
  */
 export async function invokeCommunion(actor, note = "") {
   const st = readAnsu(actor);
@@ -77,7 +60,6 @@ export async function invokeCommunion(actor, note = "") {
   const rounds = st.terminal === "subjugated" ? null : durationRounds(st.level);
   await patchAnsu(actor, { communion: { mode: "active", rounds } });
   await appendLog(actor, "communion", { on: true, rounds }, note);
-  await resetPerCommunionUses(actor);
   await syncActor(actor);
   refreshAnsuPanel();
 }
@@ -188,7 +170,71 @@ async function handleActionCard(message) {
     }
     if (st.communion.mode === "none" || st.pendingRelease) return;
     await callRelease(actor, suggestedDC(st), game.i18n.localize("SHARDS.Ansu.ReleaseByPlayer"));
+  } else {
+    await maybeStartCooldown(actor, tag.entryId);
   }
+}
+
+/**
+ * Cooldown actives (The Ansu Refuses): using the card starts the module-owned
+ * world-time cooldown, auto-applies wounded +1, and whispers the GM. Staying at
+ * 1 HP stays manual — the GM sets HP.
+ */
+async function maybeStartCooldown(actor, entryId) {
+  const content = await loadContent().catch(() => null);
+  const entry = content?.byId?.get(entryId);
+  const minutes = entry?.actionData?.cooldownMinutes;
+  if (!Number.isInteger(minutes)) return;
+
+  const st = readAnsu(actor);
+  const now = game.time?.worldTime ?? 0;
+  const runningUntil = Number((st.cooldowns ?? []).find((c) => c?.id === entryId)?.until) || 0;
+  if (now < runningUntil) {
+    const left = Math.ceil((runningUntil - now) / 60);
+    await whisperGMCard(actor, game.i18n.format("SHARDS.Ansu.CooldownRunning", { name: entry.name, minutes: left }));
+    return;
+  }
+
+  const cooldowns = [
+    ...(st.cooldowns ?? []).filter((c) => c?.id !== entryId),
+    { id: entryId, until: now + minutes * 60 },
+  ];
+  await patchAnsu(actor, { cooldowns });
+  await appendLog(actor, "refuses", { entryId, minutes });
+  if (entryId === "the-ansu-refuses") {
+    try {
+      await actor.increaseCondition?.("wounded");
+    } catch (err) {
+      console.warn(`${MODULE_ID} | could not auto-apply wounded`, err);
+    }
+    await whisperGMCard(actor, game.i18n.format("SHARDS.Ansu.RefusesUsed", { name: actor.name }));
+  }
+  await syncActor(actor); // bakes frequency 0 → the Use button greys out
+  refreshAnsuPanel();
+}
+
+async function whisperGMCard(actor, text) {
+  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+  await ChatMessage.create({
+    content: `<div class="ansu-card"><p>${text}</p></div>`,
+    whisper: gmIds,
+    speaker: ChatMessage.getSpeaker({ actor }),
+  });
+}
+
+/** Prune expired cooldowns and re-enable their Use buttons as world time moves. */
+async function sweepCooldowns() {
+  const now = game.time?.worldTime ?? 0;
+  for (const actor of listAttunedActors()) {
+    const st = readAnsu(actor);
+    const all = st.cooldowns ?? [];
+    if (!all.length) continue;
+    const kept = all.filter((c) => now < Number(c?.until));
+    if (kept.length === all.length) continue;
+    await patchAnsu(actor, { cooldowns: kept });
+    await syncActor(actor);
+  }
+  refreshAnsuPanel();
 }
 
 /* ------------------------------------------------------------------ */
@@ -205,6 +251,12 @@ export function registerCommunionHooks() {
     if (!isPrimaryGM()) return;
     if (changes?.round === undefined && changes?.turn === undefined) return;
     sweepCombat(combat, changes).catch((err) => console.error(`${MODULE_ID} | ansu combat sweep`, err));
+  });
+
+  // Cooldowns run on world time (combat rounds advance it; so does the GM's clock).
+  Hooks.on("updateWorldTime", () => {
+    if (!isPrimaryGM()) return;
+    sweepCooldowns().catch((err) => console.error(`${MODULE_ID} | ansu cooldown sweep`, err));
   });
 
   // A combat ending mid-Communion leaves the effect unlimited; nothing to do.

@@ -164,7 +164,7 @@
   "SHARDS.Izir.ArtNone": "No art configured for this threshold.",
 
   "SHARDS.Settings.ansuDcBase.name": "Ansu: release DC base",
-  "SHARDS.Settings.ansuDcBase.hint": "Base of the Release save DC: base + step × min(attunement, cap). Default 14.",
+  "SHARDS.Settings.ansuDcBase.hint": "Base of the Release save DC: base + step × min(attunement, cap). Default 20 → DC 22..30.",
   "SHARDS.Settings.ansuDcStep.name": "Ansu: release DC per level",
   "SHARDS.Settings.ansuDcStep.hint": "How much the Release DC rises per attunement level until the cap (default 2).",
   "SHARDS.Settings.ansuDcCap.name": "Ansu: release DC freeze level",
@@ -184,6 +184,8 @@
   "SHARDS.Settings.ansuArtSwap.hint": "Swap portrait and token art automatically at tier thresholds (the horn stages). Manual buttons always work.",
   "SHARDS.Settings.ansuTokenIcons.name": "Ansu: effect token icons",
   "SHARDS.Settings.ansuTokenIcons.hint": "Show the Attunement / Communion status icons on the token.",
+  "SHARDS.Settings.ansuMarker.name": "Ansu: attunement marker on actor",
+  "SHARDS.Settings.ansuMarker.hint": "Keep the persistent Attunement effect (with the two-way level badge) on attuned actors. Turn off to track the level from the panel only — no marker hangs on the character.",
 
   "SHARDS.Ansu.PanelTitle": "Ansu Communion",
   "SHARDS.Ansu.Roster": "The Attuned",
@@ -297,6 +299,8 @@
   "SHARDS.Ansu.OutcomeShort.failure": "F",
   "SHARDS.Ansu.OutcomeShort.criticalFailure": "CF",
 
+  "SHARDS.Ansu.RefusesUsed": "{name}: the Ansu refuses. Set HP to 1, resolve the retaliation Strike, wounded increased by 1 (applied). Cooldown: 10 minutes.",
+  "SHARDS.Ansu.CooldownRunning": "{name} is still recovering: about {minutes} minute(s) left.",
   "SHARDS.Ansu.SeizureStart": "{name}: the Ansu takes hold. Full Communion applied — the GM plays the body until Return is pressed.",
   "SHARDS.Ansu.SeizureAutoStart": "{name}: critical failure — the Ansu seizes the body for 1 round, then Lingering resumes.",
   "SHARDS.Ansu.SeizureEnd": "{name}: the body returns.",
@@ -331,6 +335,7 @@
   "SHARDS.Ansu.Log.communionOff": "Communion ended",
   "SHARDS.Ansu.Log.lingering": "Lingering — the Ansu held on",
   "SHARDS.Ansu.Log.release": "Release save (DC {dc}): {outcome}",
+  "SHARDS.Ansu.Log.refuses": "The Ansu refused ({id}) — wounded +1, cooldown {minutes} min",
   "SHARDS.Ansu.Log.seizureOn": "Seizure — the Ansu takes the body",
   "SHARDS.Ansu.Log.seizureAuto": "Seizure (crit fail) — 1 round",
   "SHARDS.Ansu.Log.seizureOff": "The body returned",

@@ -1,0 +1,45 @@
+{
+  "_id": "ansur1fairbattle",
+  "_key": "!items!ansur1fairbattle",
+  "name": "Fair Battle",
+  "type": "action",
+  "img": "icons/abilities/solar-fist-mirrored.webp",
+  "folder": "ansufolderdiscip",
+  "sort": 4250,
+  "system": {
+    "description": {
+      "value": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair — it was arithmetic. Make one melee Strike and compare the attack roll against every enemy within your reach. The Strike deals 10 extra damage; roll damage once and apply it to each target you hit. Your multiple attack penalty counts this as one attack.</p>"
+    },
+    "slug": "shards-ansu-fair-battle",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 3
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "flourish"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "fair-battle",
+        "family": "fair-battle",
+        "kind": "boon"
+      }
+    }
+  }
+}

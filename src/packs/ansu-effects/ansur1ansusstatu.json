@@ -8,7 +8,7 @@
   "sort": 7000,
   "system": {
     "description": {
-      "value": "<p>For a minute at a time, you are the thing that stood over you in your mind. When you Invoke the Ansu you grow to Large size: your reach increases by 5 feet, and your gear grows with you. Your Ancestral Vigor bonus improves to +2.</p>"
+      "value": "<p>You carry the Ansu's presence rather than its bulk. Your reach with melee Strikes increases by 5 feet — the space around you belongs to something larger than your body. Your size, square, and gear stay unchanged.</p>"
     },
     "slug": "shards-ansu-ansus-stature",
     "duration": {
@@ -31,12 +31,10 @@
     },
     "rules": [
       {
-        "key": "CreatureSize",
-        "value": "large",
-        "resizeEquipment": true,
-        "reach": {
-          "override": 10
-        }
+        "key": "Note",
+        "selector": "all",
+        "title": "Ansu's Stature",
+        "text": "Melee reach +5 feet while Communion lasts (no size change)."
       }
     ],
     "start": {

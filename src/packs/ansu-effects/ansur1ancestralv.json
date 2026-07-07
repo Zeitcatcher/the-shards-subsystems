@@ -8,7 +8,7 @@
   "sort": 1000,
   "system": {
     "description": {
-      "value": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain twice your attunement temporary Hit Points, and you gain a +1 status bonus to melee damage rolls while Communion lasts.</p>"
+      "value": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain three times your attunement temporary Hit Points, and you gain a +2 status bonus to melee damage rolls while Communion lasts.</p>"
     },
     "slug": "shards-ansu-ancestral-vigor",
     "duration": {
@@ -32,13 +32,13 @@
     "rules": [
       {
         "key": "TempHP",
-        "value": 2
+        "value": 3
       },
       {
         "key": "FlatModifier",
         "selector": "melee-strike-damage",
         "type": "status",
-        "value": 1,
+        "value": 2,
         "label": "Ancestral Vigor"
       }
     ],

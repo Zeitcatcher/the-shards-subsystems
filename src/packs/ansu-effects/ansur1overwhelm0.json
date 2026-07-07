@@ -8,7 +8,7 @@
   "sort": 6250,
   "system": {
     "description": {
-      "value": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, immediately attempt an Athletics check to Shove or Trip the target; this check doesn't count toward your multiple attack penalty, and the Ansu's mass is behind it — +1 circumstance bonus.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>"
+      "value": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, the target is automatically Shoved 5 feet or knocked @UUID[Compendium.pf2e.conditionitems.Item.Prone] (your choice — no check). On a critical hit, both, and the shove is 10 feet.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>"
     },
     "slug": "shards-ansu-overwhelm",
     "actionType": {
