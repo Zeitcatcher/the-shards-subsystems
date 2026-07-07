@@ -1,0 +1,61 @@
+{
+  "_id": "lethality1000000",
+  "_key": "!items!lethality1000000",
+  "name": "Lethality I",
+  "type": "effect",
+  "img": "icons/magic/unholy/projectile-helix-blood-red.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 4000,
+  "system": {
+    "description": {
+      "value": "<p>Your blows carry the hunger of the void. Your Strikes deal an extra 1d6 void damage.</p>"
+    },
+    "slug": "shards-izir-lethality-1",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "DamageDice",
+        "selector": "strike-damage",
+        "diceNumber": 1,
+        "dieSize": "d6",
+        "damageType": "void"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "lethality-1",
+        "family": "lethality",
+        "kind": "boon"
+      }
+    }
+  }
+}

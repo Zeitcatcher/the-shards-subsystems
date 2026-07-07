@@ -4,8 +4,9 @@ export const MODULE_ID = "the-shards-subsystems";
 
 /** Subsystem keys (also the flag namespace under flags[MODULE_ID]). */
 export const IZIR = "izir";
+export const ANSU = "ansu";
 
-/** Immersion runs 0..10; 10 is the terminal fork (Ниневеш / Подчинение). */
+/** Both tracks run 0..10; 10 is a terminal (Izir: fork; Ansu: Mastery or Taken). */
 export const MAX_LEVEL = 10;
 
 export const SETTINGS = Object.freeze({
@@ -21,10 +22,23 @@ export const SETTINGS = Object.freeze({
   IZIR_SUGGESTIONS: "izirSuggestions",
   IZIR_ART_SWAP: "izirArtSwap",
   IZIR_TOKEN_ICONS: "izirTokenIcons",
+  // Ansu
+  ANSU_DC_BASE: "ansuDcBase",
+  ANSU_DC_STEP: "ansuDcStep",
+  ANSU_DC_CAP: "ansuDcCap",
+  ANSU_SHOW_DC: "ansuShowDc",
+  ANSU_CLIMB_BASE: "ansuClimbBase",
+  ANSU_CLIMB_STEP: "ansuClimbStep",
+  ANSU_SUGGESTIONS: "ansuSuggestions",
+  ANSU_ART_SWAP: "ansuArtSwap",
+  ANSU_TOKEN_ICONS: "ansuTokenIcons",
 });
 
 export const TEMPLATES = Object.freeze({
   IZIR_PANEL: `modules/${MODULE_ID}/templates/izir/panel.hbs`,
   IZIR_ART: `modules/${MODULE_ID}/templates/izir/art-dialog.hbs`,
   IZIR_HISTORY: `modules/${MODULE_ID}/templates/izir/history-dialog.hbs`,
+  ANSU_PANEL: `modules/${MODULE_ID}/templates/ansu/panel.hbs`,
+  ANSU_ART: `modules/${MODULE_ID}/templates/ansu/art-dialog.hbs`,
+  ANSU_HISTORY: `modules/${MODULE_ID}/templates/ansu/history-dialog.hbs`,
 });

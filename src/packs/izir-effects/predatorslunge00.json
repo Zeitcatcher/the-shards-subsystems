@@ -1,0 +1,46 @@
+{
+  "_id": "predatorslunge00",
+  "_key": "!items!predatorslunge00",
+  "name": "Predator's Lunge",
+  "type": "action",
+  "img": "icons/skills/melee/strike-dagger-blood-red.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 4250,
+  "system": {
+    "description": {
+      "value": "<p>The void pulls you toward wounded prey.</p><hr /><p><strong>Effect</strong> Stride toward the nearest bloodied enemy, ignoring difficult terrain. If you end your movement adjacent to it, your next Strike against it this turn gains a +1 circumstance bonus to the attack roll.</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+    },
+    "slug": "shards-izir-predators-lunge",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 1
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "void",
+        "move"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "predators-lunge",
+        "family": "predators-lunge",
+        "kind": "boon"
+      }
+    }
+  }
+}

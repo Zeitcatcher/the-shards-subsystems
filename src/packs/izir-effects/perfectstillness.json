@@ -1,0 +1,50 @@
+{
+  "_id": "perfectstillness",
+  "_key": "!items!perfectstillness",
+  "name": "Perfect Stillness",
+  "type": "action",
+  "img": "icons/magic/control/silhouette-hold-beam-blue.webp",
+  "folder": "izirfoldernineve",
+  "sort": 10250,
+  "system": {
+    "description": {
+      "value": "<p>You unmake sound and thought for one held breath.</p><hr /><p><strong>Frequency</strong> once per day; <strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each enemy in the area attempts a Will save (@Check[will|dc:your Izir DC]).</p><ul><li><strong>Success</strong> Off-guard until the end of its next turn.</li><li><strong>Failure</strong> Stunned 1.</li><li><strong>Critical Failure</strong> Stunned 2.</li></ul>"
+    },
+    "slug": "shards-izir-perfect-stillness",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "void",
+        "incapacitation",
+        "mental"
+      ],
+      "rarity": "common"
+    },
+    "frequency": {
+      "max": 1,
+      "per": "day"
+    },
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "perfect-stillness",
+        "family": "perfect-stillness",
+        "kind": "boon"
+      }
+    }
+  }
+}

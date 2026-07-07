@@ -6,7 +6,8 @@
  * work. Every mutation goes flags → syncActor → re-render.
  */
 
-import { MODULE_ID, SETTINGS, TEMPLATES } from "../../../core/constants.mjs";
+import { MODULE_ID, IZIR, SETTINGS, TEMPLATES } from "../../../core/constants.mjs";
+import { renderSubsystemSwitcher, applyHandoffPosition } from "../../../core/switcher.mjs";
 import {
   readIzir,
   patchIzir,
@@ -440,6 +441,7 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender?.(context, options);
+    renderSubsystemSwitcher(this, IZIR);
     // Keep the temptation inputs alive across re-renders.
     const dcInput = this.element.querySelector('input[name="temptDc"]');
     const reasonInput = this.element.querySelector('input[name="temptReason"]');
@@ -522,11 +524,12 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
 let instance;
 
-/** Open (or focus) the Izir panel, optionally focused on a specific actor UUID. */
-export function openIzirPanel(actorUuid) {
+/** Open (or focus) the Izir panel, optionally on an actor and at a handed-off position. */
+export function openIzirPanel(actorUuid, opts = {}) {
   instance ??= new IzirPanel();
   if (actorUuid) instance._actorUuid = actorUuid;
   instance.render({ force: true });
+  applyHandoffPosition(instance, opts);
 }
 
 /** Re-render the panel if it's open (e.g. after an actor flag changes elsewhere). */

@@ -1,0 +1,48 @@
+{
+  "_id": "ansur1invokethea",
+  "_key": "!items!ansur1invokethea",
+  "name": "Invoke the Ansu",
+  "type": "action",
+  "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
+  "folder": "ansufoldertrial0",
+  "sort": 1250,
+  "system": {
+    "description": {
+      "value": "<p>You stop holding the door shut. The presence in your blood floods through you: you gain the Communion benefits of your attunement rank.</p><hr /><p><strong>Duration</strong> 1 round / 3 rounds / 1 minute by tier (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). When Communion ends — or when you try to end it early — attempt a Will save against the Release DC (your Release DC).</p><p>You can Invoke at will, but not while Communion is already running.</p>"
+    },
+    "slug": "shards-ansu-invoke-the-ansu",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 1
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "concentrate"
+      ],
+      "rarity": "common"
+    },
+    "frequency": {
+      "max": 1,
+      "per": "round"
+    },
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "invoke-the-ansu",
+        "family": "invoke-the-ansu",
+        "kind": "boon"
+      }
+    }
+  }
+}

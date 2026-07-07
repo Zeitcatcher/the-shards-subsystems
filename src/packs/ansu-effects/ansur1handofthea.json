@@ -1,0 +1,46 @@
+{
+  "_id": "ansur1handofthea",
+  "_key": "!items!ansur1handofthea",
+  "name": "Hand of the Ansu",
+  "type": "action",
+  "img": "icons/equipment/worn-items/other-worn-items/hand-of-the-mage.webp",
+  "folder": "ansufoldermaster",
+  "sort": 10250,
+  "system": {
+    "description": {
+      "value": "<p>The mind-summons perfected. You Interact with an object at a distance — up to 120 feet, through walls and barriers: seize it, drag it to your hand, shove it, turn a wheel, throw a bolt. Call the Blade now works anywhere on the scene, no range limit. Creatures holding an object still keep their grip.</p>"
+    },
+    "slug": "shards-ansu-hand-of-the-ansu",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 1
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "concentrate",
+        "magical"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "hand-of-the-ansu",
+        "family": "hand-of-the-ansu",
+        "kind": "boon"
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "_id": "ansur2ancestralv",
+  "_key": "!items!ansur2ancestralv",
+  "name": "Ancestral Vigor (Union)",
+  "type": "effect",
+  "img": "icons/magic/control/buff-strength-muscle-damage-red.webp",
+  "folder": "ansufolderunion0",
+  "sort": 7000,
+  "system": {
+    "description": {
+      "value": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain twice your attunement temporary Hit Points, and you gain a +2 status bonus to melee damage rolls while Communion lasts.</p>"
+    },
+    "slug": "shards-ansu-ancestral-vigor-2",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "TempHP",
+        "value": 2
+      },
+      {
+        "key": "FlatModifier",
+        "selector": "melee-strike-damage",
+        "type": "status",
+        "value": 2,
+        "label": "Ancestral Vigor"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "ancestral-vigor-2",
+        "family": "ancestral-vigor",
+        "kind": "boon"
+      }
+    }
+  }
+}

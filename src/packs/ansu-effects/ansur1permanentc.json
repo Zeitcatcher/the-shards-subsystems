@@ -1,0 +1,53 @@
+{
+  "_id": "ansur1permanentc",
+  "_key": "!items!ansur1permanentc",
+  "name": "Permanent Communion",
+  "type": "effect",
+  "img": "icons/magic/control/control-influence-crown-gold.webp",
+  "folder": "ansufoldermaster",
+  "sort": 10000,
+  "system": {
+    "description": {
+      "value": "<p>There is no longer a door to hold shut — there is only you, larger inside than before. Communion no longer expires and never requires a Release save. You can enter or end it as a free action once per turn. Every Communion boon and Inheritance is simply yours now.</p>"
+    },
+    "slug": "shards-ansu-permanent-communion",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "permanent-communion",
+        "family": "permanent-communion",
+        "kind": "boon"
+      }
+    }
+  }
+}

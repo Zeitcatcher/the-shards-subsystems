@@ -1,0 +1,49 @@
+{
+  "_id": "rcizirwave100000",
+  "_key": "!items!rcizirwave100000",
+  "name": "Recharge: Izir Wave I",
+  "type": "effect",
+  "img": "icons/magic/time/hourglass-tilted-glowing-gold.webp",
+  "folder": "izirfolderintern",
+  "sort": 200,
+  "system": {
+    "description": {
+      "value": "<p>Izir Wave I is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>"
+    },
+    "slug": "shards-izir-recharge-izir-wave-1",
+    "duration": {
+      "value": 1,
+      "unit": "rounds",
+      "sustained": false,
+      "expiry": "turn-start"
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirRecharge": "izir-wave-1"
+    }
+  }
+}

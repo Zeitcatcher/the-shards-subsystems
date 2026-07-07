@@ -1,0 +1,61 @@
+{
+  "_id": "whisperinthebloo",
+  "_key": "!items!whisperinthebloo",
+  "name": "Whisper in the Blood",
+  "type": "effect",
+  "img": "icons/magic/unholy/hand-claw-fog-green.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 6500,
+  "system": {
+    "description": {
+      "value": "<p>When your guard breaks, the void slips in. The first time you critically fail a save in combat, you are off-guard until the end of your next turn, and the GM may call for a temptation check.</p>"
+    },
+    "slug": "shards-izir-whisper-in-the-blood",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Whisper in the Blood",
+        "text": "On a critical failure on a save in combat: off-guard until end of your next turn; GM may call a temptation check.",
+        "visibility": "gm"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "whisper-in-the-blood",
+        "family": "whisper-in-the-blood",
+        "kind": "bane"
+      }
+    }
+  }
+}

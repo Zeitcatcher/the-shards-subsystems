@@ -1,0 +1,49 @@
+{
+  "_id": "heraldofruin0000",
+  "_key": "!items!heraldofruin0000",
+  "name": "Herald of Ruin",
+  "type": "action",
+  "img": "icons/magic/control/buff-flight-wings-runes-purple.webp",
+  "folder": "izirfoldercall00",
+  "sort": 9250,
+  "system": {
+    "description": {
+      "value": "<p>For one minute, you are what the Nineveh only dream of being, and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed, your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet. When the minute ends, you are drained 1.</p>"
+    },
+    "slug": "shards-izir-herald-of-ruin",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "void",
+        "polymorph"
+      ],
+      "rarity": "common"
+    },
+    "frequency": {
+      "max": 1,
+      "per": "day"
+    },
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "herald-of-ruin",
+        "family": "herald-of-ruin",
+        "kind": "boon"
+      }
+    }
+  }
+}

@@ -13,6 +13,7 @@ import { isPrimaryGM } from "./core/platform.mjs";
 
 // Subsystems self-register at import time.
 import "./subsystems/izir/index.mjs";
+import "./subsystems/ansu/index.mjs";
 
 Hooks.once("init", () => {
   Handlebars.registerHelper("shardsEq", (a, b) => a === b);

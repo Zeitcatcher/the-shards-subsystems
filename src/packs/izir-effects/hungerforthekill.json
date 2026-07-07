@@ -1,0 +1,71 @@
+{
+  "_id": "hungerforthekill",
+  "_key": "!items!hungerforthekill",
+  "name": "Hunger for the Kill",
+  "type": "effect",
+  "img": "icons/skills/melee/strike-dagger-blood-red.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 4500,
+  "system": {
+    "description": {
+      "value": "<p>When you drop a foe, the void demands you finish it. Attempt a Will save against your temptation DC or you must spend your next action to Strike it (or the nearest hostile). You take a -2 circumstance penalty on nonlethal attacks.</p>"
+    },
+    "slug": "shards-izir-hunger-for-the-kill",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "FlatModifier",
+        "selector": "attack",
+        "type": "circumstance",
+        "value": -2,
+        "predicate": [
+          "nonlethal"
+        ],
+        "label": "SHARDS.Izir.MaskedLabel"
+      },
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Hunger for the Kill",
+        "text": "On dropping a foe: Will vs temptation DC or compelled to Strike it (or the nearest hostile).",
+        "visibility": "gm"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "hunger-for-the-kill",
+        "family": "hunger-for-the-kill",
+        "kind": "bane"
+      }
+    }
+  }
+}

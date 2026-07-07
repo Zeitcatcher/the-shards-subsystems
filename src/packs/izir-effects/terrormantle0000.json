@@ -1,0 +1,75 @@
+{
+  "_id": "terrormantle0000",
+  "_key": "!items!terrormantle0000",
+  "name": "Terror's Mantle",
+  "type": "effect",
+  "img": "icons/magic/unholy/orb-glowing-purple.webp",
+  "folder": "izirfoldercall00",
+  "sort": 7000,
+  "system": {
+    "description": {
+      "value": "<p>Dread pours off you like cold. When an enemy enters the 10-foot aura, it attempts a Will save against your temptation DC: frightened 1 on a failure, frightened 2 on a critical failure.</p>"
+    },
+    "slug": "shards-izir-terror-mantle",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Aura",
+        "slug": "izir-terror",
+        "radius": 10,
+        "traits": [
+          "emotion",
+          "fear",
+          "mental"
+        ],
+        "effects": [
+          {
+            "uuid": "Compendium.the-shards-subsystems.izir-effects.Item.izirterroraura00",
+            "affects": "enemies",
+            "events": [
+              "enter"
+            ],
+            "includesSelf": false,
+            "removeOnExit": true
+          }
+        ]
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "terror-mantle",
+        "family": "terror-mantle",
+        "kind": "boon"
+      }
+    }
+  }
+}

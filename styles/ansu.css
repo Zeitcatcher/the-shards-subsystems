@@ -1,0 +1,992 @@
+/* Ansu-specific styling: forge-bronze tier accents, the Communion control bar, the
+   Climb, ladder chips, Release block, seizure states, satellites, chat cards.
+   Mirrors the Izir panel's anatomy with its own class namespace so the two
+   subsystems stay uncoupled. Theme-variable based (follows Foundry light/dark). */
+
+/* The window must always be wide enough for the ladder chips + their hover kits. */
+#the-shards-subsystems-ansu {
+  min-width: 900px;
+}
+
+.the-shards-subsystems .ansu-panel {
+  display: grid;
+  grid-template-columns: 224px 1fr;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  color: var(--color-text-primary, #191813);
+}
+.the-shards-subsystems .ansu-panel.compact {
+  grid-template-columns: 196px 1fr;
+  font-size: var(--font-size-13, 0.85rem);
+}
+
+/* Tier accent variable, consumed by headers/rows/labels. */
+.the-shards-subsystems .tier-attuned { --ansu-tier-color: #6b7280; }
+.the-shards-subsystems .tier-trial { --ansu-tier-color: #8a6a45; }
+.the-shards-subsystems .tier-discipline { --ansu-tier-color: #b5892a; }
+.the-shards-subsystems .tier-union { --ansu-tier-color: #b06a24; }
+.the-shards-subsystems .tier-mastery { --ansu-tier-color: #3e8e7e; }
+.the-shards-subsystems .tier-subjugated { --ansu-tier-color: #3e8e7e; }
+.the-shards-subsystems .tier-taken { --ansu-tier-color: #a11; }
+
+/* ---------- shared chrome (ansu namespace) ---------- */
+.the-shards-subsystems .ansu-ghost {
+  width: auto;
+  flex: 0 0 auto;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--color-text-secondary, #4b4a44);
+  font-size: var(--font-size-12, 0.8rem);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.the-shards-subsystems .ansu-ghost:hover {
+  border-color: var(--color-border-light-primary, #b5b3a4);
+  color: var(--color-text-primary, #191813);
+}
+.the-shards-subsystems .ansu-ghost:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.the-shards-subsystems .ansu-primary {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 0.8rem);
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid #b5892a;
+  background: rgba(181, 137, 42, 0.12);
+  white-space: nowrap;
+}
+.the-shards-subsystems .ansu-primary:disabled {
+  opacity: 0.5;
+}
+.the-shards-subsystems .ansu-spacer {
+  flex: 1 1 auto;
+}
+.the-shards-subsystems .ansu-hint {
+  font-size: var(--font-size-11, 0.72rem);
+  color: var(--color-text-secondary, #4b4a44);
+  opacity: 0.8;
+  font-style: italic;
+}
+.the-shards-subsystems .ansu-lbl {
+  font-size: var(--font-size-10, 0.68rem);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.65;
+}
+.the-shards-subsystems .ansu-empty {
+  padding: 1rem;
+  opacity: 0.7;
+  font-style: italic;
+  text-align: center;
+}
+.the-shards-subsystems .ansu-dash-empty {
+  margin: auto;
+}
+
+/* ---------- roster ---------- */
+.the-shards-subsystems .ansu-roster {
+  border-right: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: rgba(0, 0, 0, 0.03);
+}
+.the-shards-subsystems .ansu-roster-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.55rem 0.35rem;
+}
+.the-shards-subsystems .ansu-roster-head h3 {
+  margin: 0;
+  font-size: var(--font-size-11, 0.7rem);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  border: none;
+}
+.the-shards-subsystems .ansu-mark-btn {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-10, 0.68rem);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid #b5892a;
+  color: #8a6417;
+  background: rgba(181, 137, 42, 0.08);
+}
+.the-shards-subsystems .ansu-roster-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+.the-shards-subsystems .ansu-roster-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-left: 3px solid var(--ansu-tier-color, transparent);
+}
+.the-shards-subsystems .ansu-roster-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.the-shards-subsystems .ansu-roster-item.selected {
+  background: rgba(181, 137, 42, 0.1);
+}
+.the-shards-subsystems .ansu-roster-item img {
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: none;
+  flex: 0 0 auto;
+}
+.the-shards-subsystems .ansu-roster-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.the-shards-subsystems .ansu-roster-name {
+  font-size: var(--font-size-13, 0.84rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.the-shards-subsystems .ansu-roster-tier {
+  font-size: var(--font-size-10, 0.66rem);
+  opacity: 0.65;
+}
+.the-shards-subsystems .ansu-dot {
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+.the-shards-subsystems .ansu-dot-pending {
+  color: #b5892a;
+}
+.the-shards-subsystems .ansu-dot-seized {
+  color: #a11;
+}
+.the-shards-subsystems .ansu-dual {
+  margin-left: auto;
+  font-size: 0.62rem;
+  opacity: 0.55;
+  border: 1px dashed var(--color-border-light-tertiary, #c9c7b8);
+  border-radius: 3px;
+  padding: 0 3px;
+  flex: 0 0 auto;
+}
+.the-shards-subsystems .ansu-dot + .ansu-dual,
+.the-shards-subsystems .ansu-dot + .ansu-dot {
+  margin-left: 4px;
+}
+
+/* ---------- dash ---------- */
+.the-shards-subsystems .ansu-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.6rem 0.7rem;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+}
+.the-shards-subsystems .ansu-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.the-shards-subsystems .ansu-id img {
+  width: 44px;
+  height: 44px;
+  border-radius: 5px;
+  object-fit: cover;
+  border: 1px solid var(--ansu-tier-color, #b5892a);
+}
+.the-shards-subsystems .ansu-id-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.the-shards-subsystems .ansu-id-title h2 {
+  margin: 0;
+  border: none;
+  font-size: var(--font-size-18, 1.15rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.the-shards-subsystems .ansu-tier-pill {
+  font-size: var(--font-size-10, 0.64rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 2px 8px;
+  color: var(--ansu-tier-color, #8a6417);
+  border: 1px solid var(--ansu-tier-color, #b5892a);
+  background: rgba(181, 137, 42, 0.07);
+  white-space: nowrap;
+}
+.the-shards-subsystems .ansu-id .ansu-ghost {
+  margin-left: auto;
+}
+
+/* ---------- stats strip ---------- */
+.the-shards-subsystems .ansu-stats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.the-shards-subsystems .ansu-stat {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  border-radius: 5px;
+  padding: 4px 10px;
+  min-width: 88px;
+}
+.the-shards-subsystems .ansu-stat .l {
+  display: block;
+  font-size: var(--font-size-10, 0.6rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.the-shards-subsystems .ansu-stat .n {
+  font-size: var(--font-size-16, 1.05rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.the-shards-subsystems .ansu-stat .n small {
+  font-size: 0.7em;
+  opacity: 0.55;
+  font-weight: 400;
+}
+.the-shards-subsystems .ansu-stat.hot {
+  border-color: rgba(181, 137, 42, 0.65);
+}
+.the-shards-subsystems .ansu-stat.hot .n {
+  color: #8a6417;
+}
+.the-shards-subsystems .ansu-stat.climb-n .n {
+  color: #3e8e7e;
+}
+
+/* ---------- Communion control bar ---------- */
+.the-shards-subsystems .ansu-comm {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  border: 1px solid rgba(181, 137, 42, 0.5);
+  background: rgba(181, 137, 42, 0.05);
+  border-radius: 5px;
+  padding: 0.45rem 0.6rem;
+}
+.the-shards-subsystems .ansu-comm.mode-lingering {
+  border-color: rgba(165, 71, 63, 0.6);
+  background: rgba(165, 71, 63, 0.06);
+}
+.the-shards-subsystems .ansu-comm.mode-seized,
+.the-shards-subsystems .ansu-comm.mode-taken {
+  border-color: rgba(170, 17, 17, 0.55);
+  background: rgba(170, 17, 17, 0.06);
+}
+.the-shards-subsystems .ansu-comm.pulse {
+  animation: ansu-pulse 0.8s ease-in-out 2;
+}
+.the-shards-subsystems .ansu-state {
+  font-size: var(--font-size-10, 0.66rem);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 3px 9px;
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  opacity: 0.85;
+}
+.the-shards-subsystems .ansu-state.st-active,
+.the-shards-subsystems .ansu-state.st-permanent {
+  color: #8a6417;
+  border-color: #b5892a;
+  background: rgba(181, 137, 42, 0.14);
+  box-shadow: 0 0 6px rgba(181, 137, 42, 0.35);
+  opacity: 1;
+}
+.the-shards-subsystems .ansu-state.st-lingering {
+  color: #8f3d37;
+  border-color: #a5473f;
+  background: rgba(165, 71, 63, 0.12);
+  opacity: 1;
+}
+.the-shards-subsystems .ansu-state.st-seized,
+.the-shards-subsystems .ansu-state.st-taken {
+  color: #a11;
+  border-color: #a11;
+  background: rgba(170, 17, 17, 0.14);
+  box-shadow: 0 0 8px rgba(170, 17, 17, 0.35);
+  opacity: 1;
+}
+.the-shards-subsystems .ansu-rounds {
+  font-size: var(--font-size-11, 0.72rem);
+  font-weight: 600;
+  color: #8a6417;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.the-shards-subsystems .ansu-endnosave {
+  opacity: 0.7;
+}
+.the-shards-subsystems .ansu-seize {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 0.76rem);
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid #8f2f27;
+  color: #8f2f27;
+  background: rgba(143, 47, 39, 0.07);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.the-shards-subsystems .ansu-seize.held {
+  background: rgba(143, 47, 39, 0.2);
+  color: #fff;
+  background-color: #8f2f27;
+  box-shadow: 0 0 8px rgba(143, 47, 39, 0.5);
+}
+
+/* ---------- stepper ---------- */
+.the-shards-subsystems .ansu-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  border-radius: 5px;
+  padding: 0.45rem 0.6rem;
+}
+.the-shards-subsystems .ansu-step {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  font-size: 1rem;
+  display: grid;
+  place-items: center;
+}
+.the-shards-subsystems .ansu-step-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+}
+.the-shards-subsystems .ansu-step-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ansu-tier-color, #b5892a);
+  font-variant-numeric: tabular-nums;
+}
+.the-shards-subsystems .ansu-step-num small {
+  font-size: 0.7rem;
+  opacity: 0.55;
+  font-weight: 400;
+}
+.the-shards-subsystems .ansu-step-cap {
+  font-size: var(--font-size-10, 0.64rem);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.65;
+}
+.the-shards-subsystems .ansu-step-note {
+  font-size: var(--font-size-11, 0.7rem);
+  opacity: 0.6;
+  max-width: 30ch;
+  line-height: 1.25;
+}
+.the-shards-subsystems .ansu-tenth {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 0.78rem);
+  border: 1px solid #3e8e7e;
+  color: #2e6e61;
+  background: rgba(62, 142, 126, 0.06);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
+.the-shards-subsystems .ansu-tenth.ready {
+  background: rgba(62, 142, 126, 0.18);
+  font-weight: 700;
+  box-shadow: 0 0 6px rgba(62, 142, 126, 0.45);
+}
+
+/* ---------- the Climb ---------- */
+.the-shards-subsystems .ansu-climb {
+  border: 1px solid rgba(62, 142, 126, 0.45);
+  background: rgba(62, 142, 126, 0.05);
+  border-radius: 5px;
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.the-shards-subsystems .ansu-climb.full {
+  box-shadow: inset 0 0 0 1px rgba(62, 142, 126, 0.6);
+}
+.the-shards-subsystems .ansu-climb.pulse {
+  animation: ansu-pulse 0.8s ease-in-out 2;
+}
+@keyframes ansu-pulse {
+  50% { box-shadow: 0 0 0 2px rgba(62, 142, 126, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .the-shards-subsystems .ansu-climb.pulse,
+  .the-shards-subsystems .ansu-comm.pulse { animation: none; box-shadow: 0 0 0 2px rgba(62, 142, 126, 0.6); }
+}
+.the-shards-subsystems .ansu-climb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+.the-shards-subsystems .ansu-climb-title {
+  font-size: var(--font-size-10, 0.66rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2e6e61;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.the-shards-subsystems .ansu-climb-count {
+  font-size: var(--font-size-13, 0.85rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.the-shards-subsystems .ansu-climb-count small {
+  opacity: 0.6;
+  font-weight: 400;
+}
+.the-shards-subsystems .ansu-segbar {
+  display: flex;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+.the-shards-subsystems .ansu-seg {
+  height: 12px;
+  flex: 1 1 auto;
+  min-width: 8px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.the-shards-subsystems .ansu-seg:hover {
+  border-color: #3e8e7e;
+}
+.the-shards-subsystems .ansu-seg.f {
+  background: linear-gradient(180deg, #5aa895, #3a7d6e);
+  border-color: #3e8e7e;
+}
+.the-shards-subsystems .ansu-seg.gap {
+  margin-left: 5px;
+}
+.the-shards-subsystems .ansu-mini {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.the-shards-subsystems .ansu-climb-legend {
+  font-size: var(--font-size-10, 0.66rem);
+  opacity: 0.6;
+}
+
+/* ---------- terminal banner ---------- */
+.the-shards-subsystems .ansu-terminal-banner {
+  text-align: center;
+  font-weight: 600;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+}
+.the-shards-subsystems .ansu-terminal-banner.terminal-taken {
+  background: rgba(170, 17, 17, 0.12);
+  color: #a11;
+  border: 1px solid rgba(170, 17, 17, 0.4);
+}
+.the-shards-subsystems .ansu-terminal-banner.terminal-subjugated {
+  background: rgba(62, 142, 126, 0.12);
+  color: #2e6e61;
+  border: 1px solid rgba(62, 142, 126, 0.4);
+}
+
+/* ---------- the ladder ---------- */
+.the-shards-subsystems .ansu-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 5px;
+}
+.the-shards-subsystems .ansu-tier-label {
+  font-size: var(--font-size-10, 0.64rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  color: var(--ansu-tier-color, #b5892a);
+  margin: 0.45rem 0 0.1rem;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-weight: 600;
+}
+.the-shards-subsystems .ansu-tier-label i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--ansu-tier-color, #b5892a);
+}
+.the-shards-subsystems .ansu-lrow {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 3px 5px;
+  border-radius: 5px;
+}
+.the-shards-subsystems .ansu-lrow.current {
+  background: rgba(181, 137, 42, 0.09);
+  outline: 1px solid rgba(181, 137, 42, 0.45);
+}
+.the-shards-subsystems .ansu-lrow.locked {
+  opacity: 0.42;
+  filter: saturate(0.4);
+}
+.the-shards-subsystems .ansu-ldisc {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  border: 2px solid var(--ansu-tier-color, #b5892a);
+  display: grid;
+  place-items: center;
+  font-size: var(--font-size-11, 0.72rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+  background: rgba(0, 0, 0, 0.04);
+}
+.the-shards-subsystems .ansu-lrow.current .ansu-ldisc {
+  background: var(--ansu-tier-color, #b5892a);
+  color: #fff;
+}
+.the-shards-subsystems .ansu-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+}
+
+/* chips */
+.the-shards-subsystems .ansu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-12, 0.76rem);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  line-height: 1.5;
+  max-width: 100%;
+}
+.the-shards-subsystems .ansu-chip.passive {
+  border-color: rgba(181, 137, 42, 0.45);
+  background: rgba(181, 137, 42, 0.07);
+}
+.the-shards-subsystems .ansu-chip.active {
+  border-color: rgba(181, 137, 42, 0.75);
+  background: rgba(181, 137, 42, 0.13);
+}
+.the-shards-subsystems .ansu-chip.always {
+  border-style: dashed;
+  border-color: rgba(62, 142, 126, 0.6);
+  background: rgba(62, 142, 126, 0.06);
+}
+.the-shards-subsystems .ansu-chip.suppressed {
+  text-decoration: line-through;
+  border-style: dashed;
+  opacity: 0.65;
+}
+.the-shards-subsystems .ansu-chip.replaced {
+  opacity: 0.45;
+  border-style: dotted;
+}
+.the-shards-subsystems .ansu-chip.gate {
+  border-style: dashed;
+  border-color: rgba(62, 142, 126, 0.6);
+  background: rgba(62, 142, 126, 0.06);
+}
+.the-shards-subsystems .ansu-chip .cost {
+  color: #8a6417;
+  font-size: 0.68rem;
+  letter-spacing: -1px;
+}
+.the-shards-subsystems .ansu-chip .tag {
+  font-size: var(--font-size-10, 0.62rem);
+  opacity: 0.6;
+  border-left: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  padding-left: 5px;
+}
+.the-shards-subsystems .ansu-chip .why {
+  color: #8a6417;
+  font-size: 0.7rem;
+}
+
+/* chip hover controls — space is RESERVED (visibility, not display) so revealing
+   the kit can never reflow the chips and yank the hover target away. */
+.the-shards-subsystems .ansu-chip .kit {
+  display: inline-flex;
+  visibility: hidden;
+  gap: 2px;
+  align-items: center;
+  margin-left: 2px;
+  border-left: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  padding-left: 5px;
+}
+.the-shards-subsystems .ansu-lrow:not(.locked) .ansu-chip:hover .kit {
+  visibility: visible;
+}
+.the-shards-subsystems .ansu-lrow.locked .ansu-chip .kit {
+  display: none; /* locked rows have no controls and don't need the width */
+}
+.the-shards-subsystems .ansu-chip .kit button {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.68rem;
+  opacity: 0.6;
+  padding: 0 2px;
+  line-height: 1;
+}
+.the-shards-subsystems .ansu-chip .kit button:hover {
+  opacity: 1;
+}
+
+/* fork row */
+.the-shards-subsystems .ansu-fork-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--font-size-12, 0.78rem);
+  padding: 4px 11px;
+  border-radius: 4px;
+  border: 1px solid;
+  width: auto;
+  flex: 0 0 auto;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.the-shards-subsystems .ansu-fork-chip.tak {
+  border-color: #a11;
+  color: #a11;
+  background: rgba(170, 17, 17, 0.07);
+}
+.the-shards-subsystems .ansu-fork-chip.sub {
+  border-color: #3e8e7e;
+  color: #2e6e61;
+  background: rgba(62, 142, 126, 0.08);
+}
+
+/* ---------- Release block ---------- */
+.the-shards-subsystems .ansu-release {
+  border: 1px solid rgba(181, 137, 42, 0.45);
+  background: rgba(181, 137, 42, 0.05);
+  border-radius: 5px;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.the-shards-subsystems .ansu-release-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.the-shards-subsystems .ansu-release-dc {
+  font-size: var(--font-size-10, 0.66rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a6417;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.the-shards-subsystems .ansu-dc-input {
+  width: 64px;
+  flex: 0 0 auto;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.the-shards-subsystems .ansu-reason-input {
+  flex: 1 1 140px;
+  min-width: 120px;
+}
+.the-shards-subsystems .ansu-pending {
+  border: 1px solid #b5892a;
+  background: rgba(181, 137, 42, 0.1);
+  border-radius: 5px;
+  padding: 0.4rem 0.6rem;
+}
+.the-shards-subsystems .ansu-pending p {
+  margin: 0 0 0.35rem;
+  font-size: var(--font-size-12, 0.78rem);
+}
+.the-shards-subsystems .ansu-outcomes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.the-shards-subsystems .ansu-outcome-label {
+  font-size: var(--font-size-10, 0.66rem);
+  opacity: 0.65;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.the-shards-subsystems .ansu-outcome-btn {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-10, 0.68rem);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+.the-shards-subsystems .ansu-outcome-btn.outcome-criticalSuccess { border-color: #2e7d32; color: #2e7d32; }
+.the-shards-subsystems .ansu-outcome-btn.outcome-success { border-color: #4e944f; color: #4e944f; }
+.the-shards-subsystems .ansu-outcome-btn.outcome-failure { border-color: #b5651d; color: #b5651d; }
+.the-shards-subsystems .ansu-outcome-btn.outcome-criticalFailure { border-color: #a11; color: #a11; }
+
+.the-shards-subsystems .ansu-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-10, 0.66rem);
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: #888;
+}
+.the-shards-subsystems .ansu-pill small {
+  font-weight: 600;
+  opacity: 0.85;
+}
+.the-shards-subsystems .ansu-pill.outcome-criticalSuccess { background: #3f7d46; }
+.the-shards-subsystems .ansu-pill.outcome-success { background: #5c8a60; }
+.the-shards-subsystems .ansu-pill.outcome-failure { background: #a06a34; }
+.the-shards-subsystems .ansu-pill.outcome-criticalFailure { background: #a03b32; }
+
+.the-shards-subsystems .ansu-sugg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 0.72rem);
+  color: #8a6417;
+  border: 1px dashed #b5892a;
+  background: rgba(181, 137, 42, 0.07);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  line-height: 1.5;
+}
+
+/* ---------- footer ---------- */
+.the-shards-subsystems .ansu-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-top: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  padding-top: 0.45rem;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+.the-shards-subsystems .ansu-taken-btn {
+  color: #8f3d37;
+}
+.the-shards-subsystems .ansu-taken-btn:hover {
+  border-color: #a11;
+  color: #a11;
+}
+
+/* ---------- satellites (art / history) ---------- */
+.the-shards-subsystems.ansu-satellite .ansu-art,
+.the-shards-subsystems.ansu-satellite .ansu-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+.the-shards-subsystems .ansu-art-row {
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+}
+.the-shards-subsystems .ansu-art-row.applied {
+  border-color: #b5892a;
+  box-shadow: inset 0 0 0 1px #b5892a;
+}
+.the-shards-subsystems .ansu-art-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.the-shards-subsystems .ansu-art-stage {
+  font-size: var(--font-size-10, 0.66rem);
+  opacity: 0.65;
+  font-style: italic;
+  flex: 1 1 auto;
+}
+.the-shards-subsystems .ansu-art-applied {
+  font-size: var(--font-size-10, 0.66rem);
+  color: #8a6417;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.the-shards-subsystems .ansu-art-field {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.25rem;
+}
+.the-shards-subsystems .ansu-art-field label {
+  flex: 0 0 58px;
+  font-size: var(--font-size-10, 0.66rem);
+  opacity: 0.7;
+}
+.the-shards-subsystems .ansu-art-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-10, 0.68rem);
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+.the-shards-subsystems .ansu-art-actions {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+.the-shards-subsystems .ansu-art-actions button:first-child {
+  width: auto;
+  flex: 1 1 auto;
+}
+.the-shards-subsystems .ansu-art-revert {
+  width: 100%;
+}
+.the-shards-subsystems .ansu-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.the-shards-subsystems .ansu-history-head h4 {
+  margin: 0;
+  font-size: var(--font-size-13, 0.85rem);
+}
+.the-shards-subsystems .ansu-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+.the-shards-subsystems .ansu-log li {
+  display: flex;
+  gap: 0.6rem;
+  font-size: var(--font-size-11, 0.74rem);
+  padding: 0.15rem 0;
+  border-bottom: 1px dotted var(--color-border-light-tertiary, #d5d3c6);
+}
+.the-shards-subsystems .ansu-log-when {
+  flex: 0 0 auto;
+  opacity: 0.6;
+  min-width: 122px;
+}
+.the-shards-subsystems .ansu-log-desc {
+  flex: 1 1 auto;
+}
+
+/* ---------- fork / taken dialogs ---------- */
+.ansu-fork .ansu-fork-warn {
+  color: #a11;
+  font-weight: 600;
+}
+.ansu-fork-dialog .ansu-fork-taken {
+  background: rgba(170, 17, 17, 0.15);
+  border-color: #a11;
+  color: #a11;
+}
+.ansu-fork-dialog .ansu-fork-subjugated {
+  background: rgba(62, 142, 126, 0.15);
+  border-color: #3e8e7e;
+  color: #2e6e61;
+}
+
+/* ---------- chat cards (outside the panel scope) ---------- */
+.ansu-card {
+  border-left: 3px solid #b5892a;
+  padding: 0.2rem 0.5rem;
+}
+.ansu-card .ansu-card-title {
+  font-weight: 600;
+  margin: 0 0 0.3rem;
+}
+.ansu-card .ansu-card-reason {
+  opacity: 0.85;
+  margin: 0 0 0.3rem;
+}
+/* Same two pf2e stylings stripped inside our cards as in the Izir cards. */
+.ansu-card [data-visibility] {
+  background: none !important;
+  box-shadow: none !important;
+}
+.ansu-card a.inline-check,
+.ansu-card span.inline-check {
+  background: none !important;
+  box-shadow: none !important;
+  border: 1px solid #b5892a;
+  border-radius: 3px;
+  padding: 1px 6px;
+  color: inherit;
+}
+.ansu-card a.inline-check:hover {
+  background: rgba(181, 137, 42, 0.12) !important;
+  text-shadow: none;
+}

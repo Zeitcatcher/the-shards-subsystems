@@ -1,0 +1,47 @@
+{
+  "_id": "devourlight00000",
+  "_key": "!items!devourlight00000",
+  "name": "Devour Light",
+  "type": "action",
+  "img": "icons/magic/unholy/orb-glowing-purple.webp",
+  "folder": "izirfoldercall00",
+  "sort": 8250,
+  "system": {
+    "description": {
+      "value": "<p>The void in you drinks the light from the world.</p><hr /><p><strong>Effect</strong> @Template[emanation|distance:20] Nonmagical light sources in the emanation are extinguished and magical light is suppressed for 1 minute. Each enemy in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[fortitude|dc:your Izir DC|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+    },
+    "slug": "shards-izir-devour-light",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "void",
+        "manipulate",
+        "darkness"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "devour-light",
+        "family": "devour-light",
+        "kind": "boon"
+      }
+    }
+  }
+}

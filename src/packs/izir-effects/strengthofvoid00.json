@@ -1,0 +1,66 @@
+{
+  "_id": "strengthofvoid00",
+  "_key": "!items!strengthofvoid00",
+  "name": "Strength of the Void",
+  "type": "effect",
+  "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
+  "folder": "izirfolderwhispe",
+  "sort": 2000,
+  "system": {
+    "description": {
+      "value": "<p>Unnatural power floods your limbs. You gain a +1 status bonus to Athletics and a +5-foot status bonus to your Speed.</p>"
+    },
+    "slug": "shards-izir-strength-of-void",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "FlatModifier",
+        "selector": "athletics",
+        "type": "status",
+        "value": 1
+      },
+      {
+        "key": "FlatModifier",
+        "selector": "speed",
+        "type": "status",
+        "value": 5
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "strength-of-void",
+        "family": "strength-of-void",
+        "kind": "boon"
+      }
+    }
+  }
+}

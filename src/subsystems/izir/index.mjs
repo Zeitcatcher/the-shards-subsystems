@@ -81,7 +81,7 @@ registerSubsystem({
   icon: "fa-solid fa-eye",
   macroImg: "icons/magic/perception/eye-ringed-glow-angry-red.webp",
   settings: IZIR_SETTINGS,
-  openPanel: (actorUuid) => openIzirPanel(actorUuid),
+  openPanel: (actorUuid, opts) => openIzirPanel(actorUuid, opts),
   refresh: () => refreshIzirPanel(),
   sheetButton: rechargeSheetShim,
   onSetup: () => registerIzirTraits(),

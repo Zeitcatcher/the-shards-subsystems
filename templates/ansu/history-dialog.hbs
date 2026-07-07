@@ -1,0 +1,20 @@
+<div class="ansu-history">
+  <div class="ansu-history-head">
+    <h4>{{name}}</h4>
+    <button type="button" class="ansu-ghost" data-action="exportJournal">
+      <i class="fa-solid fa-file-export"></i> {{localize "SHARDS.Ansu.ExportJournal"}}
+    </button>
+  </div>
+  {{#if hasEntries}}
+  <ul class="ansu-log">
+    {{#each entries}}
+    <li class="log-{{this.type}}">
+      <span class="ansu-log-when">{{this.when}}</span>
+      <span class="ansu-log-desc">{{this.desc}}{{#if this.note}} — <em>{{this.note}}</em>{{/if}}</span>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="ansu-empty">{{localize "SHARDS.Ansu.NoHistory"}}</p>
+  {{/if}}
+</div>

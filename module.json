@@ -1,8 +1,8 @@
 {
   "id": "the-shards-subsystems",
   "title": "The Shards Subsystems",
-  "description": "GM tools for The Shards campaign (Pathfinder 2e). Includes Izir, a ten-level immersion tracker for the Nameless: every level grants a power and exacts a price, failed temptation saves fill a slide toward the next level, and the GM can suppress any single effect or export the full history.",
-  "version": "0.3.0",
+  "description": "GM tools for The Shards campaign (Pathfinder 2e). Includes Izir, a ten-level immersion tracker for the Nameless (powers with prices, temptation saves, the slide), and Ansu, a ten-level mastery track for murkhor bearers (Communion boons on a timer, Release saves, the Climb, and the Seizure override). One window, independent subsystems.",
+  "version": "0.4.0",
   "authors": [
     {
       "name": "Zeitcatcher"
@@ -28,7 +28,8 @@
   ],
   "styles": [
     "styles/core.css",
-    "styles/izir.css"
+    "styles/izir.css",
+    "styles/ansu.css"
   ],
   "languages": [
     {
@@ -50,6 +51,19 @@
         "ASSISTANT": "OWNER",
         "GAMEMASTER": "OWNER"
       }
+    },
+    {
+      "name": "ansu-effects",
+      "label": "The Shards: Ansu",
+      "type": "Item",
+      "system": "pf2e",
+      "path": "packs/ansu-effects",
+      "ownership": {
+        "PLAYER": "NONE",
+        "TRUSTED": "NONE",
+        "ASSISTANT": "OWNER",
+        "GAMEMASTER": "OWNER"
+      }
     }
   ],
   "packFolders": [
@@ -57,13 +71,14 @@
       "name": "The Shards",
       "sorting": "m",
       "packs": [
-        "izir-effects"
+        "izir-effects",
+        "ansu-effects"
       ]
     }
   ],
   "url": "https://github.com/Zeitcatcher/the-shards-subsystems",
   "manifest": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/latest/download/module.json",
-  "download": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/download/v0.3.0/module.zip",
+  "download": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/download/v0.4.0/module.zip",
   "license": "PolyForm-Noncommercial-1.0.0",
   "readme": "https://github.com/Zeitcatcher/the-shards-subsystems#readme"
 }

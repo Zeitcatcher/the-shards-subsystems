@@ -1,0 +1,72 @@
+{
+  "_id": "ansur1hornsrefor",
+  "_key": "!items!ansur1hornsrefor",
+  "name": "Horns Reforged",
+  "type": "effect",
+  "img": "icons/commodities/bones/horn-curved-orange.webp",
+  "folder": "ansufolderdiscip",
+  "sort": 4000,
+  "system": {
+    "description": {
+      "value": "<p>What the Ansu broke, the Ansu rebuilds — while it's close. During Communion your shattered horns knit into whole ridged weapons: you gain a horns unarmed Strike (1d8 piercing). When Communion ends, they crumble back to stumps.</p>"
+    },
+    "slug": "shards-ansu-horns-reforged",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Strike",
+        "slug": "shards-ansu-horns-reforged",
+        "label": "Horns Reforged",
+        "img": "icons/commodities/bones/horn-curved-orange.webp",
+        "group": "brawling",
+        "traits": [
+          "unarmed"
+        ],
+        "range": null,
+        "damage": {
+          "base": {
+            "damageType": "piercing",
+            "dice": 1,
+            "die": "d8"
+          }
+        }
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "horns-reforged",
+        "family": "horns-reforged",
+        "kind": "boon"
+      }
+    }
+  }
+}

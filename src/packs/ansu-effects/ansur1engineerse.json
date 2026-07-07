@@ -1,0 +1,70 @@
+{
+  "_id": "ansur1engineerse",
+  "_key": "!items!ansur1engineerse",
+  "name": "Engineer's Eye",
+  "type": "effect",
+  "img": "icons/commodities/tech/cog-brass.webp",
+  "folder": "ansufolderdiscip",
+  "sort": 5500,
+  "system": {
+    "description": {
+      "value": "<p>You begin to see the world the way your people built it: as mechanism. You gain a +1 circumstance bonus to Recall Knowledge about constructs, traps and mechanisms, and to Crafting checks to Disable a Device on mechanical devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>"
+    },
+    "slug": "shards-ansu-engineers-eye",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "FlatModifier",
+        "selector": "crafting",
+        "type": "circumstance",
+        "value": 1,
+        "predicate": [
+          "action:disable-device"
+        ],
+        "label": "Engineer's Eye"
+      },
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Engineer's Eye",
+        "text": "+1 circumstance to Recall Knowledge about constructs, traps and mechanisms."
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "engineers-eye",
+        "family": "engineers-eye",
+        "kind": "boon"
+      }
+    }
+  }
+}

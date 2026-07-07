@@ -1,0 +1,61 @@
+{
+  "_id": "slippingcontrol0",
+  "_key": "!items!slippingcontrol0",
+  "name": "Slipping Control",
+  "type": "effect",
+  "img": "icons/magic/unholy/hand-claw-glow-orange.webp",
+  "folder": "izirfoldercall00",
+  "sort": 7500,
+  "system": {
+    "description": {
+      "value": "<p>The first time you are bloodied each combat, attempt a Will save against your temptation DC or be compelled to Strike the nearest creature (allies included) for 1 round. While below half Hit Points, you are doomed 1.</p>"
+    },
+    "slug": "shards-izir-slipping-control",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Slipping Control",
+        "text": "First time bloodied each combat: Will vs temptation DC or compelled to Strike the nearest creature (allies included) for 1 round. Doomed 1 while below half HP.",
+        "visibility": "gm"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "slipping-control",
+        "family": "slipping-control",
+        "kind": "bane"
+      }
+    }
+  }
+}

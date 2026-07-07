@@ -1,0 +1,61 @@
+{
+  "_id": "unnaturalvigor00",
+  "_key": "!items!unnaturalvigor00",
+  "name": "Unnatural Vigor",
+  "type": "effect",
+  "img": "icons/magic/life/heart-shadow-red.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 5000,
+  "system": {
+    "description": {
+      "value": "<p>The void stitches you back together mid-fight. Once per hour, when you roll initiative, gain temporary Hit Points equal to your level.</p>"
+    },
+    "slug": "shards-izir-unnatural-vigor",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Note",
+        "selector": "initiative",
+        "title": "Unnatural Vigor",
+        "text": "1/hour, on rolling initiative: gain temporary HP equal to your level.",
+        "visibility": "owner"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "unnatural-vigor",
+        "family": "unnatural-vigor",
+        "kind": "boon"
+      }
+    }
+  }
+}

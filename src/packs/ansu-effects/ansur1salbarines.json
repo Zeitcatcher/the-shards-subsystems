@@ -1,0 +1,60 @@
+{
+  "_id": "ansur1salbarines",
+  "_key": "!items!ansur1salbarines",
+  "name": "Salbarine Skin",
+  "type": "effect",
+  "img": "icons/commodities/metal/mail-scale-steel.webp",
+  "folder": "ansufolderdiscip",
+  "sort": 5000,
+  "system": {
+    "description": {
+      "value": "<p>A pale metal sheen spreads over hide and scar — the same gleam as the Ansu's ornaments. You gain resistance ⌈attunement / 3⌉ to physical damage (2 at attunement 5, 3 at 7, 4 at 10).</p>"
+    },
+    "slug": "shards-ansu-salbarine-skin",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Resistance",
+        "type": "physical",
+        "value": 2,
+        "label": "Salbarine Skin"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "salbarine-skin",
+        "family": "salbarine-skin",
+        "kind": "boon"
+      }
+    }
+  }
+}

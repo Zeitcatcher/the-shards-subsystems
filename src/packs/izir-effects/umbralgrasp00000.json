@@ -1,0 +1,46 @@
+{
+  "_id": "umbralgrasp00000",
+  "_key": "!items!umbralgrasp00000",
+  "name": "Umbral Grasp",
+  "type": "action",
+  "img": "icons/magic/unholy/hand-grasping-green.webp",
+  "folder": "izirfolderwhispe",
+  "sort": 2250,
+  "system": {
+    "description": {
+      "value": "<p>A hand of living void reaches where yours cannot.</p><hr /><p><strong>Range</strong> 15 feet; <strong>Targets</strong> 1 creature</p><p><strong>Effect</strong> The target attempts a Fortitude save (@Check[fortitude|dc:your Izir DC]).</p><ul><li><strong>Failure</strong> The void drags the target 10 feet toward you.</li><li><strong>Critical Failure</strong> As failure, and the target is off-guard until the end of its next turn.</li></ul><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+    },
+    "slug": "shards-izir-umbral-grasp",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "void",
+        "manipulate"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "umbral-grasp",
+        "family": "umbral-grasp",
+        "kind": "boon"
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "_id": "ansur1callthebla",
+  "_key": "!items!ansur1callthebla",
+  "name": "Call the Blade",
+  "type": "action",
+  "img": "icons/weapons/axes/axe-broad-engraved-black-grey.webp",
+  "folder": "ansufoldertrial0",
+  "sort": 3250,
+  "system": {
+    "description": {
+      "value": "<p>You remember where your weapon is the way you remember where your hand is. One weapon you own flies to your open grasp from up to 60 feet — walls and physical barriers don't block the call, though sealed magical wards do. If a creature is holding it, the weapon strains but doesn't tear free.</p><p><em>(The Ansu once called Афина through the walls of a fighting club. This is that, learned.)</em></p>"
+    },
+    "slug": "shards-ansu-call-the-blade",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 1
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "concentrate",
+        "magical"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "call-the-blade",
+        "family": "call-the-blade",
+        "kind": "boon"
+      }
+    }
+  }
+}

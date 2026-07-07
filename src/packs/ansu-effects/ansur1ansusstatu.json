@@ -1,0 +1,62 @@
+{
+  "_id": "ansur1ansusstatu",
+  "_key": "!items!ansur1ansusstatu",
+  "name": "Ansu's Stature",
+  "type": "effect",
+  "img": "icons/equipment/worn-items/apex-items/belt-of-giant-strength.webp",
+  "folder": "ansufolderunion0",
+  "sort": 7000,
+  "system": {
+    "description": {
+      "value": "<p>For a minute at a time, you are the thing that stood over you in your mind. When you Invoke the Ansu you grow to Large size: your reach increases by 5 feet, and your gear grows with you. Your Ancestral Vigor bonus improves to +2.</p>"
+    },
+    "slug": "shards-ansu-ansus-stature",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "CreatureSize",
+        "value": "large",
+        "resizeEquipment": true,
+        "reach": {
+          "override": 10
+        }
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "ansus-stature",
+        "family": "ansus-stature",
+        "kind": "boon"
+      }
+    }
+  }
+}

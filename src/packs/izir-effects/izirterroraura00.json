@@ -1,0 +1,51 @@
+{
+  "_id": "izirterroraura00",
+  "_key": "!items!izirterroraura00",
+  "name": "Izir's Terror",
+  "type": "effect",
+  "img": "icons/magic/unholy/orb-glowing-purple.webp",
+  "folder": "izirfolderintern",
+  "sort": 100,
+  "system": {
+    "description": {
+      "value": "<p>You are inside Izir's Terror. On entering, attempt a Will save against the bearer's temptation DC: frightened 1 on a failure, frightened 2 on a critical failure.</p>"
+    },
+    "slug": "shards-izir-pack-izirterroraura00",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izir": {
+        "pack": true
+      }
+    }
+  }
+}

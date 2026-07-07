@@ -1,0 +1,69 @@
+{
+  "_id": "thebodybetrays00",
+  "_key": "!items!thebodybetrays00",
+  "name": "The Body Betrays",
+  "type": "effect",
+  "img": "icons/magic/unholy/strike-body-explode-disintegrate.webp",
+  "folder": "izirfoldercall00",
+  "sort": 8500,
+  "system": {
+    "description": {
+      "value": "<p>The void reshapes your flesh into something visibly wrong. Only magic can disguise it; you take a -2 circumstance penalty to Diplomacy and Deception against those who are not Nameless, and wards against Izir always detect you.</p>"
+    },
+    "slug": "shards-izir-the-body-betrays",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "FlatModifier",
+        "selector": [
+          "diplomacy",
+          "deception"
+        ],
+        "type": "circumstance",
+        "value": -2,
+        "label": "SHARDS.Izir.MaskedLabel"
+      },
+      {
+        "key": "RollOption",
+        "domain": "all",
+        "option": "self:shards:izir:visible"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "the-body-betrays",
+        "family": "the-body-betrays",
+        "kind": "bane"
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "_id": "ansur1overwhelm0",
+  "_key": "!items!ansur1overwhelm0",
+  "name": "Overwhelm",
+  "type": "action",
+  "img": "icons/abilities/solar-fist.webp",
+  "folder": "ansufolderdiscip",
+  "sort": 6250,
+  "system": {
+    "description": {
+      "value": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, immediately attempt an Athletics check to Shove or Trip the target; this check doesn't count toward your multiple attack penalty, and the Ansu's mass is behind it — +1 circumstance bonus.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>"
+    },
+    "slug": "shards-ansu-overwhelm",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "flourish"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "overwhelm",
+        "family": "overwhelm",
+        "kind": "boon"
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "_id": "ansur1roaroftheo",
+  "_key": "!items!ansur1roaroftheo",
+  "name": "Roar of the Old Blood",
+  "type": "action",
+  "img": "icons/creatures/unholy/demon-fire-horned-winged-roar.webp",
+  "folder": "ansufolderunion0",
+  "sort": 8250,
+  "system": {
+    "description": {
+      "value": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize each enemy within 30 feet. You don't take the penalty for not sharing a language — fear this old needs no translation.</p><p><em>Once per Communion.</em></p>"
+    },
+    "slug": "shards-ansu-roar-of-the-old-blood",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 1
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "auditory",
+        "concentrate",
+        "emotion",
+        "fear",
+        "mental"
+      ],
+      "rarity": "common"
+    },
+    "frequency": {
+      "max": 1,
+      "per": "day"
+    },
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "roar-of-the-old-blood",
+        "family": "roar-of-the-old-blood",
+        "kind": "boon"
+      }
+    }
+  }
+}

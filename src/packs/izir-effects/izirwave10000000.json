@@ -1,0 +1,46 @@
+{
+  "_id": "izirwave10000000",
+  "_key": "!items!izirwave10000000",
+  "name": "Izir Wave I",
+  "type": "action",
+  "img": "icons/magic/unholy/beam-impact-purple.webp",
+  "folder": "izirfolderwhispe",
+  "sort": 3250,
+  "system": {
+    "description": {
+      "value": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:15] Each creature in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[reflex|dc:your Izir DC|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+    },
+    "slug": "shards-izir-izir-wave-1",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "void",
+        "manipulate"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "izir-wave-1",
+        "family": "izir-wave",
+        "kind": "boon"
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "_id": "voidstep00000000",
+  "_key": "!items!voidstep00000000",
+  "name": "Void Step",
+  "type": "action",
+  "img": "icons/magic/movement/trail-streak-zigzag-teal.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 6250,
+  "system": {
+    "description": {
+      "value": "<p>You fold through the dark between two shadows.</p><hr /><p><strong>Requirements</strong> You are in dim light or darkness.</p><p><strong>Effect</strong> Teleport up to 15 feet to a space you can see that is in dim light or darkness.</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+    },
+    "slug": "shards-izir-void-step",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 1
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "void",
+        "move",
+        "teleportation"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "void-step",
+        "family": "void-step",
+        "kind": "boon"
+      }
+    }
+  }
+}

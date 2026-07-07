@@ -1,0 +1,63 @@
+{
+  "_id": "gripofthevoid000",
+  "_key": "!items!gripofthevoid000",
+  "name": "Grip of the Void",
+  "type": "effect",
+  "img": "icons/magic/unholy/beam-ringed-impact-purple.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 6000,
+  "system": {
+    "description": {
+      "value": "<p>Where you wound, the void lingers. Your critical hits deal an extra 1d6 persistent void damage.</p>"
+    },
+    "slug": "shards-izir-grip-of-the-void",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "DamageDice",
+        "selector": "strike-damage",
+        "diceNumber": 1,
+        "dieSize": "d6",
+        "damageType": "void",
+        "category": "persistent",
+        "critical": true
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "grip-of-the-void",
+        "family": "grip-of-the-void",
+        "kind": "boon"
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "_id": "sovereignwill000",
+  "_key": "!items!sovereignwill000",
+  "name": "Sovereign Will",
+  "type": "effect",
+  "img": "icons/magic/control/buff-flight-wings-runes-purple.webp",
+  "folder": "izirfoldernineve",
+  "sort": 10000,
+  "system": {
+    "description": {
+      "value": "<p>You are the master now, not the mastered. You are immune to void damage and to Izir's compulsions, and you gain a +1 status bonus to Will saves.</p>"
+    },
+    "slug": "shards-izir-sovereign-will",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Immunity",
+        "type": "void"
+      },
+      {
+        "key": "FlatModifier",
+        "selector": "will",
+        "type": "status",
+        "value": 1
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "sovereign-will",
+        "family": "sovereign-will",
+        "kind": "boon"
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "_id": "anathematothehol",
+  "_key": "!items!anathematothehol",
+  "name": "Anathema to the Holy",
+  "type": "effect",
+  "img": "icons/magic/light/explosion-star-glow-yellow.webp",
+  "folder": "izirfolderwhispe",
+  "sort": 3500,
+  "system": {
+    "description": {
+      "value": "<p>The void in you recoils from light and the sacred. You gain weakness 2 (4 at immersion 6, 6 at 8) to holy damage (the weakness deepens as you sink: 4 at immersion 6, 6 at immersion 8), and sudden bright light dazzles you for 1 round.</p>"
+    },
+    "slug": "shards-izir-anathema-to-the-holy",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Weakness",
+        "type": "holy",
+        "value": 2
+      },
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Anathema to the Holy",
+        "text": "Sudden bright light dazzles you for 1 round.",
+        "visibility": "gm"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "anathema-to-the-holy",
+        "family": "anathema-to-the-holy",
+        "kind": "bane"
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "_id": "thefacefades0000",
+  "_key": "!items!thefacefades0000",
+  "name": "The Face Fades",
+  "type": "effect",
+  "img": "icons/magic/unholy/hand-marked-pink.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 5500,
+  "system": {
+    "description": {
+      "value": "<p>Your features blur toward something wrong. You take a -2 circumstance penalty to Diplomacy and Deception against strangers, and concealing your nature at close range now requires magic.</p>"
+    },
+    "slug": "shards-izir-the-face-fades",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "FlatModifier",
+        "selector": [
+          "diplomacy",
+          "deception"
+        ],
+        "type": "circumstance",
+        "value": -2,
+        "label": "SHARDS.Izir.MaskedLabel"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "the-face-fades",
+        "family": "mark-spreads",
+        "kind": "bane"
+      }
+    }
+  }
+}

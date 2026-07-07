@@ -1,0 +1,61 @@
+{
+  "_id": "dreamsofvoid0000",
+  "_key": "!items!dreamsofvoid0000",
+  "name": "Dreams of the Void",
+  "type": "effect",
+  "img": "icons/magic/unholy/silhouette-robe-evil-power.webp",
+  "folder": "izirfolderwhispe",
+  "sort": 1500,
+  "system": {
+    "description": {
+      "value": "<p>Sleep opens a door. After daily preparations, attempt a DC 4 flat check; on a failure you are fatigued until you spend 10 minutes communing with Izir, which may itself invite temptation.</p>"
+    },
+    "slug": "shards-izir-dreams-of-void",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Dreams of the Void",
+        "text": "After daily preparations: DC 4 flat check or fatigued until 10 minutes of communion with Izir.",
+        "visibility": "gm"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "dreams-of-void",
+        "family": "dreams-of-void",
+        "kind": "bane"
+      }
+    }
+  }
+}

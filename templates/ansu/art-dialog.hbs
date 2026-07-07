@@ -1,0 +1,34 @@
+<div class="ansu-art">
+  <p class="ansu-hint">{{localize "SHARDS.Ansu.ArtHint"}}</p>
+  {{#each rows}}
+  <div class="ansu-art-row {{#if this.applied}}applied{{/if}}">
+    <div class="ansu-art-head">
+      <strong>{{this.label}}</strong>
+      <span class="ansu-art-stage">{{this.hint}}</span>
+      {{#if this.applied}}<span class="ansu-art-applied">{{localize "SHARDS.Ansu.ArtApplied"}}</span>{{/if}}
+    </div>
+    <div class="ansu-art-field">
+      <label>{{localize "SHARDS.Ansu.ArtPortrait"}}</label>
+      <span class="ansu-art-path">{{#if this.portrait}}{{this.portrait}}{{else}}—{{/if}}</span>
+      <button type="button" class="ansu-ghost" data-action="artBrowse" data-threshold="{{this.threshold}}" data-field="portrait"
+        data-tooltip="{{localize 'SHARDS.Ansu.ArtBrowse'}}"><i class="fa-solid fa-folder-open"></i></button>
+    </div>
+    <div class="ansu-art-field">
+      <label>{{localize "SHARDS.Ansu.ArtToken"}}</label>
+      <span class="ansu-art-path">{{#if this.token}}{{this.token}}{{else}}—{{/if}}</span>
+      <button type="button" class="ansu-ghost" data-action="artBrowse" data-threshold="{{this.threshold}}" data-field="token"
+        data-tooltip="{{localize 'SHARDS.Ansu.ArtBrowse'}}"><i class="fa-solid fa-folder-open"></i></button>
+    </div>
+    <div class="ansu-art-actions">
+      <button type="button" data-action="artApply" data-threshold="{{this.threshold}}" {{#unless this.hasArt}}disabled{{/unless}}>{{localize "SHARDS.Ansu.ArtApply"}}</button>
+      <button type="button" class="ansu-ghost" data-action="artClear" data-threshold="{{this.threshold}}"
+        data-tooltip="{{localize 'SHARDS.Ansu.ArtClear'}}"><i class="fa-solid fa-eraser"></i></button>
+    </div>
+  </div>
+  {{/each}}
+  {{#if hasOriginal}}
+  <button type="button" class="ansu-art-revert" data-action="artRevert">
+    <i class="fa-solid fa-rotate-left"></i> {{localize "SHARDS.Ansu.ArtRevert"}}
+  </button>
+  {{/if}}
+</div>

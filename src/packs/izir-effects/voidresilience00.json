@@ -1,0 +1,59 @@
+{
+  "_id": "voidresilience00",
+  "_key": "!items!voidresilience00",
+  "name": "Void Resilience",
+  "type": "effect",
+  "img": "icons/magic/unholy/orb-glowing-purple.webp",
+  "folder": "izirfolderwhispe",
+  "sort": 3000,
+  "system": {
+    "description": {
+      "value": "<p>Void becomes a second skin. You gain resistance to void damage equal to half your level.</p>"
+    },
+    "slug": "shards-izir-void-resilience",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Resistance",
+        "type": "void",
+        "value": "floor(@actor.level/2)"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "void-resilience",
+        "family": "void-resilience",
+        "kind": "boon"
+      }
+    }
+  }
+}

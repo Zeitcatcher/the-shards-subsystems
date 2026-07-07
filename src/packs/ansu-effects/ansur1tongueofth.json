@@ -1,0 +1,60 @@
+{
+  "_id": "ansur1tongueofth",
+  "_key": "!items!ansur1tongueofth",
+  "name": "Tongue of the Makers",
+  "type": "effect",
+  "img": "icons/abilities/blue-rune-ancient.webp",
+  "folder": "ansufoldertrial0",
+  "sort": 2500,
+  "system": {
+    "description": {
+      "value": "<p>The Ansu murmurs the old words until they are yours. You can speak, read and write Murkhor and recognize the maker-glyphs of your people. You gain a +1 circumstance bonus to Decipher Writing and to Recall Knowledge about murkhor works, ruins and devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>"
+    },
+    "slug": "shards-ansu-tongue-of-the-makers",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Tongue of the Makers",
+        "text": "Knows Murkhor. +1 circumstance to Decipher Writing and Recall Knowledge about murkhor works."
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "tongue-of-the-makers",
+        "family": "tongue-of-the-makers",
+        "kind": "boon"
+      }
+    }
+  }
+}

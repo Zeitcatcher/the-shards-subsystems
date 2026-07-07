@@ -1,0 +1,74 @@
+{
+  "_id": "voidlash00000000",
+  "_key": "!items!voidlash00000000",
+  "name": "Void Lash",
+  "type": "effect",
+  "img": "icons/magic/unholy/projectile-helix-blood-red.webp",
+  "folder": "izirfolderwhispe",
+  "sort": 1000,
+  "system": {
+    "description": {
+      "value": "<p>A whip of living black snaps from your hand. Void Lash is a ranged Strike (30 feet) using your Izir attack modifier (your Izir attack modifier). It deals void damage that scales with your level and can be used at will.</p>"
+    },
+    "slug": "shards-izir-void-lash",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Strike",
+        "slug": "shards-izir-void-lash",
+        "label": "Void Lash",
+        "img": "icons/magic/unholy/projectile-helix-blood-red.webp",
+        "group": "brawling",
+        "traits": [
+          "magical",
+          "unarmed",
+          "void"
+        ],
+        "range": 30,
+        "damage": {
+          "base": {
+            "damageType": "void",
+            "dice": 1,
+            "die": "d4"
+          }
+        }
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "void-lash",
+        "family": "void-lash",
+        "kind": "boon"
+      }
+    }
+  }
+}

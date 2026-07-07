@@ -1,0 +1,49 @@
+{
+  "_id": "rcvoidstep000000",
+  "_key": "!items!rcvoidstep000000",
+  "name": "Recharge: Void Step",
+  "type": "effect",
+  "img": "icons/magic/time/hourglass-tilted-glowing-gold.webp",
+  "folder": "izirfolderintern",
+  "sort": 200,
+  "system": {
+    "description": {
+      "value": "<p>Void Step is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>"
+    },
+    "slug": "shards-izir-recharge-void-step",
+    "duration": {
+      "value": 1,
+      "unit": "rounds",
+      "sustained": false,
+      "expiry": "turn-start"
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirRecharge": "void-step"
+    }
+  }
+}

@@ -1,0 +1,288 @@
+{
+  "version": 1,
+  "_note": "Single source of truth for Ansu boons (there are no banes — the system's teeth are control, not prices). Names and descriptions are authored in English (GM directive). Number tokens: {{ansuReleaseDC}}, {{ansuTempHp}}, {{ansuResist}}, {{ansuLevel}}, {{ansuDuration}} — baked at compose time and recomputed on attunement or character-level change.",
+  "_designNote": "GM-approved ladder (2026-07-06): rev-2 artifact text verbatim. `always: true` = Inheritance (persistent knowledge, lives on the Attunement marker); everything else lives on the Communion effect and exists only while it runs. Gate `subjugated` = Mastery-only. The metal is Salbarium (Сальбарий).",
+  "tiers": [
+    { "id": "trial", "levels": [1, 3], "labelKey": "SHARDS.Ansu.Tier.trial" },
+    { "id": "discipline", "levels": [4, 6], "labelKey": "SHARDS.Ansu.Tier.discipline" },
+    { "id": "union", "levels": [7, 9], "labelKey": "SHARDS.Ansu.Tier.union" },
+    { "id": "mastery", "levels": [10, 10], "labelKey": "SHARDS.Ansu.Tier.mastery" }
+  ],
+  "entries": [
+    {
+      "id": "invoke-the-ansu",
+      "family": "invoke-the-ansu",
+      "rank": 1,
+      "level": 1,
+      "kind": "boon",
+      "form": "action",
+      "name": "Invoke the Ansu",
+      "description": "<p>You stop holding the door shut. The presence in your blood floods through you: you gain the Communion benefits of your attunement rank.</p><hr /><p><strong>Duration</strong> {{ansuDuration}} (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). When Communion ends — or when you try to end it early — attempt a Will save against the Release DC ({{ansuReleaseDC}}).</p><p>You can Invoke at will, but not while Communion is already running.</p>",
+      "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
+      "rules": [],
+      "chipTag": "enter communion",
+      "actionData": {
+        "actionType": "action",
+        "actions": 1,
+        "traits": ["concentrate"],
+        "frequency": { "max": 1, "per": "round" }
+      }
+    },
+    {
+      "id": "release-the-ansu",
+      "family": "release-the-ansu",
+      "rank": 1,
+      "level": 1,
+      "kind": "boon",
+      "form": "action",
+      "name": "Release the Ansu",
+      "description": "<p>You loosen your grip on the borrowed strength and try to hand it back. Attempt a Will save against the Release DC ({{ansuReleaseDC}}).</p><ul><li><strong>Critical Success</strong> Clean release; the discipline feeds the Climb (+2).</li><li><strong>Success</strong> Clean release (+1 to the Climb).</li><li><strong>Failure</strong> The Ansu doesn't let go: <em>Lingering</em> — the boons stay on, the Ansu steers. Re-save at the end of each of your turns.</li><li><strong>Critical Failure</strong> <em>Seizure</em> — the Ansu takes the body for 1 round (the GM plays you), then Lingering resumes.</li></ul>",
+      "img": "icons/magic/control/debuff-energy-hold-teal-blue.webp",
+      "rules": [],
+      "chipTag": "will save",
+      "actionData": {
+        "actionType": "free",
+        "actions": null,
+        "traits": ["concentrate"],
+        "frequency": { "max": 1, "per": "round" }
+      }
+    },
+    {
+      "id": "ancestral-vigor",
+      "family": "ancestral-vigor",
+      "rank": 1,
+      "level": 1,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Ancestral Vigor",
+      "description": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain {{ansuTempHp}} temporary Hit Points, and you gain a +1 status bonus to melee damage rolls while Communion lasts.</p>",
+      "img": "icons/magic/control/buff-strength-muscle-damage-red.webp",
+      "chipTag": "temp HP + damage",
+      "rules": [
+        { "key": "TempHP", "value": "{{ansuTempHp}}" },
+        { "key": "FlatModifier", "selector": "melee-strike-damage", "type": "status", "value": 1, "label": "Ancestral Vigor" }
+      ]
+    },
+    {
+      "id": "bulls-footing",
+      "family": "bulls-footing",
+      "rank": 1,
+      "level": 2,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Bull's Footing",
+      "description": "<p>Hooves strike the ground like hammers on an anvil. You gain a +10-foot status bonus to your Speed, and when you Stride in a straight line toward an enemy you ignore non-magical difficult terrain.</p>",
+      "img": "icons/equipment/worn-items/other-worn-items/boots-of-speed.webp",
+      "chipTag": "speed",
+      "rules": [
+        { "key": "FlatModifier", "selector": "land-speed", "type": "status", "value": 10, "label": "Bull's Footing" },
+        { "key": "Note", "selector": "all", "title": "Bull's Footing", "text": "Striding in a straight line toward an enemy: ignore non-magical difficult terrain." }
+      ]
+    },
+    {
+      "id": "tongue-of-the-makers",
+      "family": "tongue-of-the-makers",
+      "rank": 1,
+      "level": 2,
+      "kind": "boon",
+      "form": "effect",
+      "always": true,
+      "name": "Tongue of the Makers",
+      "description": "<p>The Ansu murmurs the old words until they are yours. You can speak, read and write Murkhor and recognize the maker-glyphs of your people. You gain a +1 circumstance bonus to Decipher Writing and to Recall Knowledge about murkhor works, ruins and devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>",
+      "img": "icons/abilities/blue-rune-ancient.webp",
+      "chipTag": "always on",
+      "rules": [
+        { "key": "Note", "selector": "all", "title": "Tongue of the Makers", "text": "Knows Murkhor. +1 circumstance to Decipher Writing and Recall Knowledge about murkhor works." }
+      ]
+    },
+    {
+      "id": "call-the-blade",
+      "family": "call-the-blade",
+      "rank": 1,
+      "level": 3,
+      "kind": "boon",
+      "form": "action",
+      "name": "Call the Blade",
+      "description": "<p>You remember where your weapon is the way you remember where your hand is. One weapon you own flies to your open grasp from up to 60 feet — walls and physical barriers don't block the call, though sealed magical wards do. If a creature is holding it, the weapon strains but doesn't tear free.</p><p><em>(The Ansu once called Афина through the walls of a fighting club. This is that, learned.)</em></p>",
+      "img": "icons/weapons/axes/axe-broad-engraved-black-grey.webp",
+      "rules": [],
+      "chipTag": "weapon returns",
+      "actionData": {
+        "actionType": "action",
+        "actions": 1,
+        "traits": ["concentrate", "magical"]
+      }
+    },
+    {
+      "id": "horns-reforged",
+      "family": "horns-reforged",
+      "rank": 1,
+      "level": 4,
+      "kind": "boon",
+      "form": "strike",
+      "name": "Horns Reforged",
+      "description": "<p>What the Ansu broke, the Ansu rebuilds — while it's close. During Communion your shattered horns knit into whole ridged weapons: you gain a horns unarmed Strike (1d8 piercing). When Communion ends, they crumble back to stumps.</p>",
+      "img": "icons/commodities/bones/horn-curved-orange.webp",
+      "chipTag": "horn strike · art",
+      "rules": [],
+      "strikeData": {
+        "die": "d8",
+        "dice": 1,
+        "damageType": "piercing",
+        "traits": ["unarmed"],
+        "group": "brawling",
+        "range": null
+      }
+    },
+    {
+      "id": "salbarine-skin",
+      "family": "salbarine-skin",
+      "rank": 1,
+      "level": 5,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Salbarine Skin",
+      "description": "<p>A pale metal sheen spreads over hide and scar — the same gleam as the Ansu's ornaments. You gain resistance {{ansuResist}} to physical damage (2 at attunement 5, 3 at 7, 4 at 10).</p>",
+      "img": "icons/commodities/metal/mail-scale-steel.webp",
+      "chipTag": "resistance {{ansuResist}}",
+      "rules": [
+        { "key": "Resistance", "type": "physical", "value": "{{ansuResist}}", "label": "Salbarine Skin" }
+      ]
+    },
+    {
+      "id": "engineers-eye",
+      "family": "engineers-eye",
+      "rank": 1,
+      "level": 5,
+      "kind": "boon",
+      "form": "effect",
+      "always": true,
+      "name": "Engineer's Eye",
+      "description": "<p>You begin to see the world the way your people built it: as mechanism. You gain a +1 circumstance bonus to Recall Knowledge about constructs, traps and mechanisms, and to Crafting checks to Disable a Device on mechanical devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>",
+      "img": "icons/commodities/tech/cog-brass.webp",
+      "chipTag": "always on",
+      "rules": [
+        { "key": "FlatModifier", "selector": "crafting", "type": "circumstance", "value": 1, "predicate": ["action:disable-device"], "label": "Engineer's Eye" },
+        { "key": "Note", "selector": "all", "title": "Engineer's Eye", "text": "+1 circumstance to Recall Knowledge about constructs, traps and mechanisms." }
+      ]
+    },
+    {
+      "id": "overwhelm",
+      "family": "overwhelm",
+      "rank": 1,
+      "level": 6,
+      "kind": "boon",
+      "form": "action",
+      "name": "Overwhelm",
+      "description": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, immediately attempt an Athletics check to Shove or Trip the target; this check doesn't count toward your multiple attack penalty, and the Ansu's mass is behind it — +1 circumstance bonus.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>",
+      "img": "icons/abilities/solar-fist.webp",
+      "rules": [],
+      "chipTag": "strike + shove/trip",
+      "actionData": {
+        "actionType": "action",
+        "actions": 2,
+        "traits": ["flourish"]
+      }
+    },
+    {
+      "id": "ancestral-vigor-2",
+      "family": "ancestral-vigor",
+      "rank": 2,
+      "level": 7,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Ancestral Vigor (Union)",
+      "description": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu you gain {{ansuTempHp}} temporary Hit Points, and you gain a +2 status bonus to melee damage rolls while Communion lasts.</p>",
+      "img": "icons/magic/control/buff-strength-muscle-damage-red.webp",
+      "chipTag": "temp HP + damage 2",
+      "rules": [
+        { "key": "TempHP", "value": "{{ansuTempHp}}" },
+        { "key": "FlatModifier", "selector": "melee-strike-damage", "type": "status", "value": 2, "label": "Ancestral Vigor" }
+      ]
+    },
+    {
+      "id": "ansus-stature",
+      "family": "ansus-stature",
+      "rank": 1,
+      "level": 7,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Ansu's Stature",
+      "description": "<p>For a minute at a time, you are the thing that stood over you in your mind. When you Invoke the Ansu you grow to Large size: your reach increases by 5 feet, and your gear grows with you. Your Ancestral Vigor bonus improves to +2.</p>",
+      "img": "icons/equipment/worn-items/apex-items/belt-of-giant-strength.webp",
+      "chipTag": "Large · reach",
+      "rules": [
+        { "key": "CreatureSize", "value": "large", "resizeEquipment": true, "reach": { "override": 10 } }
+      ]
+    },
+    {
+      "id": "roar-of-the-old-blood",
+      "family": "roar-of-the-old-blood",
+      "rank": 1,
+      "level": 8,
+      "kind": "boon",
+      "form": "action",
+      "name": "Roar of the Old Blood",
+      "description": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize each enemy within 30 feet. You don't take the penalty for not sharing a language — fear this old needs no translation.</p><p><em>Once per Communion.</em></p>",
+      "img": "icons/creatures/unholy/demon-fire-horned-winged-roar.webp",
+      "rules": [],
+      "chipTag": "1/communion",
+      "actionData": {
+        "actionType": "action",
+        "actions": 1,
+        "traits": ["auditory", "concentrate", "emotion", "fear", "mental"],
+        "frequency": { "max": 1, "per": "day" },
+        "perCommunion": true
+      }
+    },
+    {
+      "id": "mind-like-a-forge",
+      "family": "mind-like-a-forge",
+      "rank": 1,
+      "level": 9,
+      "kind": "boon",
+      "form": "effect",
+      "name": "Mind Like a Forge",
+      "description": "<p>The Ansu drives the body faster than deliberation. While Communion lasts you are quickened; you can use the extra action only to Stride or Strike.</p>",
+      "img": "icons/spells/haste.webp",
+      "chipTag": "quickened",
+      "rules": [
+        { "key": "GrantItem", "uuid": "Compendium.pf2e.conditionitems.Item.Quickened", "inMemoryOnly": true },
+        { "key": "Note", "selector": "all", "title": "Mind Like a Forge", "text": "Quickened: the extra action is only for Stride or Strike." }
+      ]
+    },
+    {
+      "id": "permanent-communion",
+      "family": "permanent-communion",
+      "rank": 1,
+      "level": 10,
+      "kind": "boon",
+      "form": "effect",
+      "gate": "subjugated",
+      "name": "Permanent Communion",
+      "description": "<p>There is no longer a door to hold shut — there is only you, larger inside than before. Communion no longer expires and never requires a Release save. You can enter or end it as a free action once per turn. Every Communion boon and Inheritance is simply yours now.</p>",
+      "img": "icons/magic/control/control-influence-crown-gold.webp",
+      "chipTag": "no saves · at will",
+      "rules": []
+    },
+    {
+      "id": "hand-of-the-ansu",
+      "family": "hand-of-the-ansu",
+      "rank": 1,
+      "level": 10,
+      "kind": "boon",
+      "form": "action",
+      "gate": "subjugated",
+      "name": "Hand of the Ansu",
+      "description": "<p>The mind-summons perfected. You Interact with an object at a distance — up to 120 feet, through walls and barriers: seize it, drag it to your hand, shove it, turn a wheel, throw a bolt. Call the Blade now works anywhere on the scene, no range limit. Creatures holding an object still keep their grip.</p>",
+      "img": "icons/equipment/worn-items/other-worn-items/hand-of-the-mage.webp",
+      "rules": [],
+      "chipTag": "capstone",
+      "actionData": {
+        "actionType": "action",
+        "actions": 1,
+        "traits": ["concentrate", "magical"]
+      }
+    }
+  ]
+}

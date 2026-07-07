@@ -1,0 +1,46 @@
+{
+  "_id": "izirwave20000000",
+  "_key": "!items!izirwave20000000",
+  "name": "Izir Wave II",
+  "type": "action",
+  "img": "icons/magic/unholy/beam-impact-purple.webp",
+  "folder": "izirfoldergrip00",
+  "sort": 5250,
+  "system": {
+    "description": {
+      "value": "<p>The wave widens into a torrent of annihilation.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:30] Each creature in the area takes @Damage[(floor(@actor.level/2))d8[void]|options:area-damage] damage (@Check[reflex|dc:your Izir DC|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+    },
+    "slug": "shards-izir-izir-wave-2",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "void",
+        "manipulate"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "izir-wave-2",
+        "family": "izir-wave",
+        "kind": "boon"
+      }
+    }
+  }
+}

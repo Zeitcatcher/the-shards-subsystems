@@ -1,0 +1,61 @@
+{
+  "_id": "izirdoesnotletgo",
+  "_key": "!items!izirdoesnotletgo",
+  "name": "Izir Does Not Let Go",
+  "type": "effect",
+  "img": "icons/magic/life/heart-shadow-red.webp",
+  "folder": "izirfoldercall00",
+  "sort": 8000,
+  "system": {
+    "description": {
+      "value": "<p>The void refuses to release its vessel. Once per day, when you would be reduced to 0 Hit Points, you stay at 1 Hit Point instead.</p>"
+    },
+    "slug": "shards-izir-izir-does-not-let-go",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Izir Does Not Let Go",
+        "text": "1/day: when reduced to 0 HP, stay at 1 HP instead.",
+        "visibility": "owner"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "izir-does-not-let-go",
+        "family": "izir-does-not-let-go",
+        "kind": "boon"
+      }
+    }
+  }
+}

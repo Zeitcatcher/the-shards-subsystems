@@ -1,0 +1,65 @@
+{
+  "_id": "ansur1mindlikeaf",
+  "_key": "!items!ansur1mindlikeaf",
+  "name": "Mind Like a Forge",
+  "type": "effect",
+  "img": "icons/spells/haste.webp",
+  "folder": "ansufolderunion0",
+  "sort": 9000,
+  "system": {
+    "description": {
+      "value": "<p>The Ansu drives the body faster than deliberation. While Communion lasts you are quickened; you can use the extra action only to Stride or Strike.</p>"
+    },
+    "slug": "shards-ansu-mind-like-a-forge",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "GrantItem",
+        "uuid": "Compendium.pf2e.conditionitems.Item.Quickened",
+        "inMemoryOnly": true
+      },
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Mind Like a Forge",
+        "text": "Quickened: the extra action is only for Stride or Strike."
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "mind-like-a-forge",
+        "family": "mind-like-a-forge",
+        "kind": "boon"
+      }
+    }
+  }
+}

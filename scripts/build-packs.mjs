@@ -14,7 +14,10 @@ import { fileURLToPath } from "node:url";
 import { compilePack } from "@foundryvtt/foundryvtt-cli";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const PACKS = [{ src: "src/packs/izir-effects", dest: "packs/izir-effects" }];
+const PACKS = [
+  { src: "src/packs/izir-effects", dest: "packs/izir-effects" },
+  { src: "src/packs/ansu-effects", dest: "packs/ansu-effects" },
+];
 
 for (const p of PACKS) {
   const dest = resolve(ROOT, p.dest);

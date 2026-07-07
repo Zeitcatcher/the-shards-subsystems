@@ -251,3 +251,160 @@ const n = writeDir("src/packs/izir-effects", docs);
 console.log(
   `build-pack-sources: wrote ${FOLDERS.length} folders + ${(content.entries ?? []).length} abilities + ${(content.packEffects ?? []).length} aura effect(s) = ${n} docs.`,
 );
+
+/* ================================================================== */
+/* Ansu — same reusable-pack idea, its own namespace and folder set.    */
+/* Copies carry flags[MODULE_ID].ansuPack (NOT the tracker's `.ansu`     */
+/* tag), so the reconciler ignores anything dragged on manually.        */
+/* ================================================================== */
+
+const ANSU_DEFAULT_EFFECT_IMG = "icons/creatures/magical/spirit-fire-orange.webp";
+const ANSU_DEFAULT_ACTION_IMG = "icons/magic/control/buff-strength-muscle-damage-orange.webp";
+
+const ansuContent = JSON.parse(readFileSync(resolve(ROOT, "data/ansu/content.json"), "utf8"));
+
+const ANSU_FOLDERS = [
+  { key: "trial", name: "Tier I — Trial (Att 1–3)" },
+  { key: "discipline", name: "Tier II — Discipline (Att 4–6)" },
+  { key: "union", name: "Tier III — Union (Att 7–9)" },
+  { key: "mastery", name: "Terminal — Mastery (Att 10)" },
+];
+const ansuFolderId = (key) => makeId(`ansufolder-${key}`);
+
+// Rank in the seed keeps family upgrades ("ancestral-vigor" / "-2") from truncating
+// to the same 16 chars.
+const ansuDocId = (entry) => makeId(`ansu-r${entry.rank ?? 1}-${entry.id}`);
+
+function ansuTierKeyFor(entry) {
+  if (entry.gate === "subjugated") return "mastery";
+  if (entry.level <= 3) return "trial";
+  if (entry.level <= 6) return "discipline";
+  if (entry.level <= 9) return "union";
+  return "mastery";
+}
+
+/** Pack copies are static: replace the runtime number tokens with readable text. */
+function ansuScrub(text) {
+  return String(text ?? "")
+    .replaceAll("{{ansuReleaseDC}}", "your Release DC")
+    .replaceAll("{{ansuTempHp}}", "twice your attunement")
+    .replaceAll("{{ansuResist}}", "⌈attunement / 3⌉")
+    .replaceAll("{{ansuLevel}}", "your attunement")
+    .replaceAll("{{ansuDuration}}", "1 round / 3 rounds / 1 minute by tier");
+}
+
+/** Pack-copy rules with number tokens neutralized (static docs can't compute). */
+function ansuScrubRules(rules) {
+  return (Array.isArray(rules) ? rules : []).map((r) => {
+    const out = { ...r };
+    for (const [k, v] of Object.entries(out)) {
+      if (typeof v === "string" && v.includes("{{ansuTempHp}}")) out[k] = 2;
+      if (typeof v === "string" && v.includes("{{ansuResist}}")) out[k] = 2;
+    }
+    return out;
+  });
+}
+
+function ansuFolderDoc(f, index) {
+  const id = ansuFolderId(f.key);
+  return { _id: id, _key: `!folders!${id}`, name: f.name, type: "Item", sorting: "m", folder: null, sort: (index + 1) * 100000 };
+}
+
+function ansuBaseSystemEffect(entry) {
+  return {
+    description: { value: ansuScrub(entry.description) },
+    slug: `shards-ansu-${entry.id}`,
+    duration: { value: -1, unit: "unlimited", sustained: false, expiry: null },
+    unidentified: false,
+    level: { value: 1 },
+    tokenIcon: { show: true },
+    badge: null,
+    traits: { value: [], rarity: "common" },
+    rules: ansuScrubRules(entry.rules),
+    start: { value: 0, initiative: null },
+    publication: PUBLICATION,
+  };
+}
+
+function ansuEffectItem(entry) {
+  const id = ansuDocId(entry);
+  return {
+    _id: id,
+    _key: `!items!${id}`,
+    name: entry.name,
+    type: "effect",
+    img: entry.img || ANSU_DEFAULT_EFFECT_IMG,
+    folder: ansuFolderId(ansuTierKeyFor(entry)),
+    sort: entry.level * 1000 + (entry.always ? 500 : 0),
+    system: ansuBaseSystemEffect(entry),
+    flags: { [MODULE_ID]: { ansuPack: { entryId: entry.id, family: entry.family, kind: entry.kind } } },
+  };
+}
+
+function ansuActionItem(entry) {
+  const id = ansuDocId(entry);
+  const a = entry.actionData ?? {};
+  return {
+    _id: id,
+    _key: `!items!${id}`,
+    name: entry.name,
+    type: "action",
+    img: entry.img || ANSU_DEFAULT_ACTION_IMG,
+    folder: ansuFolderId(ansuTierKeyFor(entry)),
+    sort: entry.level * 1000 + 250,
+    system: {
+      description: { value: ansuScrub(entry.description) },
+      slug: `shards-ansu-${entry.id}`,
+      actionType: { value: a.actionType ?? "action" },
+      actions: { value: a.actions ?? null },
+      category: a.category ?? null,
+      traits: { value: a.traits ?? [], rarity: "common" },
+      frequency: a.frequency ?? null,
+      rules: Array.isArray(entry.rules) ? entry.rules : [],
+      publication: PUBLICATION,
+    },
+    flags: { [MODULE_ID]: { ansuPack: { entryId: entry.id, family: entry.family, kind: entry.kind } } },
+  };
+}
+
+function ansuEntryItem(entry) {
+  if (entry.form === "action") return ansuActionItem(entry);
+  if (entry.form === "strike") {
+    // Reusable copy grants the Strike via rule element; no attackModifier — the
+    // horns use whatever actor they land on. Official shape (no category field).
+    const s = entry.strikeData ?? {};
+    const doc = ansuEffectItem(entry);
+    doc.system.rules = [
+      ...ansuScrubRules(entry.rules),
+      {
+        key: "Strike",
+        slug: `shards-ansu-${entry.id}`,
+        label: entry.name,
+        img: entry.img,
+        group: s.group ?? "brawling",
+        traits: s.traits ?? ["unarmed"],
+        range: s.range ?? null,
+        damage: { base: { damageType: s.damageType ?? "piercing", dice: s.dice ?? 1, die: s.die ?? "d8" } },
+      },
+    ];
+    return doc;
+  }
+  return ansuEffectItem(entry);
+}
+
+const ansuDocs = [
+  ...ANSU_FOLDERS.map(ansuFolderDoc),
+  ...(ansuContent.entries ?? []).map(ansuEntryItem),
+];
+
+const ansuIds = ansuDocs.map((d) => d._id);
+const ansuDupes = ansuIds.filter((id, i) => ansuIds.indexOf(id) !== i);
+if (ansuDupes.length) {
+  console.error(`build-pack-sources: DUPLICATE ansu ids after makeId: ${[...new Set(ansuDupes)].join(", ")}`);
+  process.exit(1);
+}
+
+const an = writeDir("src/packs/ansu-effects", ansuDocs);
+console.log(
+  `build-pack-sources: wrote ${ANSU_FOLDERS.length} ansu folders + ${(ansuContent.entries ?? []).length} abilities = ${an} docs.`,
+);

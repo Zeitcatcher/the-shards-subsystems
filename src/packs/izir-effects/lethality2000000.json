@@ -1,0 +1,68 @@
+{
+  "_id": "lethality2000000",
+  "_key": "!items!lethality2000000",
+  "name": "Lethality II",
+  "type": "effect",
+  "img": "icons/magic/unholy/beam-ringed-impact-purple.webp",
+  "folder": "izirfoldercall00",
+  "sort": 9000,
+  "system": {
+    "description": {
+      "value": "<p>The hunger is a torrent. Your Strikes deal an extra 2d6 void damage, and when you drop a foe, adjacent enemies are frightened 1.</p>"
+    },
+    "slug": "shards-izir-lethality-2",
+    "duration": {
+      "value": -1,
+      "unit": "unlimited",
+      "sustained": false,
+      "expiry": null
+    },
+    "unidentified": false,
+    "level": {
+      "value": 1
+    },
+    "tokenIcon": {
+      "show": true
+    },
+    "badge": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "rules": [
+      {
+        "key": "DamageDice",
+        "selector": "strike-damage",
+        "diceNumber": 2,
+        "dieSize": "d6",
+        "damageType": "void"
+      },
+      {
+        "key": "Note",
+        "selector": "all",
+        "title": "Lethality II",
+        "text": "When you drop a foe, adjacent enemies are frightened 1.",
+        "visibility": "owner"
+      }
+    ],
+    "start": {
+      "value": 0,
+      "initiative": null
+    },
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "OGL",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "izirPack": {
+        "entryId": "lethality-2",
+        "family": "lethality",
+        "kind": "boon"
+      }
+    }
+  }
+}
