@@ -28,6 +28,14 @@ function tagFlags(entryId, hash) {
   return { [MODULE_ID]: { izir: { entryId, contentHash: hash } } };
 }
 
+/** Deterministic 16-char id, same rule as the pack build script's makeId. */
+const makeId = (s) => s.replace(/[^A-Za-z0-9]/g, "").padEnd(16, "0").slice(0, 16);
+
+/** The pack UUID of an entry's generated "Recharge: <name>" effect. */
+export function rechargeEffectUuid(entryId) {
+  return `Compendium.${MODULE_ID}.izir-effects.Item.${makeId(`rc-${entryId}`)}`;
+}
+
 /* ------------------------------------------------------------------ */
 /* Item builders                                                       */
 /* ------------------------------------------------------------------ */
@@ -113,6 +121,13 @@ export function buildActionSource(desired) {
     system.selfEffect = {
       uuid: `Compendium.${MODULE_ID}.izir-effects.Item.${a.selfEffectId}`,
       name: desired.name,
+    };
+  } else if (a.recharge) {
+    // Recharge actives get their Use button from a selfEffect pointing at the
+    // generated Recharge effect (pf2e: usable = selfEffect || frequency).
+    system.selfEffect = {
+      uuid: rechargeEffectUuid(desired.entryId),
+      name: game.i18n.format("SHARDS.Izir.RechargeEffect", { name: desired.name }),
     };
   }
   return {

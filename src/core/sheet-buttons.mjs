@@ -10,12 +10,13 @@ import { getSubsystems } from "./subsystems.mjs";
 
 export function registerSheetButtons() {
   const inject = (app, html) => {
-    if (!game.user?.isGM) return;
     const root = html instanceof HTMLElement ? html : (html?.[0] ?? app?.element);
     if (!root) return;
     for (const sub of getSubsystems()) {
       if (typeof sub.sheetButton !== "function") continue;
       try {
+        // GM gating is each handler's own business: shims like the recharge
+        // button-disable must run on player clients too.
         sub.sheetButton(app, root);
       } catch (err) {
         console.warn(`${MODULE_ID} | sheet button (${sub.id})`, err);

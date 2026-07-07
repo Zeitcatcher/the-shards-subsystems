@@ -195,9 +195,47 @@ function writeDir(rel, docs) {
   return docs.length;
 }
 
+/**
+ * One generated "Recharge: <name>" effect per recharge active. Its _id is derived
+ * from the entry id with the same makeId rule the runtime uses, so the action's
+ * selfEffect UUID can be computed without storing it in content.json. The 1-round
+ * duration is a placeholder: the module rolls the recharge die and overwrites it.
+ */
+function rechargeEffectItem(entry) {
+  const id = makeId(`rc-${entry.id}`);
+  return {
+    _id: id,
+    _key: `!items!${id}`,
+    name: `Recharge: ${entry.name}`,
+    type: "effect",
+    img: "icons/magic/time/hourglass-tilted-glowing-gold.webp",
+    folder: folderId("internal"),
+    sort: 200,
+    system: {
+      description: {
+        value: `<p>${entry.name} is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>`,
+      },
+      slug: `shards-izir-recharge-${entry.id}`,
+      duration: { value: 1, unit: "rounds", sustained: false, expiry: "turn-start" },
+      unidentified: false,
+      level: { value: 1 },
+      tokenIcon: { show: true },
+      badge: null,
+      traits: { value: [], rarity: "common" },
+      rules: [],
+      start: { value: 0, initiative: null },
+      publication: PUBLICATION,
+    },
+    flags: { [MODULE_ID]: { izirRecharge: entry.id } },
+  };
+}
+
+const rechargeEntries = (content.entries ?? []).filter((e) => e.actionData?.recharge);
+
 const docs = [
   ...FOLDERS.map(folderDoc),
   ...(content.entries ?? []).map(entryItem),
+  ...rechargeEntries.map(rechargeEffectItem),
   ...(content.packEffects ?? []).map(packEffectItem),
 ];
 

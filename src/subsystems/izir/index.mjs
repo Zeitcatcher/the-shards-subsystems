@@ -10,10 +10,11 @@ import { openIzirPanel, refreshIzirPanel } from "./apps/izir-panel.mjs";
 import { loadContent } from "./content.mjs";
 import { registerSyncHooks, syncAllMarked } from "./sync.mjs";
 import { registerTemptationHooks } from "./temptation.mjs";
-import { registerRechargeHooks } from "./recharge.mjs";
+import { registerRechargeHooks, findRechargeEffect, remainingRounds } from "./recharge.mjs";
 import { registerTerrorHooks } from "./terror.mjs";
 import { setImmersion } from "./transform.mjs";
 import { registerIzirTraits } from "./traits.mjs";
+import { isMarked } from "./state.mjs";
 
 const IZIR_SETTINGS = [
   {
@@ -43,14 +44,46 @@ const IZIR_SETTINGS = [
   { key: SETTINGS.IZIR_TOKEN_ICONS, scope: "world", type: "Boolean", default: true, config: true },
 ];
 
+/**
+ * Presentational shim on every client: while a recharge effect is active, grey the
+ * ability's Use button and show the remaining rounds. Enforcement never depends on
+ * this; if a pf2e update shifts the sheet DOM, the whisper guard still holds.
+ */
+function rechargeSheetShim(app, root) {
+  const actor = app?.actor ?? app?.document;
+  if (!actor || !isMarked(actor)) return;
+  for (const item of actor.items) {
+    const tag = item.getFlag?.(MODULE_ID, IZIR);
+    if (!tag?.entryId || item.type !== "action") continue;
+    const running = findRechargeEffect(actor, tag.entryId);
+    const row = root.querySelector?.(`[data-item-id="${item.id}"]`);
+    if (!row) continue;
+    const btn = row.querySelector('button[data-action="use-action"], [data-action="use-action"]');
+    if (!btn) continue;
+    if (running) {
+      const rounds = remainingRounds(running);
+      btn.disabled = true;
+      btn.classList.add("izir-recharging");
+      btn.dataset.tooltip = game.i18n.format("SHARDS.Izir.StillRecharging", { name: item.name, rounds });
+      if (!row.querySelector(".izir-cd")) {
+        const badge = document.createElement("span");
+        badge.className = "izir-cd";
+        badge.textContent = game.i18n.format("SHARDS.Izir.RoundsShort", { rounds });
+        btn.before(badge);
+      }
+    }
+  }
+}
+
 registerSubsystem({
   id: IZIR,
   titleKey: "SHARDS.Izir.PanelTitle",
   icon: "fa-solid fa-eye",
-  macroImg: "icons/abilities/purple-eye.webp",
+  macroImg: "icons/magic/perception/eye-ringed-glow-angry-red.webp",
   settings: IZIR_SETTINGS,
   openPanel: (actorUuid) => openIzirPanel(actorUuid),
   refresh: () => refreshIzirPanel(),
+  sheetButton: rechargeSheetShim,
   onSetup: () => registerIzirTraits(),
   onReady: async () => {
     try {

@@ -600,18 +600,38 @@
   opacity: 0.85;
   margin: 0 0 0.3rem;
 }
-/* pf2e's inline check pill ships with a bright background that glares inside our
-   cards; keep the button affordance, drop the slab. */
+/* Two pf2e stylings glare inside our cards: the inline-check pill's background and
+   the [data-visibility="gm"] highlight around GM-only text (the actual white slab).
+   Strip both here only; the rest of chat keeps pf2e's look. */
+.izir-temptation-card [data-visibility] {
+  background: none !important;
+  box-shadow: none !important;
+}
 .izir-temptation-card a.inline-check,
 .izir-temptation-card span.inline-check {
-  background: none;
-  box-shadow: none;
+  background: none !important;
+  box-shadow: none !important;
   border: 1px solid #6a2fa0;
   border-radius: 3px;
   padding: 1px 6px;
   color: inherit;
 }
 .izir-temptation-card a.inline-check:hover {
-  background: rgba(106, 47, 160, 0.12);
+  background: rgba(106, 47, 160, 0.12) !important;
   text-shadow: none;
+}
+
+/* Recharge shim on the pf2e sheet: greyed Use button + rounds badge. */
+button.izir-recharging {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.izir-cd {
+  color: #a5473f;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-right: 4px;
+  white-space: nowrap;
+  align-self: center;
 }

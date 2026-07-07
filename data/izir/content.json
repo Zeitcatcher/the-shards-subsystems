@@ -1,7 +1,7 @@
 {
   "version": 1,
   "_note": "Single source of truth for Izir boons and prices. Names and descriptions are authored in English (GM directive). Price rule elements use the neutral label key SHARDS.Izir.MaskedLabel so hidden prices don't leak their names through roll breakdowns.",
-  "_activesNote": "All actives are real content: strikes and actions with Izir-DC checks, dragon-pattern Recharge 1d6, and 1/day capstones. The 1/day-style frequency on recharge actives exists for the sheet's Use button; the module zeroes the use while the rolled Recharge effect runs and restores it when the effect ends.",
+  "_activesNote": "All actives are real content: strikes and actions with Izir-DC checks, dragon-pattern Recharge 1d6, and 1/day capstones. Recharge actives carry no frequency; their Use button comes from a selfEffect pointing at a generated Recharge pack effect, and the module rolls the die and sets the effect duration when the ability is used in combat.",
   "tiers": [
     {
       "id": "whisper",
@@ -145,11 +145,7 @@
           "void",
           "manipulate"
         ],
-        "recharge": "1d6",
-        "frequency": {
-          "max": 1,
-          "per": "day"
-        }
+        "recharge": "1d6"
       }
     },
     {
@@ -211,11 +207,7 @@
           "void",
           "manipulate"
         ],
-        "recharge": "1d6",
-        "frequency": {
-          "max": 1,
-          "per": "day"
-        }
+        "recharge": "1d6"
       }
     },
     {
@@ -282,11 +274,7 @@
           "void",
           "move"
         ],
-        "recharge": "1d6",
-        "frequency": {
-          "max": 1,
-          "per": "day"
-        }
+        "recharge": "1d6"
       }
     },
     {
@@ -357,11 +345,7 @@
           "void",
           "manipulate"
         ],
-        "recharge": "1d6",
-        "frequency": {
-          "max": 1,
-          "per": "day"
-        }
+        "recharge": "1d6"
       }
     },
     {
@@ -428,11 +412,7 @@
           "move",
           "teleportation"
         ],
-        "recharge": "1d6",
-        "frequency": {
-          "max": 1,
-          "per": "day"
-        }
+        "recharge": "1d6"
       }
     },
     {
@@ -508,11 +488,7 @@
           "void",
           "manipulate"
         ],
-        "recharge": "1d6",
-        "frequency": {
-          "max": 1,
-          "per": "day"
-        }
+        "recharge": "1d6"
       }
     },
     {
@@ -574,11 +550,7 @@
           "manipulate",
           "darkness"
         ],
-        "recharge": "1d6",
-        "frequency": {
-          "max": 1,
-          "per": "day"
-        }
+        "recharge": "1d6"
       }
     },
     {

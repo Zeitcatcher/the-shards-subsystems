@@ -116,7 +116,8 @@
   "SHARDS.Izir.RechargeFlavor": "Recharge: {name}",
   "SHARDS.Izir.RechargeEffect": "Recharge: {name}",
   "SHARDS.Izir.RechargeDesc": "{name} is spent. Available again in {rounds} rounds.",
-  "SHARDS.Izir.StillRecharging": "{name} is still recharging. The use stays spent until the Recharge effect ends.",
+  "SHARDS.Izir.StillRecharging": "{name} is still recharging: {rounds} round(s) left.",
+  "SHARDS.Izir.RoundsShort": "{rounds} rds",
 
   "SHARDS.Izir.TerrorTitle": "Izir's Terror",
   "SHARDS.Izir.TerrorPrompt": "{target} is caught in {bearer}'s terror aura. Roll the Will save below; frightened applies only on a failure.",

@@ -42,15 +42,20 @@ function insertTool(controls, tool) {
   }
 }
 
-/** Create a one-off launcher macro per subsystem if the GM doesn't have one yet. */
+/** Create a launcher macro per subsystem, or repair its image if the path changed. */
 export async function ensureLauncherMacros() {
   for (const sub of getSubsystems()) {
     const name = game.i18n.localize(sub.titleKey);
-    if (game.macros.find((m) => m.name === name)) continue;
+    const img = sub.macroImg ?? "icons/svg/d20.svg";
+    const existing = game.macros.find((m) => m.name === name);
+    if (existing) {
+      if (existing.img !== img && existing.isOwner) await existing.update({ img });
+      continue;
+    }
     await Macro.create({
       name,
       type: "script",
-      img: sub.macroImg ?? "icons/svg/eye.svg",
+      img,
       command: `game.modules.get("${MODULE_ID}").api.openPanel("${sub.id}");`,
     });
   }
