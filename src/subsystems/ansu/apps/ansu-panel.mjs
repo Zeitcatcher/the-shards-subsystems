@@ -24,7 +24,7 @@ import { selectEntries, buildCtx, injectNumbers, durationLabel, communionMode } 
 import { suggestChips } from "../logic/suggest.mjs";
 import { loadContent } from "../content.mjs";
 import { syncActor, syncAllAttuned, displayTier, readDials, inActiveCombat } from "../sync.mjs";
-import { invokeCommunion, endCommunion, findCommunionEffect, remainingRounds } from "../communion.mjs";
+import { invokeCommunion, requestInvoke, endCommunion, findCommunionEffect, remainingRounds } from "../communion.mjs";
 import {
   callRelease,
   suggestedDC,
@@ -32,6 +32,7 @@ import {
   clearPendingRelease,
   postUrge,
 } from "../release.mjs";
+import { suggestedCallDC, recordCallOutcome, clearPendingCall } from "../call.mjs";
 import { startSeizure, returnFromSeizure, isSeized } from "../seizure.mjs";
 import { exportLog } from "../journal.mjs";
 import { triggerFork, triggerTaken, setAttunement, applyClimbChange } from "../transform.mjs";
@@ -196,7 +197,28 @@ async function onEditReason(_event, target) {
 async function onInvoke() {
   const actor = resolveActor(this._actorUuid);
   if (!actor) return;
-  await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.InvokedByGM"));
+  await requestInvoke(actor); // posts the Call card (or toggles a master straight in)
+  this.render();
+}
+
+async function onForceInvoke() {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  await clearPendingCall(actor);
+  await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.ForceInvokeNote"));
+  this.render();
+}
+
+async function onRecordCall(_event, target) {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  await recordCallOutcome(actor, target.dataset.outcome, null);
+  this.render();
+}
+
+async function onClearPendingCall() {
+  const actor = resolveActor(this._actorUuid);
+  if (actor) await clearPendingCall(actor);
   this.render();
 }
 
@@ -235,7 +257,7 @@ async function onSeize() {
   const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const st = readAnsu(actor);
-  if (isSeized(st)) await returnFromSeizure(actor, { toLingering: false });
+  if (isSeized(st)) await returnFromSeizure(actor, {}); // exact snapshot restore
   else await startSeizure(actor, { auto: false });
   this.render();
 }
@@ -427,12 +449,17 @@ function buildComm(actor, st) {
     const effect = findCommunionEffect(actor);
     if (effect) rounds = remainingRounds(effect);
   }
+  const OUTCOME_KEYS = ["criticalSuccess", "success", "failure", "criticalFailure"];
   return {
     mode,
     modeLabel: game.i18n.localize(`SHARDS.Ansu.Mode.${mode === "none" || mode === "off" ? "dormant" : mode}`),
     rounds,
     stamped: st.communion?.rounds ?? null,
-    canInvoke: !running && st.terminal !== "taken" && (st.level >= 1 || st.terminal === "subjugated"),
+    canInvoke: !running && st.terminal !== "taken" && (st.level >= 1 || st.terminal === "subjugated") && !st.pendingCall,
+    invokeIsCall: !st.terminal, // pre-Mastery the button posts the Call check
+    pendingCall: st.pendingCall ? { ...st.pendingCall } : null,
+    callOutcomes: OUTCOME_KEYS.map((o) => ({ key: o, label: game.i18n.localize(`SHARDS.Ansu.OutcomeShort.${o}`) })),
+    canForceInvoke: !running && !st.terminal && st.level >= 1,
     canRelease: running && !seized && !st.pendingRelease && st.terminal !== "taken",
     releaseIsToggle: st.terminal === "subjugated",
     canEndNoSave: running && !st.terminal && mode !== "seized",
@@ -471,6 +498,9 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleSuppress: onToggleSuppress,
       editReason: onEditReason,
       invoke: onInvoke,
+      forceInvoke: onForceInvoke,
+      recordCall: onRecordCall,
+      clearPendingCall: onClearPendingCall,
       releaseSave: onReleaseSave,
       endNoSave: onEndNoSave,
       seize: onSeize,
@@ -549,6 +579,7 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         tierLabel: tierLabelFor(st),
         terminal: st.terminal,
         releaseDc: st.terminal ? "—" : dcPreview,
+        callDc: st.terminal ? "—" : suggestedCallDC(st),
         duration: st.terminal ? durationLabel(null) : durationLabel(st.level >= 1 ? (st.level <= 3 ? 1 : st.level <= 6 ? 3 : 10) : 0),
         suppressedCount: st.suppressed.length,
         canDown: st.level > 0 && !st.terminal,

@@ -3,6 +3,7 @@ import {
   clampLevel,
   tierForLevel,
   releaseDC,
+  callDC,
   durationRounds,
   tempHpFor,
   resistFor,
@@ -59,6 +60,23 @@ describe("releaseDC (rev 3: 20 + 2 × min(N, 5))", () => {
   });
   it("never returns below 1", () => {
     expect(releaseDC(1, -50, 0, 5)).toBe(1);
+  });
+});
+
+describe("callDC (the Intimidation gate: 20 + 2×N, uncapped)", () => {
+  it("matches the Release ladder through 5, then keeps climbing", () => {
+    expect(callDC(1)).toBe(22);
+    expect(callDC(4)).toBe(28);
+    expect(callDC(5)).toBe(30);
+    expect(callDC(6)).toBe(32); // release freezes at 30; the Call does not
+    expect(callDC(9)).toBe(38);
+  });
+  it("treats level 0 as 1 and honours custom dials", () => {
+    expect(callDC(0)).toBe(22);
+    expect(callDC(4, 16, 1)).toBe(20);
+  });
+  it("never returns below 1", () => {
+    expect(callDC(1, -50, 0)).toBe(1);
   });
 });
 

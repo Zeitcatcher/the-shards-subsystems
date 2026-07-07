@@ -46,6 +46,7 @@
     <div class="ansu-stats">
       <div class="ansu-stat"><span class="l">{{localize "SHARDS.Ansu.Attunement"}}</span><span class="n">{{detail.level}} <small>/ {{detail.maxLevel}}</small></span></div>
       <div class="ansu-stat"><span class="l">{{localize "SHARDS.Ansu.StatDuration"}}</span><span class="n">{{detail.duration}}</span></div>
+      <div class="ansu-stat hot"><span class="l">{{localize "SHARDS.Ansu.CallDC"}}</span><span class="n">{{detail.callDc}}</span></div>
       <div class="ansu-stat hot"><span class="l">{{localize "SHARDS.Ansu.ReleaseDC"}}</span><span class="n">{{detail.releaseDc}}</span></div>
       {{#if climb}}
       <div class="ansu-stat climb-n"><span class="l">{{localize "SHARDS.Ansu.ClimbTitle"}}</span><span class="n">{{climb.value}} <small>/ {{climb.needed}}</small></span></div>
@@ -54,9 +55,14 @@
     </div>
 
     <div class="ansu-comm mode-{{comm.mode}}">
-      <button type="button" class="ansu-primary" data-action="invoke" {{#unless comm.canInvoke}}disabled{{/unless}}>
-        <i class="fa-solid fa-bolt"></i> {{localize "SHARDS.Ansu.Invoke"}}
+      <button type="button" class="ansu-primary" data-action="invoke" {{#unless comm.canInvoke}}disabled{{/unless}}
+        data-tooltip="{{#if comm.invokeIsCall}}{{localize 'SHARDS.Ansu.InvokeCallHint'}}{{/if}}">
+        <i class="fa-solid fa-bolt"></i> {{#if comm.invokeIsCall}}{{localize "SHARDS.Ansu.InvokeCall"}}{{else}}{{localize "SHARDS.Ansu.Invoke"}}{{/if}}
       </button>
+      {{#if comm.canForceInvoke}}
+      <button type="button" class="ansu-ghost" data-action="forceInvoke"
+        data-tooltip="{{localize 'SHARDS.Ansu.ForceInvokeHint'}}"><i class="fa-solid fa-bolt-lightning"></i></button>
+      {{/if}}
       {{#if comm.releaseIsToggle}}
       <button type="button" class="ansu-ghost" data-action="releaseSave" {{#unless comm.canRelease}}disabled{{/unless}}>
         {{localize "SHARDS.Ansu.EndCommunion"}}
@@ -86,6 +92,19 @@
       </button>
       {{/if}}
     </div>
+
+    {{#if comm.pendingCall}}
+    <div class="ansu-pending ansu-pending-call">
+      <p><i class="fa-solid fa-hand-fist"></i> {{localize "SHARDS.Ansu.CallPendingTitle"}} — DC {{comm.pendingCall.dc}}</p>
+      <div class="ansu-outcomes">
+        <span class="ansu-outcome-label">{{localize "SHARDS.Ansu.RecordManually"}}</span>
+        {{#each comm.callOutcomes}}
+        <button type="button" class="ansu-outcome-btn outcome-{{this.key}}" data-action="recordCall" data-outcome="{{this.key}}">{{this.label}}</button>
+        {{/each}}
+        <button type="button" class="ansu-ghost" data-action="clearPendingCall" data-tooltip="{{localize 'SHARDS.Ansu.ClearPending'}}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    {{/if}}
 
     <div class="ansu-stepper">
       <button type="button" class="ansu-step" data-action="levelDown"

@@ -21,6 +21,7 @@ A corruption tracker for the Nameless. The GM marks an actor and sets their imme
 A mastery track for murkhor bearers. The GM attunes an actor and grows their bond with the Ansu from 0 to 10. The power is borrowed, not owned: the bearer invokes Communion for a burst of boons, then has to wrestle the Ansu back down to end it.
 
 - Ten levels in four tiers: Trial, Discipline, Union, and the terminal tenth step, where the GM chooses Mastery (the Ansu subjugated) or Taken (the Ansu wins the body — and at the GM's call that can happen at any level).
+- The power is never owed: invoking it takes an Intimidation check against the Call DC (20 + 2 per level, uncapped — 22 to 38). Fail and the action is wasted; critically fail and the Ansu comes anyway, seizing the body for a round before handing it back.
 - Communion lasts 1 round at Trial, 3 rounds at Discipline, a minute at Union, and forever at Mastery. In combat the countdown and the Release save on expiry run on their own.
 - Ending Communion takes a Will save: DC 20 + 2 per attunement level, frozen at 30 from level 5 — the wrestle stays real deep into the campaign. Failure means the Ansu lingers with the boons still on; a critical failure hands the body to the GM for a round.
 - Clean releases fill the Climb (2 + level points); a full bar raises attunement on its own, and the token badge doubles as a level control.

@@ -69,14 +69,20 @@ describe("selectEntries", () => {
 });
 
 describe("numbers (rev 3)", () => {
-  it("buildCtx bakes DC 20+2×min(N,5), temp HP 3×, resistance /2, parry, tier dice", () => {
+  it("buildCtx bakes both DC ladders, temp HP 3×, resistance /2, parry, tier dice", () => {
     const ctx = buildCtx(4, 4);
     expect(ctx.releaseDc).toBe(28);
+    expect(ctx.callDc).toBe(28); // ladders match through 5…
+    expect(buildCtx(8, 8).callDc).toBe(36); // …then the Call keeps climbing
+    expect(buildCtx(8, 8).releaseDc).toBe(30);
     expect(ctx.tempHp).toBe(12);
     expect(ctx.resist).toBe(2);
     expect(ctx.parry).toBe(8);
     expect(ctx.tierDice).toBe(2);
     expect(ctx.durationRounds).toBe(3);
+  });
+  it("injects {{ansuCallDC}}", () => {
+    expect(injectNumbers("Call DC {{ansuCallDC}}", buildCtx(4, 6))).toBe("Call DC 32");
   });
   it("injectNumbers replaces every token", () => {
     const ctx = buildCtx(4, 5);

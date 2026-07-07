@@ -51,6 +51,22 @@ export function releaseDC(level, base = 20, step = 2, cap = 5) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Call DC — the Intimidation gate on Invoking (GM rev 3.3).            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Intimidation-check DC to Call the Ansu: base + step × attunement, UNCAPPED —
+ * unlike the Release DC it never freezes (22 → 38 at attunement 9). The power
+ * is never owed; it answers strength. No check at Mastery (callers gate).
+ */
+export function callDC(level, base = 20, step = 2) {
+  const b = Number.isFinite(Math.trunc(Number(base))) ? Math.trunc(Number(base)) : 20;
+  const s = Number.isFinite(Math.trunc(Number(step))) ? Math.trunc(Number(step)) : 2;
+  const n = Math.max(1, clampLevel(level));
+  return Math.max(1, b + s * n);
+}
+
+/* ------------------------------------------------------------------ */
 /* Communion duration by tier.                                          */
 /* ------------------------------------------------------------------ */
 

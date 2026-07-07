@@ -990,3 +990,9 @@
   background: rgba(181, 137, 42, 0.12) !important;
   text-shadow: none;
 }
+
+/* ---------- the Call (pending Intimidation gate) ---------- */
+.the-shards-subsystems .ansu-pending-call {
+  border-color: rgba(143, 47, 39, 0.55);
+  background: rgba(143, 47, 39, 0.07);
+}

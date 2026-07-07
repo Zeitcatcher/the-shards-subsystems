@@ -12,7 +12,7 @@
  * delete ops, updates in place.
  */
 
-import { clampLevel, tierForLevel, releaseDC, durationRounds, tempHpFor, resistFor, parryFor, tierDiceFor, MAX_LEVEL } from "./model.mjs";
+import { clampLevel, tierForLevel, releaseDC, callDC, durationRounds, tempHpFor, resistFor, parryFor, tierDiceFor, MAX_LEVEL } from "./model.mjs";
 
 export const ATTUNEMENT_ENTRY_ID = "ansu-attunement";
 export const COMMUNION_ENTRY_ID = "ansu-communion";
@@ -64,6 +64,7 @@ export function buildCtx(charLevel, level, dials = {}) {
     charLevel: cl,
     level: l,
     releaseDc: releaseDC(l, dials.dcBase, dials.dcStep, dials.dcCap),
+    callDc: callDC(l, dials.callBase, dials.callStep),
     tempHp: tempHpFor(l),
     resist: resistFor(l),
     parry: parryFor(l),
@@ -86,6 +87,7 @@ export function injectNumbers(text, ctx) {
   if (typeof text !== "string") return text;
   return text
     .replaceAll("{{ansuReleaseDC}}", String(ctx.releaseDc))
+    .replaceAll("{{ansuCallDC}}", String(ctx.callDc))
     .replaceAll("{{ansuTempHp}}", String(ctx.tempHp))
     .replaceAll("{{ansuResist}}", String(ctx.resist))
     .replaceAll("{{ansuParry}}", String(ctx.parry))

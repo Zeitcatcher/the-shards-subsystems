@@ -39,6 +39,8 @@ export function readDials() {
     dcBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_BASE)) || 20,
     dcStep: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_STEP)) || 2,
     dcCap: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_CAP)) || 5,
+    callBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_BASE)) || 20,
+    callStep: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_STEP)) ?? 2,
     climbBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CLIMB_BASE)) || 2,
     climbStep: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CLIMB_STEP)) ?? 1,
   };

@@ -17,6 +17,7 @@ import { COMMUNION_ENTRY_ID } from "./logic/reconcile.mjs";
 import { syncActor } from "./sync.mjs";
 import { loadContent } from "./content.mjs";
 import { callRelease, suggestedDC } from "./release.mjs";
+import { callTheCall, suggestedCallDC } from "./call.mjs";
 import { maybeReturnFromSeizure } from "./seizure.mjs";
 import { refreshAnsuPanel } from "./apps/ansu-panel.mjs";
 
@@ -42,8 +43,7 @@ export function remainingRounds(effect) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Enter Communion. For a subjugated master this is the free toggle (no saves,
- * unlimited); otherwise the tier's duration applies. No-op while already running.
+ * Enter Communion directly (post-Call, subjugated free toggle, or GM force).
  * Per-communion counters need no reset: the actives are created fresh on invoke.
  */
 export async function invokeCommunion(actor, note = "") {
@@ -62,6 +62,30 @@ export async function invokeCommunion(actor, note = "") {
   await appendLog(actor, "communion", { on: true, rounds }, note);
   await syncActor(actor);
   refreshAnsuPanel();
+}
+
+/**
+ * The player-facing entrance: subjugated masters toggle straight in; everyone
+ * else must win the Call first (Intimidation vs 20 + 2×attunement, uncapped).
+ * The Call capture then drives invokeCommunion / the crit-fail seizure.
+ */
+export async function requestInvoke(actor) {
+  const st = readAnsu(actor);
+  if (st.terminal === "taken") return;
+  if (st.communion.mode !== "none") {
+    ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.AlreadyActive"));
+    return;
+  }
+  if (!st.terminal && st.level < 1) {
+    ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.NoAttunement"));
+    return;
+  }
+  if (st.terminal === "subjugated") {
+    await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.InvokedByPlayer"));
+    return;
+  }
+  if (st.pendingCall) return; // one open Call at a time
+  await callTheCall(actor, suggestedCallDC(st));
 }
 
 /**
@@ -161,7 +185,7 @@ async function handleActionCard(message) {
   if (!tag?.entryId) return;
 
   if (tag.entryId === "invoke-the-ansu") {
-    await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.InvokedByPlayer"));
+    await requestInvoke(actor);
   } else if (tag.entryId === "release-the-ansu") {
     const st = readAnsu(actor);
     if (st.terminal === "subjugated") {

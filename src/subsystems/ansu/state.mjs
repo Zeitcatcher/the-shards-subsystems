@@ -40,6 +40,7 @@ export function emptyAnsuState() {
       rounds: null, // stamped duration at invoke (display only)
     },
     pendingRelease: null, // { id, dc, reason, createdAt }
+    pendingCall: null, // { id, dc, createdAt } — the Intimidation gate on Invoke
     seizure: null, // { snapshot, at, auto, returnAt: { combatId, round, turn } }
     cooldowns: [], // [{ id: <entryId>, until: worldTime }] — module-owned ability cooldowns (array: replaced wholesale on patch)
     art: {

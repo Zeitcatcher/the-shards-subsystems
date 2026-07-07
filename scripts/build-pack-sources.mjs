@@ -287,6 +287,7 @@ function ansuTierKeyFor(entry) {
 function ansuScrub(text) {
   return String(text ?? "")
     .replaceAll("{{ansuReleaseDC}}", "your Release DC")
+    .replaceAll("{{ansuCallDC}}", "your Call DC")
     .replaceAll("{{ansuTempHp}}", "three times your attunement")
     .replaceAll("{{ansuResist}}", "⌈attunement / 2⌉")
     .replaceAll("{{ansuParry}}", "twice your attunement")

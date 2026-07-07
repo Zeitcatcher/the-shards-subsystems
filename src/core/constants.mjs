@@ -26,6 +26,8 @@ export const SETTINGS = Object.freeze({
   ANSU_DC_BASE: "ansuDcBase",
   ANSU_DC_STEP: "ansuDcStep",
   ANSU_DC_CAP: "ansuDcCap",
+  ANSU_CALL_BASE: "ansuCallBase",
+  ANSU_CALL_STEP: "ansuCallStep",
   ANSU_SHOW_DC: "ansuShowDc",
   ANSU_CLIMB_BASE: "ansuClimbBase",
   ANSU_CLIMB_STEP: "ansuClimbStep",

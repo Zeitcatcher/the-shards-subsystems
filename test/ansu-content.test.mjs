@@ -39,6 +39,12 @@ describe("data/ansu/content.json", () => {
     const doors = raw.entries.filter((e) => e.actionData?.alwaysAvailable);
     expect(doors.map((e) => e.id)).toEqual(["invoke-the-ansu"]);
   });
+  it("Invoke carries the Call gate (Intimidation, {{ansuCallDC}}, four outcomes)", () => {
+    const invoke = raw.entries.find((e) => e.id === "invoke-the-ansu");
+    expect(invoke.description).toContain("{{ansuCallDC}}");
+    expect(invoke.description).toContain("Intimidation");
+    expect(invoke.description).toContain("Critical Failure");
+  });
   it("per-communion actives carry the frequency the module resets", () => {
     const per = raw.entries.filter((e) => e.actionData?.perCommunion);
     expect(per.map((e) => e.id)).toEqual(["roar-of-the-old-blood"]);

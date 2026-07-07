@@ -11,6 +11,7 @@
 
 import { MODULE_ID } from "../../core/constants.mjs";
 import { readAnsu, patchAnsu, appendLog } from "./state.mjs";
+import { durationRounds } from "./logic/model.mjs";
 import { syncActor } from "./sync.mjs";
 import { refreshAnsuPanel } from "./apps/ansu-panel.mjs";
 
@@ -29,11 +30,14 @@ export function isSeized(state) {
 }
 
 /**
- * Take the body. `auto` marks the 1-round crit-fail variant (returns by itself
- * at the end of the bearer's next turn); a manual seizure holds until the GM
- * presses Return. No-op at a terminal or while already seized.
+ * Take the body. `auto` marks the 1-round variant (returns by itself at the end
+ * of the bearer's next turn); a manual seizure holds until the GM presses
+ * Return. `thenMode` names where an auto seizure lands afterwards: "lingering"
+ * (release crit-fail — the wrestle continues) or "active" (Call crit-fail — the
+ * Ansu came anyway; Communion then runs under the player with a fresh duration).
+ * No-op at a terminal or while already seized.
  */
-export async function startSeizure(actor, { auto = false } = {}) {
+export async function startSeizure(actor, { auto = false, thenMode = "lingering" } = {}) {
   const st = readAnsu(actor);
   if (st.terminal || isSeized(st)) return;
 
@@ -47,7 +51,7 @@ export async function startSeizure(actor, { auto = false } = {}) {
   await patchAnsu(actor, {
     communion: { mode: "seized", rounds: null },
     pendingRelease: null,
-    seizure: { snapshot, at: Date.now(), auto, roundsLeft: auto ? 1 : null },
+    seizure: { snapshot, at: Date.now(), auto, thenMode, roundsLeft: auto ? 1 : null },
   });
   await appendLog(actor, "seizure", { on: true, auto });
   await syncActor(actor);
@@ -56,40 +60,51 @@ export async function startSeizure(actor, { auto = false } = {}) {
 }
 
 /**
- * Give the body back. Restores the snapshot exactly (level, climb, communion,
- * pending roll — everything as it was before the press). The auto variant slips
- * to Lingering instead: the wrestle continues.
+ * Give the body back. Default restores the snapshot exactly (level, climb,
+ * communion, pending roll — everything as before the press). `toMode` overrides
+ * the landing state for the auto variants: "lingering" keeps the wrestle going,
+ * "active" starts a fresh Communion at the bearer's own tier duration.
  */
-export async function returnFromSeizure(actor, { toLingering = false } = {}) {
+export async function returnFromSeizure(actor, { toMode = null } = {}) {
   const st = readAnsu(actor);
   if (!isSeized(st) || !st.seizure?.snapshot) return;
 
   const snap = st.seizure.snapshot;
+  let communion = snap.communion;
+  let pendingRelease = snap.pendingRelease;
+  if (toMode === "lingering") {
+    communion = { mode: "lingering", rounds: null };
+    pendingRelease = null;
+  } else if (toMode === "active") {
+    communion = { mode: "active", rounds: durationRounds(snap.level) };
+    pendingRelease = null;
+  }
   await patchAnsu(actor, {
     level: snap.level,
     climb: snap.climb,
     terminal: snap.terminal,
-    communion: toLingering ? { mode: "lingering", rounds: null } : snap.communion,
-    pendingRelease: toLingering ? null : snap.pendingRelease,
+    communion,
+    pendingRelease,
     seizure: null,
   });
-  await appendLog(actor, "seizure", { on: false, toLingering });
+  await appendLog(actor, "seizure", { on: false, toMode });
   await syncActor(actor);
   await whisperGM(actor, "SHARDS.Ansu.SeizureEnd", { name: actor.name });
   refreshAnsuPanel();
 }
 
 /**
- * Combat-sweep hook: an auto (crit-fail) seizure returns at the end of the
- * bearer's next turn. `force` returns any auto seizure immediately (combat
- * deleted mid-hold). Manual seizures never auto-return.
+ * Combat-sweep hook: an auto seizure returns at the end of the bearer's next
+ * turn, landing in its `thenMode`. `force` returns any auto seizure immediately
+ * (combat deleted mid-hold). Manual seizures never auto-return.
  */
 export async function maybeReturnFromSeizure(actor, combat, { force = false } = {}) {
   const st = readAnsu(actor);
   if (!isSeized(st) || !st.seizure?.auto) return;
+  const landing = st.seizure.thenMode === "active" ? "active" : "lingering";
 
   if (force) {
-    await returnFromSeizure(actor, { toLingering: true });
+    await returnFromSeizure(actor, { toMode: landing });
     return;
   }
 
@@ -101,5 +116,5 @@ export async function maybeReturnFromSeizure(actor, combat, { force = false } = 
     await patchAnsu(actor, { seizure: { ...st.seizure, roundsLeft: left } });
     return;
   }
-  await returnFromSeizure(actor, { toLingering: true });
+  await returnFromSeizure(actor, { toMode: landing });
 }

@@ -11,6 +11,7 @@ import { loadContent } from "./content.mjs";
 import { registerSyncHooks, syncAllAttuned } from "./sync.mjs";
 import { registerCommunionHooks } from "./communion.mjs";
 import { registerReleaseHooks } from "./release.mjs";
+import { registerCallHooks } from "./call.mjs";
 import { setAttunement } from "./transform.mjs";
 import { registerAnsuTraits } from "./traits.mjs";
 
@@ -27,6 +28,8 @@ const ANSU_SETTINGS = [
     key: SETTINGS.ANSU_DC_CAP, scope: "world", type: "Number", default: 5, config: true,
     range: { min: 1, max: 9, step: 1 }, onChange: resyncOnChange,
   },
+  { key: SETTINGS.ANSU_CALL_BASE, scope: "world", type: "Number", default: 20, config: true, onChange: resyncOnChange },
+  { key: SETTINGS.ANSU_CALL_STEP, scope: "world", type: "Number", default: 2, config: true, onChange: resyncOnChange },
   {
     key: SETTINGS.ANSU_SHOW_DC, scope: "world", type: "String", default: "gm", config: true,
     choices: {
@@ -67,5 +70,6 @@ registerSubsystem({
     });
     registerCommunionHooks();
     registerReleaseHooks();
+    registerCallHooks();
   },
 });
