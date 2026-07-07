@@ -37,13 +37,13 @@ function playerOwners(actor) {
 
 /**
  * Start the Call: write the pending marker, then whisper the card (PC) or roll
- * (NPC). Guarded by the panel/communion layer — this assumes a dormant, non-
- * terminal bearer with attunement ≥ 1.
+ * (NPC). A fresh Call REPLACES any stale pending one (new id, new card) — an
+ * unrolled card from a past fight must never wedge the door shut.
  */
 export async function callTheCall(actor, dc) {
   if (!actor || !Number.isFinite(dc)) return;
   const st = readAnsu(actor);
-  if (st.terminal || st.pendingCall) return;
+  if (st.terminal) return;
   const id = foundry.utils.randomID();
   await patchAnsu(actor, { pendingCall: { id, dc, createdAt: Date.now() } });
 

@@ -3,12 +3,12 @@
   "_key": "!items!ansur1overwhelm0",
   "name": "Overwhelm",
   "type": "action",
-  "img": "icons/abilities/solar-fist.webp",
+  "img": "icons/weapons/axes/axe-battle-heavy-black.webp",
   "folder": "ansufolderdiscip",
   "sort": 6250,
   "system": {
     "description": {
-      "value": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, the target is automatically Shoved 5 feet or knocked @UUID[Compendium.pf2e.conditionitems.Item.Prone] (your choice — no check). On a critical hit, both, and the shove is 10 feet.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>"
+      "value": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, the target is automatically Shoved 5 feet or knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone} (your choice — no check). On a critical hit, both, and the shove is 10 feet.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>"
     },
     "slug": "shards-ansu-overwhelm",
     "actionType": {

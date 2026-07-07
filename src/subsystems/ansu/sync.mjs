@@ -23,7 +23,9 @@ import { clampLevel, tierForLevel, MAX_LEVEL } from "./logic/model.mjs";
 import { loadContent } from "./content.mjs";
 
 const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "OGL", remaster: true };
-const MARKER_IMG = "icons/ancestries/minotaur.webp";
+// icons/ancestries/ does not exist on the hosted install (playtest 2026-07-07) —
+// the broken-horn bearer wears a horn instead.
+const MARKER_IMG = "icons/commodities/bones/horn-curved-worn-brown.webp";
 const COMMUNION_IMG = "icons/creatures/magical/spirit-fire-orange.webp";
 const SEIZED_IMG = "icons/magic/control/control-influence-puppet.webp";
 const MASTERY_IMG = "icons/magic/control/control-influence-crown-gold.webp";

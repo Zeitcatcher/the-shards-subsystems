@@ -3,12 +3,12 @@
   "_key": "!items!ansur1theansuref",
   "name": "The Ansu Refuses",
   "type": "action",
-  "img": "icons/abilities/blue-fist-in-the-air.webp",
+  "img": "icons/magic/control/buff-luck-fortune-green-gold.webp",
   "folder": "ansufolderunion0",
   "sort": 7250,
   "system": {
     "description": {
-      "value": "<p><strong>Trigger</strong> You would be reduced to 0 Hit Points while Communion lasts.</p><hr /><p>The Ansu does not permit the vessel to break — and it answers. You remain at 1 Hit Point, you immediately make one melee Strike against the creature that downed you (if it's within your reach), and you increase your @UUID[Compendium.pf2e.conditionitems.Item.Wounded] condition by 1 — the body keeps the bill.</p><p><em>Cooldown: 10 minutes.</em></p>"
+      "value": "<p><strong>Trigger</strong> You would be reduced to 0 Hit Points while Communion lasts.</p><hr /><p>The Ansu does not permit the vessel to break — and it answers. You remain at 1 Hit Point, you immediately make one melee Strike against the creature that downed you (if it's within your reach), and you increase your @UUID[Compendium.pf2e.conditionitems.Item.Yl48xTdMh3aeQYL2]{Wounded} condition by 1 — the body keeps the bill.</p><p><em>Cooldown: 10 minutes.</em></p>"
     },
     "slug": "shards-ansu-the-ansu-refuses",
     "actionType": {

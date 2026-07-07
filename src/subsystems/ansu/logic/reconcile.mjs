@@ -309,6 +309,11 @@ export function composeActions(state, content, opts = {}) {
         const until = Number((state.cooldowns ?? []).find((c) => c?.id === e.id)?.until) || 0;
         const onCooldown = Number.isFinite(opts.now) && opts.now < until;
         actionData.frequencyValue = onCooldown ? 0 : (e.actionData?.frequency?.max ?? null);
+      } else if (e.actionData?.alwaysAvailable && e.actionData?.frequency && !running) {
+        // The door must reopen between fights: per-round frequencies only tick
+        // inside combat, so a spent Invoke would stay greyed out of combat.
+        // Every dormant resync restores its uses.
+        actionData.frequencyValue = e.actionData.frequency.max ?? null;
       }
       const data = { entryId: e.id, family: e.family, name: e.name, img: e.img, description, actionData, entry: e };
       return { ...data, hash: hashString(stableStringify({ name: e.name, img: e.img, description, actionData })) };

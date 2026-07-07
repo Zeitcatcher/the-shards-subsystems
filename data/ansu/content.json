@@ -72,8 +72,8 @@
       "kind": "boon",
       "form": "action",
       "name": "Maker's Wrath",
-      "description": "<p>The arena blow, learned. Make a melee Strike that deals {{ansuTierDice}}d6 extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.Prone].</p>",
-      "img": "icons/abilities/yellow-fist.webp",
+      "description": "<p>The arena blow, learned. Make a melee Strike that deals {{ansuTierDice}}d6 extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone}.</p>",
+      "img": "icons/weapons/axes/axe-battle-heavy-jagged.webp",
       "rules": [],
       "chipTag": "+{{ansuTierDice}}d6 strike",
       "actionData": {
@@ -91,7 +91,7 @@
       "form": "effect",
       "name": "Bull's Footing",
       "description": "<p>Hooves strike the ground like hammers on an anvil. You gain a +10-foot status bonus to your Speed, and when you Invoke the Ansu you immediately Stride as a free action — the Ansu lunges into the world. When you Stride in a straight line toward an enemy you ignore non-magical difficult terrain.</p>",
-      "img": "icons/equipment/worn-items/other-worn-items/boots-of-speed.webp",
+      "img": "icons/magic/control/buff-flight-wings-blue.webp",
       "chipTag": "speed + invoke stride",
       "rules": [
         { "key": "FlatModifier", "selector": "land-speed", "type": "status", "value": 10, "label": "Bull's Footing" },
@@ -108,7 +108,7 @@
       "always": true,
       "name": "Tongue of the Makers",
       "description": "<p>The Ansu murmurs the old words until they are yours. You can speak, read and write Murkhor and recognize the maker-glyphs of your people. You gain a +1 circumstance bonus to Decipher Writing and to Recall Knowledge about murkhor works, ruins and devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>",
-      "img": "icons/abilities/blue-rune-ancient.webp",
+      "img": "icons/commodities/currency/coin-engraved-moon-silver.webp",
       "chipTag": "always on",
       "rules": [
         { "key": "Note", "selector": "all", "title": "Tongue of the Makers", "text": "Knows Murkhor. +1 circumstance to Decipher Writing and Recall Knowledge about murkhor works." }
@@ -162,7 +162,7 @@
       "form": "action",
       "name": "Fair Battle",
       "description": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair — it was arithmetic. Make one melee Strike and compare the attack roll against every enemy within your reach. The Strike deals 10 extra damage; roll damage once and apply it to each target you hit. Your multiple attack penalty counts this as one attack.</p>",
-      "img": "icons/abilities/solar-fist-mirrored.webp",
+      "img": "icons/weapons/axes/axe-battle-elemental-lava.webp",
       "rules": [],
       "chipTag": "3+ foes · hits all · +10",
       "actionData": {
@@ -229,8 +229,8 @@
       "kind": "boon",
       "form": "action",
       "name": "Overwhelm",
-      "description": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, the target is automatically Shoved 5 feet or knocked @UUID[Compendium.pf2e.conditionitems.Item.Prone] (your choice — no check). On a critical hit, both, and the shove is 10 feet.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>",
-      "img": "icons/abilities/solar-fist.webp",
+      "description": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, the target is automatically Shoved 5 feet or knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone} (your choice — no check). On a critical hit, both, and the shove is 10 feet.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>",
+      "img": "icons/weapons/axes/axe-battle-heavy-black.webp",
       "rules": [],
       "chipTag": "auto shove/prone",
       "actionData": {
@@ -266,7 +266,7 @@
       "form": "effect",
       "name": "Ansu's Stature",
       "description": "<p>You carry the Ansu's presence rather than its bulk. Your reach with melee Strikes increases by 5 feet — the space around you belongs to something larger than your body. Your size, square, and gear stay unchanged.</p>",
-      "img": "icons/equipment/worn-items/apex-items/belt-of-giant-strength.webp",
+      "img": "icons/magic/control/buff-strength-muscle-damage.webp",
       "chipTag": "reach +5",
       "rules": [
         { "key": "Note", "selector": "all", "title": "Ansu's Stature", "text": "Melee reach +5 feet while Communion lasts (no size change)." }
@@ -280,8 +280,8 @@
       "kind": "boon",
       "form": "action",
       "name": "The Ansu Refuses",
-      "description": "<p><strong>Trigger</strong> You would be reduced to 0 Hit Points while Communion lasts.</p><hr /><p>The Ansu does not permit the vessel to break — and it answers. You remain at 1 Hit Point, you immediately make one melee Strike against the creature that downed you (if it's within your reach), and you increase your @UUID[Compendium.pf2e.conditionitems.Item.Wounded] condition by 1 — the body keeps the bill.</p><p><em>Cooldown: 10 minutes.</em></p>",
-      "img": "icons/abilities/blue-fist-in-the-air.webp",
+      "description": "<p><strong>Trigger</strong> You would be reduced to 0 Hit Points while Communion lasts.</p><hr /><p>The Ansu does not permit the vessel to break — and it answers. You remain at 1 Hit Point, you immediately make one melee Strike against the creature that downed you (if it's within your reach), and you increase your @UUID[Compendium.pf2e.conditionitems.Item.Yl48xTdMh3aeQYL2]{Wounded} condition by 1 — the body keeps the bill.</p><p><em>Cooldown: 10 minutes.</em></p>",
+      "img": "icons/magic/control/buff-luck-fortune-green-gold.webp",
       "rules": [],
       "chipTag": "1 / 10 min · strike back",
       "actionData": {
@@ -316,7 +316,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Roar of the Old Blood",
-      "description": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize every enemy within 30 feet. You don't take the penalty for not sharing a language, and each target treats its result one degree of success worse. On what becomes a critical failure the target is @UUID[Compendium.pf2e.conditionitems.Item.Frightened] 3 and @UUID[Compendium.pf2e.conditionitems.Item.Fleeing] for 1 round.</p><p><em>Once per Communion.</em></p>",
+      "description": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize every enemy within 30 feet. You don't take the penalty for not sharing a language, and each target treats its result one degree of success worse. On what becomes a critical failure the target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened} 3 and @UUID[Compendium.pf2e.conditionitems.Item.sDPxOjQ9kx2RZE8D]{Fleeing} for 1 round.</p><p><em>Once per Communion.</em></p>",
       "img": "icons/creatures/unholy/demon-fire-horned-winged-roar.webp",
       "rules": [],
       "chipTag": "1/communion",
@@ -340,7 +340,7 @@
       "img": "icons/spells/haste.webp",
       "chipTag": "quickened",
       "rules": [
-        { "key": "GrantItem", "uuid": "Compendium.pf2e.conditionitems.Item.Quickened", "inMemoryOnly": true },
+        { "key": "GrantItem", "uuid": "Compendium.pf2e.conditionitems.Item.nlCjDvLMf2EkV2dl", "inMemoryOnly": true },
         { "key": "Note", "selector": "all", "title": "Mind Like a Forge", "text": "Quickened: the extra action is only for Stride or Strike." }
       ]
     },
@@ -368,7 +368,7 @@
       "gate": "subjugated",
       "name": "Hand of the Ansu",
       "description": "<p>The mind-summons perfected. You Interact with an object at a distance — up to 120 feet, through walls and barriers: seize it, drag it to your hand, shove it, turn a wheel, throw a bolt. Call the Blade now works anywhere on the scene, and you can Disarm or Shove a creature at range with the telekinetic grip (Athletics vs. Reflex DC). Creatures holding an object otherwise keep their grip.</p>",
-      "img": "icons/equipment/worn-items/other-worn-items/hand-of-the-mage.webp",
+      "img": "icons/magic/control/debuff-energy-hold-levitate-blue-yellow.webp",
       "rules": [],
       "chipTag": "capstone",
       "actionData": {

@@ -455,7 +455,7 @@ function buildComm(actor, st) {
     modeLabel: game.i18n.localize(`SHARDS.Ansu.Mode.${mode === "none" || mode === "off" ? "dormant" : mode}`),
     rounds,
     stamped: st.communion?.rounds ?? null,
-    canInvoke: !running && st.terminal !== "taken" && (st.level >= 1 || st.terminal === "subjugated") && !st.pendingCall,
+    canInvoke: !running && st.terminal !== "taken" && (st.level >= 1 || st.terminal === "subjugated"),
     invokeIsCall: !st.terminal, // pre-Mastery the button posts the Call check
     pendingCall: st.pendingCall ? { ...st.pendingCall } : null,
     callOutcomes: OUTCOME_KEYS.map((o) => ({ key: o, label: game.i18n.localize(`SHARDS.Ansu.OutcomeShort.${o}`) })),

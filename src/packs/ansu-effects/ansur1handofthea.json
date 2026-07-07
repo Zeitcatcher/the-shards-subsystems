@@ -3,7 +3,7 @@
   "_key": "!items!ansur1handofthea",
   "name": "Hand of the Ansu",
   "type": "action",
-  "img": "icons/equipment/worn-items/other-worn-items/hand-of-the-mage.webp",
+  "img": "icons/magic/control/debuff-energy-hold-levitate-blue-yellow.webp",
   "folder": "ansufoldermaster",
   "sort": 10250,
   "system": {

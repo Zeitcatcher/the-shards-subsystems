@@ -214,9 +214,13 @@ describe("composeActions — module-owned cooldowns", () => {
     const recovered = running([{ id: "refuses", until: 1000 }], 1000);
     expect(recovered.find((a) => a.entryId === "refuses").actionData.frequencyValue).toBe(1);
   });
-  it("leaves ordinary frequencies unmanaged (pf2e owns their uses)", () => {
+  it("leaves ordinary frequencies unmanaged while Communion runs (pf2e owns their uses)", () => {
     const acts = running([], 0);
     expect(acts.find((a) => a.entryId === "invoke").actionData.frequencyValue).toBeUndefined();
+  });
+  it("restores the Invoke door's uses on every dormant resync (spent per-round frequencies never tick out of combat)", () => {
+    const dormant = composeActions(state({ level: 5 }), CONTENT, { charLevel: 5, now: 0 });
+    expect(dormant.find((a) => a.entryId === "invoke").actionData.frequencyValue).toBe(1);
   });
   it("cooldown state changes the hash so the sync updates the item", () => {
     const a = running([{ id: "refuses", until: 1000 }], 400).find((x) => x.entryId === "refuses");

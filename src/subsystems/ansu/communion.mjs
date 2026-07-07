@@ -84,7 +84,8 @@ export async function requestInvoke(actor) {
     await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.InvokedByPlayer"));
     return;
   }
-  if (st.pendingCall) return; // one open Call at a time
+  // A stale pending Call (unrolled card from an earlier scene) is replaced, not
+  // a lock — callTheCall posts a fresh card with a fresh id.
   await callTheCall(actor, suggestedCallDC(st));
 }
 

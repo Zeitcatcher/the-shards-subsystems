@@ -61,4 +61,18 @@ describe("data/ansu/content.json", () => {
     expect(stature.rules.some((r) => r.key === "CreatureSize")).toBe(false);
     expect(stature.rules.some((r) => r.key === "Note")).toBe(true);
   });
+  it("condition links are ID-based — names only resolve in pf2e's own compiled packs", () => {
+    const all = JSON.stringify(raw);
+    for (const m of all.matchAll(/conditionitems\.Item\.([A-Za-z0-9]+)/g)) {
+      expect(m[1], `name-based condition link: ${m[0]}`).toMatch(/^[A-Za-z0-9]{16}$/);
+    }
+  });
+  it("icons avoid trees the hosted install lacks (playtest 2026-07-07)", () => {
+    const banned = ["icons/abilities/", "icons/ancestries/", "worn-items/"];
+    for (const e of raw.entries) {
+      for (const tree of banned) {
+        expect(e.img ?? "", `${e.id} uses banned icon tree ${tree}`).not.toContain(tree);
+      }
+    }
+  });
 });

@@ -51,7 +51,7 @@ registerSubsystem({
   id: ANSU,
   titleKey: "SHARDS.Ansu.PanelTitle",
   icon: "fa-solid fa-hand-fist",
-  macroImg: "icons/ancestries/minotaur.webp",
+  macroImg: "icons/commodities/bones/horn-curved-worn-brown.webp",
   settings: ANSU_SETTINGS,
   openPanel: (actorUuid, opts) => openAnsuPanel(actorUuid, opts),
   refresh: () => refreshAnsuPanel(),
