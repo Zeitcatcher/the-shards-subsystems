@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "_note": "Single source of truth for Izir boons/banes. Names + descriptions are authored in English (GM directive). Bane rule-element labels use the neutral i18n key SHARDS.Izir.MaskedLabel so hidden prices don't leak their name through roll breakdowns.",
-  "_activesNote": "All actives are real content now: strikes/actions with Izir-DC checks, dragon-pattern Recharge 1d6 (plus a 1/round frequency purely for the sheet's Use button — the rolled Recharge effect is the actual cooldown), and 1/day capstones (Herald of Ruin via selfEffect, Perfect Stillness under subjugation).",
+  "_note": "Single source of truth for Izir boons and prices. Names and descriptions are authored in English (GM directive). Price rule elements use the neutral label key SHARDS.Izir.MaskedLabel so hidden prices don't leak their names through roll breakdowns.",
+  "_activesNote": "All actives are real content: strikes and actions with Izir-DC checks, dragon-pattern Recharge 1d6, and 1/day capstones. The 1/day-style frequency on recharge actives exists for the sheet's Use button; the module zeroes the use while the rolled Recharge effect runs and restores it when the effect ends.",
   "tiers": [
     {
       "id": "whisper",
@@ -67,7 +67,7 @@
       "kind": "boon",
       "form": "strike",
       "name": "Void Lash",
-      "description": "<p>A whip of living black snaps from your hand. Void Lash is a ranged Strike (30 feet) using your Izir attack modifier ({{izirAttack}}); it deals void damage that grows with you and can be used at will.</p>",
+      "description": "<p>A whip of living black snaps from your hand. Void Lash is a ranged Strike (30 feet) using your Izir attack modifier ({{izirAttack}}). It deals void damage that scales with your level and can be used at will.</p>",
       "img": "icons/magic/unholy/projectile-helix-blood-red.webp",
       "rules": [],
       "strikeData": {
@@ -90,7 +90,7 @@
       "kind": "bane",
       "form": "effect",
       "name": "Dreams of the Void",
-      "description": "<p>Sleep opens a door. After daily preparations, attempt a DC 4 flat check; on a failure you are fatigued until you spend 10 minutes communing with Izir — which may itself invite temptation.</p>",
+      "description": "<p>Sleep opens a door. After daily preparations, attempt a DC 4 flat check; on a failure you are fatigued until you spend 10 minutes communing with Izir, which may itself invite temptation.</p>",
       "img": "icons/magic/unholy/silhouette-robe-evil-power.webp",
       "rules": [
         {
@@ -135,7 +135,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Umbral Grasp",
-      "description": "<p>A hand of living void reaches where yours cannot.</p><hr /><p><strong>Range</strong> 15 feet; <strong>Targets</strong> 1 creature</p><p><strong>Effect</strong> The target attempts a Fortitude save (@Check[fortitude|dc:{{izirDC}}]).</p><ul><li><strong>Failure</strong> The void drags the target 10 feet toward you.</li><li><strong>Critical Failure</strong> As failure, and the target is off-guard until the end of its next turn.</li></ul><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>A hand of living void reaches where yours cannot.</p><hr /><p><strong>Range</strong> 15 feet; <strong>Targets</strong> 1 creature</p><p><strong>Effect</strong> The target attempts a Fortitude save (@Check[fortitude|dc:{{izirDC}}]).</p><ul><li><strong>Failure</strong> The void drags the target 10 feet toward you.</li><li><strong>Critical Failure</strong> As failure, and the target is off-guard until the end of its next turn.</li></ul><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/unholy/hand-grasping-green.webp",
       "rules": [],
       "actionData": {
@@ -148,7 +148,7 @@
         "recharge": "1d6",
         "frequency": {
           "max": 1,
-          "per": "round"
+          "per": "day"
         }
       }
     },
@@ -201,7 +201,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Izir Wave I",
-      "description": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:15] Each creature in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:15] Each creature in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/unholy/beam-impact-purple.webp",
       "rules": [],
       "actionData": {
@@ -214,7 +214,7 @@
         "recharge": "1d6",
         "frequency": {
           "max": 1,
-          "per": "round"
+          "per": "day"
         }
       }
     },
@@ -272,7 +272,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Predator's Lunge",
-      "description": "<p>The void pulls you toward wounded prey.</p><hr /><p><strong>Effect</strong> Stride toward the nearest bloodied enemy, ignoring difficult terrain. If you end your movement adjacent to it, your next Strike against it this turn gains a +1 circumstance bonus to the attack roll.</p><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>The void pulls you toward wounded prey.</p><hr /><p><strong>Effect</strong> Stride toward the nearest bloodied enemy, ignoring difficult terrain. If you end your movement adjacent to it, your next Strike against it this turn gains a +1 circumstance bonus to the attack roll.</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/skills/melee/strike-dagger-blood-red.webp",
       "rules": [],
       "actionData": {
@@ -285,7 +285,7 @@
         "recharge": "1d6",
         "frequency": {
           "max": 1,
-          "per": "round"
+          "per": "day"
         }
       }
     },
@@ -347,7 +347,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Izir Wave II",
-      "description": "<p>The wave widens into a torrent of annihilation.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:30] Each creature in the area takes @Damage[(floor(@actor.level/2))d8[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>The wave widens into a torrent of annihilation.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:30] Each creature in the area takes @Damage[(floor(@actor.level/2))d8[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/unholy/beam-impact-purple.webp",
       "rules": [],
       "actionData": {
@@ -360,7 +360,7 @@
         "recharge": "1d6",
         "frequency": {
           "max": 1,
-          "per": "round"
+          "per": "day"
         }
       }
     },
@@ -417,7 +417,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Void Step",
-      "description": "<p>You fold through the dark between two shadows.</p><hr /><p><strong>Requirements</strong> You are in dim light or darkness.</p><p><strong>Effect</strong> Teleport up to 15 feet to a space you can see that is in dim light or darkness.</p><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>You fold through the dark between two shadows.</p><hr /><p><strong>Requirements</strong> You are in dim light or darkness.</p><p><strong>Effect</strong> Teleport up to 15 feet to a space you can see that is in dim light or darkness.</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/movement/trail-streak-zigzag-teal.webp",
       "rules": [],
       "actionData": {
@@ -431,7 +431,7 @@
         "recharge": "1d6",
         "frequency": {
           "max": 1,
-          "per": "round"
+          "per": "day"
         }
       }
     },
@@ -463,7 +463,7 @@
       "kind": "boon",
       "form": "effect",
       "name": "Terror's Mantle",
-      "description": "<p>Dread pours off you like cold. Enemies that enter or begin their turn within 10 feet must succeed at a Will save against your temptation DC or become frightened 1 (once per target per 10 minutes).</p>",
+      "description": "<p>Dread pours off you like cold. When an enemy enters the 10-foot aura, it attempts a Will save against your temptation DC: frightened 1 on a failure, frightened 2 on a critical failure.</p>",
       "img": "icons/magic/unholy/orb-glowing-purple.webp",
       "auraEffectId": "izirterroraura00",
       "rules": [
@@ -498,7 +498,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Rend the Veil",
-      "description": "<p>You tear the skin of the world and let the void pour through.</p><hr /><p><strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each creature in the area takes @Damage[(@actor.level)d6[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>You tear the skin of the world and let the void pour through.</p><hr /><p><strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each creature in the area takes @Damage[(@actor.level)d6[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/unholy/beam-impact-purple.webp",
       "rules": [],
       "actionData": {
@@ -511,7 +511,7 @@
         "recharge": "1d6",
         "frequency": {
           "max": 1,
-          "per": "round"
+          "per": "day"
         }
       }
     },
@@ -563,7 +563,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Devour Light",
-      "description": "<p>The void in you drinks the light from the world.</p><hr /><p><strong>Effect</strong> @Template[emanation|distance:20] Nonmagical light sources in the emanation are extinguished and magical light is suppressed for 1 minute. Each enemy in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[fortitude|dc:{{izirDC}}|basic]).</p><p><em>Izir must gather again — you can't use this ability for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>The void in you drinks the light from the world.</p><hr /><p><strong>Effect</strong> @Template[emanation|distance:20] Nonmagical light sources in the emanation are extinguished and magical light is suppressed for 1 minute. Each enemy in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[fortitude|dc:{{izirDC}}|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/unholy/orb-glowing-purple.webp",
       "rules": [],
       "actionData": {
@@ -577,7 +577,7 @@
         "recharge": "1d6",
         "frequency": {
           "max": 1,
-          "per": "round"
+          "per": "day"
         }
       }
     },
@@ -644,7 +644,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Herald of Ruin",
-      "description": "<p>For one minute, you are what the Nineveh only dream of being — and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed, your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet. When the minute ends, you are drained 1.</p>",
+      "description": "<p>For one minute, you are what the Nineveh only dream of being, and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed, your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet. When the minute ends, you are drained 1.</p>",
       "img": "icons/magic/control/buff-flight-wings-runes-purple.webp",
       "rules": [],
       "actionData": {
@@ -737,15 +737,8 @@
       "_id": "izirterroraura00",
       "name": "Izir's Terror",
       "img": "icons/magic/unholy/orb-glowing-purple.webp",
-      "description": "<p>The void presses close. You are frightened 1 (Will save against the bearer's temptation DC negates).</p>",
-      "rules": [
-        {
-          "key": "Note",
-          "selector": "all",
-          "title": "Izir's Terror",
-          "text": "Frightened 1 unless you succeed at a Will save against the bearer's temptation DC."
-        }
-      ]
+      "description": "<p>You are inside Izir's Terror. On entering, attempt a Will save against the bearer's temptation DC: frightened 1 on a failure, frightened 2 on a critical failure.</p>",
+      "rules": []
     },
     {
       "_id": "izirheraldruin00",

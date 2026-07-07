@@ -600,3 +600,18 @@
   opacity: 0.85;
   margin: 0 0 0.3rem;
 }
+/* pf2e's inline check pill ships with a bright background that glares inside our
+   cards; keep the button affordance, drop the slab. */
+.izir-temptation-card a.inline-check,
+.izir-temptation-card span.inline-check {
+  background: none;
+  box-shadow: none;
+  border: 1px solid #6a2fa0;
+  border-radius: 3px;
+  padding: 1px 6px;
+  color: inherit;
+}
+.izir-temptation-card a.inline-check:hover {
+  background: rgba(106, 47, 160, 0.12);
+  text-shadow: none;
+}

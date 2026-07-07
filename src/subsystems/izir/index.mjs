@@ -11,6 +11,7 @@ import { loadContent } from "./content.mjs";
 import { registerSyncHooks, syncAllMarked } from "./sync.mjs";
 import { registerTemptationHooks } from "./temptation.mjs";
 import { registerRechargeHooks } from "./recharge.mjs";
+import { registerTerrorHooks } from "./terror.mjs";
 import { setImmersion } from "./transform.mjs";
 import { registerIzirTraits } from "./traits.mjs";
 
@@ -65,5 +66,6 @@ registerSubsystem({
     });
     registerTemptationHooks();
     registerRechargeHooks();
+    registerTerrorHooks();
   },
 });

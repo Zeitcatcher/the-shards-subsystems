@@ -1,44 +1,35 @@
-# The Shards — Campaign Subsystems
+# The Shards Subsystems
 
-GM-side campaign subsystems for the homebrew world **The Shards**, run in Pathfinder Second Edition (Remaster) on Foundry VTT.
+GM tools for the homebrew world The Shards, run in Pathfinder Second Edition (Remaster) on Foundry VTT.
 
-> **Pre-release (v0.1.0).** The Izir engine is complete and tested; the active abilities are still being authored. See [Status](#status).
+> Pre-release. The Izir subsystem is playable end to end; full docs and screenshots come with the stable release.
 
-## Subsystem 1 — Izir
+## Izir
 
-A GM-controlled corruption tracker for the **Nameless**. Mark any actor, set their Izir immersion from 0 to 10, and the module keeps a matching set of Pathfinder 2e effects and actions on them — scaling powers with a comparable, escalating price.
+A corruption tracker for the Nameless. The GM marks an actor and sets their immersion in Izir from 0 to 10. The module keeps one composed effect on the actor with every power and price of that depth, plus the active abilities as usable sheet actions and strikes.
 
-- **Immersion 0–10** across four tiers (Whisper, Grip, Call, Nineveh), set from a GM panel.
-- **Powers and prices** applied automatically as pf2e effect/action items; both are individually suppressible with a reason label, so you can reward a character who resists.
-- **Hidden prices** — negative effects are applied unidentified and revealed one at a time (a world setting flips to full transparency).
-- **Temptation of Izir** — a Will-save loop: a whispered check card for players (or a direct roll for NPCs), logged, with non-binding GM suggestions.
-- **The tenth step** — reaching 10 forces a choice: consumed into a Nineveh, or mastery (Subjugation).
-- **History log** with journal export, and **per-tier portrait/token art swaps**.
-- A **reusable compendium** ships every ability foldered by tier, so you can drag any power or price onto any token independently of the tracker.
+- Ten levels in four tiers: Whisper, Grip, Call, and the terminal tenth step, where the GM chooses Nineveh (consumed) or Subjugation (mastery).
+- Every level pairs a passive, an active ability, and a price. Prices apply unidentified and are revealed one at a time; the GM can suppress any single entry and note why.
+- Temptation saves (DC 20 at immersion 1, +3 per level) fill a slide bar. Three failures per current level raise the immersion on its own, and the token badge doubles as a level control.
+- Izir casting matches a true caster at immersion 5 and gains one step per level after that.
+- Actives recharge on 1d6 rounds like a dragon's breath. In combat the roll and the cooldown effect are automatic; the Use button stays spent until the recharge ends.
+- Terror aura prompts a Will save when an enemy enters; frightened lands only on a failed roll.
+- A compendium ships every ability as a browsable item, foldered by tier, usable on any token without the tracker.
 
 ## Requirements
 
-- Foundry VTT **v14**
-- Pathfinder 2e system **v8.2.0+**
+- Foundry VTT v14
+- Pathfinder 2e system v8.2.0+
 
 ## Install
 
-In Foundry: **Add-on Modules → Install Module**, and paste the manifest URL:
+In Foundry: Add-on Modules, Install Module, paste the manifest URL:
 
 ```
 https://github.com/Zeitcatcher/the-shards-subsystems/releases/latest/download/module.json
 ```
 
-## Status
-
-| Area | State |
-| --- | --- |
-| Immersion tracker, panel, reconciliation engine | Done |
-| Temptation loop, history, journal export | Done |
-| Level-10 fork, art swaps | Done |
-| Passive powers + prices, levels 1–10 | Done |
-| Active abilities (×9) | In progress |
-| Full docs + screenshots | Pending release |
+Engine, content, and the compendium are done. Still ahead: vault documentation and the stable-release docs.
 
 ## License
 
