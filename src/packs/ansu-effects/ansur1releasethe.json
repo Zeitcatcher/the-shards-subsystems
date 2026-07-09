@@ -8,7 +8,7 @@
   "sort": 1250,
   "system": {
     "description": {
-      "value": "<p>You loosen your grip on the borrowed strength and try to hand it back. Attempt a Will save against the Release DC (your Release DC).</p><ul><li><strong>Critical Success</strong> Clean release; the discipline feeds the Climb (+2).</li><li><strong>Success</strong> Clean release (+1 to the Climb).</li><li><strong>Failure</strong> The Ansu doesn't let go: <em>Lingering</em> — the boons stay on, the Ansu steers. Re-save at the end of each of your turns.</li><li><strong>Critical Failure</strong> <em>Seizure</em> — the Ansu takes the body for 1 round (the GM plays you), then Lingering resumes.</li></ul>"
+      "value": "<p>You loosen your grip on the borrowed strength and try to hand it back. Attempt a Will save against the Release DC (your Release DC).</p><ul><li><strong>Critical Success</strong> Clean release; the discipline feeds the Climb (+2).</li><li><strong>Success</strong> Clean release (+1 to the Climb).</li><li><strong>Failure</strong> The Ansu doesn't let go. <em>Lingering</em>: the boons stay on and the Ansu steers. Re-save at the end of each of your turns.</li><li><strong>Critical Failure</strong> <em>Seizure</em>: the Ansu takes the body for 1 round (the GM plays you), then Lingering resumes.</li></ul>"
     },
     "slug": "shards-ansu-release-the-ansu",
     "actionType": {
@@ -32,7 +32,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

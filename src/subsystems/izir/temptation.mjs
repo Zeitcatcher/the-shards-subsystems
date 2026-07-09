@@ -76,15 +76,17 @@ async function rollNpcTemptation(actor, id, dc) {
   });
 }
 
-function resolveActor(message, ctx) {
-  const uuid = ctx.actor;
-  if (uuid) {
-    const doc = fromUuidSync(uuid);
-    if (doc?.documentName === "Actor") return doc;
-    if (doc?.actor) return doc.actor;
+function resolveActor(message) {
+  // pf2e's ChatMessage#actor (speakerActor) is scene/token aware and resolves
+  // unlinked (synthetic) token actors. flags.pf2e.context.actor is only a bare
+  // world-actor id, which misses them entirely. (B1)
+  if (message.actor) return message.actor;
+  const { scene, token, actor } = message.speaker ?? {};
+  if (scene && token) {
+    const t = game.scenes?.get(scene)?.tokens?.get(token);
+    if (t?.actor) return t.actor;
   }
-  const sid = message.speaker?.actor;
-  return sid ? game.actors.get(sid) : null;
+  return actor ? game.actors.get(actor) : null;
 }
 
 /** Register the createChatMessage capture. Primary GM only. Call on ready. */
@@ -98,25 +100,21 @@ export function registerTemptationHooks() {
 async function captureFromMessage(message) {
   const ctx = message.flags?.pf2e?.context;
   if (!ctx || ctx.type !== "saving-throw") return;
-  const actor = resolveActor(message, ctx);
+  const actor = resolveActor(message);
   if (!actor || !isMarked(actor)) return;
 
   const st = readIzir(actor);
   const pending = st.pendingTemptation;
   if (!pending) return;
 
+  // Match only on the injected roll-option id: an unambiguous channel present on
+  // both the player's card click and the GM's NPC roll. Off-card rolls go through
+  // the panel's manual recorder, so there is no fuzzy DC/time fallback that could
+  // capture an unrelated saving throw at the same DC. (B2)
   const options = ctx.options ?? [];
-  let matches = false;
-  if (options.includes("shards-izir-temptation")) {
-    // Primary channel: the injected roll option carries the pending id.
-    const idOpt = options.find((o) => o.startsWith("shards-izir-temptation-id:"));
-    matches = idOpt?.slice("shards-izir-temptation-id:".length) === pending.id;
-  } else {
-    // Fallback: same actor, same DC, within 30 minutes.
-    const within = Date.now() - (pending.createdAt ?? 0) < 30 * 60 * 1000;
-    matches = ctx.dc?.value === pending.dc && within;
-  }
-  if (!matches) return;
+  if (!options.includes("shards-izir-temptation")) return;
+  const idOpt = options.find((o) => o.startsWith("shards-izir-temptation-id:"));
+  if (idOpt?.slice("shards-izir-temptation-id:".length) !== pending.id) return;
 
   const outcome = ctx.outcome ?? null;
   const total = message.rolls?.[0]?.total ?? null;
@@ -128,26 +126,39 @@ async function captureFromMessage(message) {
  * slide (fail +1, crit fail +2 — successes hold). The slide may auto-raise the
  * level or signal the Tenth Step; a small GM whisper reports what moved.
  */
+const recording = new Set();
+
 export async function recordTemptationOutcome(actor, outcome, total = null) {
   const st = readIzir(actor);
   const pending = st.pendingTemptation;
-  const delta = slideDeltaFor(outcome);
-  const log = [
-    ...st.log,
-    {
-      t: Date.now(),
-      type: "temptation",
-      data: { id: pending?.id ?? null, dc: pending?.dc ?? null, outcome, total, slideDelta: delta },
-      note: pending?.reason ?? "",
-    },
-  ];
-  await patchIzir(actor, { log, pendingTemptation: null });
+  if (!pending) return; // already recorded (auto-capture cleared it) — nothing to do
+  // Guard a double-apply when auto-capture and the manual recorder fire for the
+  // same pending at once. The check-and-add is synchronous (before any await), so
+  // only the first caller proceeds; the slide can't move twice for one save. (C5)
+  const key = `${actor.id}:${pending.id}`;
+  if (recording.has(key)) return;
+  recording.add(key);
+  try {
+    const delta = slideDeltaFor(outcome);
+    const log = [
+      ...st.log,
+      {
+        t: Date.now(),
+        type: "temptation",
+        data: { id: pending.id, dc: pending.dc ?? null, outcome, total, slideDelta: delta },
+        note: pending.reason ?? "",
+      },
+    ];
+    await patchIzir(actor, { log, pendingTemptation: null });
 
-  if (delta > 0) {
-    const r = await applySlideChange(actor, { delta, source: "temptation" });
-    if (r) await whisperSlideReport(actor, delta, r);
+    if (delta > 0) {
+      const r = await applySlideChange(actor, { delta, source: "temptation" });
+      if (r) await whisperSlideReport(actor, delta, r);
+    }
+    refreshIzirPanel();
+  } finally {
+    recording.delete(key);
   }
-  refreshIzirPanel();
 }
 
 /** GM-only confirmation of the slide movement after a captured outcome. */

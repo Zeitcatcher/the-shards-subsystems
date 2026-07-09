@@ -78,7 +78,7 @@ async function createRechargeEffect(actor, entry, name, rounds) {
         traits: { value: [], rarity: "common" },
         rules: [],
         start: { value: 0, initiative: null },
-        publication: { title: "The Shards", authors: "Zeitcatcher", license: "OGL", remaster: true },
+        publication: { title: "The Shards", authors: "Zeitcatcher", license: "ORC", remaster: true },
       },
       flags: { [MODULE_ID]: { izirRecharge: entry.id, izirRolled: true } },
     },
@@ -88,6 +88,9 @@ async function createRechargeEffect(actor, entry, name, rounds) {
 /* ------------------------------------------------------------------ */
 /* Hook 1: the Use message (pf2e flags it context.type = "self-effect") */
 /* ------------------------------------------------------------------ */
+
+// In-flight guard: one recharge roll per ability per Use burst.
+const rolling = new Set();
 
 async function handleUseMessage(message) {
   const ctx = message.flags?.pf2e?.context;
@@ -105,14 +108,29 @@ async function handleUseMessage(message) {
 
   if (!inActiveCombat(actor)) return; // no cooldowns outside combat
 
-  const running = findRechargeEffect(actor, entry.id);
-  if (running) {
-    await whisperStillRecharging(actor, item.name, remainingRounds(running));
-    return;
+  // A double-click posts two self-effect messages that would both pass the gate
+  // and roll twice; the synchronous check-and-add lets only the first win. (F)
+  const gateKey = `${actor.id}:${entry.id}`;
+  if (rolling.has(gateKey)) return;
+  rolling.add(gateKey);
+  try {
+    const running = findRechargeEffect(actor, entry.id);
+    if (running) {
+      // An already-expired marker must not block reuse — the world's "remove
+      // expired effects" automation may be off, or a sweep hasn't run yet. Clear
+      // the stale marker and roll a fresh cooldown. (F)
+      if (running.isExpired === true || running.system?.expired === true) {
+        await running.delete().catch(() => {});
+      } else {
+        await whisperStillRecharging(actor, item.name, remainingRounds(running));
+        return;
+      }
+    }
+    const rounds = await rollRecharge(actor, item.name, entry.actionData.recharge);
+    await createRechargeEffect(actor, entry, item.name, rounds);
+  } finally {
+    rolling.delete(gateKey);
   }
-
-  const rounds = await rollRecharge(actor, item.name, entry.actionData.recharge);
-  await createRechargeEffect(actor, entry, item.name, rounds);
 }
 
 /* ------------------------------------------------------------------ */

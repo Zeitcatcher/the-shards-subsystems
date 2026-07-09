@@ -2,12 +2,28 @@
   "id": "the-shards-subsystems",
   "title": "The Shards Subsystems",
   "description": "GM tools for The Shards campaign (Pathfinder 2e). Includes Izir, a ten-level immersion tracker for the Nameless (powers with prices, temptation saves, the slide), and Ansu, a ten-level mastery track for murkhor bearers (Communion boons on a timer, Release saves, the Climb, and the Seizure override). One window, independent subsystems.",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "authors": [
     {
       "name": "Zeitcatcher"
     }
   ],
+  "flags": {
+    "the-shards-subsystems": {
+      "pf2e-homebrew": {
+        "creatureTraits": {
+          "nameless": {
+            "label": "Nameless",
+            "description": "A being whose First Name has been severed and who now carries Izir. Registered by The Shards Subsystems."
+          },
+          "murkhor": {
+            "label": "Murkhor",
+            "description": "One of the ancient race of engineers, bearing an Ansu: the strength and knowledge of the ancestors. Registered by The Shards Subsystems."
+          }
+        }
+      }
+    }
+  },
   "compatibility": {
     "minimum": "14",
     "verified": "14.364"
@@ -78,7 +94,7 @@
   ],
   "url": "https://github.com/Zeitcatcher/the-shards-subsystems",
   "manifest": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/latest/download/module.json",
-  "download": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/download/v0.6.1/module.zip",
+  "download": "https://github.com/Zeitcatcher/the-shards-subsystems/releases/download/v0.6.2/module.zip",
   "license": "PolyForm-Noncommercial-1.0.0",
   "readme": "https://github.com/Zeitcatcher/the-shards-subsystems#readme"
 }

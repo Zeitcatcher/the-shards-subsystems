@@ -8,7 +8,7 @@
   "sort": 10250,
   "system": {
     "description": {
-      "value": "<p>You unmake sound and thought for one held breath.</p><hr /><p><strong>Frequency</strong> once per day; <strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each enemy in the area attempts a Will save (@Check[will|dc:your Izir DC]).</p><ul><li><strong>Success</strong> Off-guard until the end of its next turn.</li><li><strong>Failure</strong> Stunned 1.</li><li><strong>Critical Failure</strong> Stunned 2.</li></ul>"
+      "value": "<p>You unmake sound and thought for one held breath.</p><hr /><p><strong>Frequency</strong> once per day; <strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each enemy in the area must attempt a @Check[will|dc:] save.</p><ul><li><strong>Critical Success</strong> The creature is unaffected.</li><li><strong>Success</strong> The creature is off-guard until the end of its next turn.</li><li><strong>Failure</strong> The creature is stunned 1.</li><li><strong>Critical Failure</strong> The creature is stunned 2.</li></ul>"
     },
     "slug": "shards-izir-perfect-stillness",
     "actionType": {
@@ -34,7 +34,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

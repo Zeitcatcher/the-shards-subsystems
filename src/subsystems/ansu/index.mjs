@@ -9,7 +9,7 @@ import { registerSubsystem } from "../../core/subsystems.mjs";
 import { openAnsuPanel, refreshAnsuPanel } from "./apps/ansu-panel.mjs";
 import { loadContent } from "./content.mjs";
 import { registerSyncHooks, syncAllAttuned } from "./sync.mjs";
-import { registerCommunionHooks } from "./communion.mjs";
+import { registerCommunionHooks, handleExpiry } from "./communion.mjs";
 import { registerReleaseHooks } from "./release.mjs";
 import { registerCallHooks } from "./call.mjs";
 import { setAttunement } from "./transform.mjs";
@@ -63,11 +63,15 @@ registerSubsystem({
       console.error(`${MODULE_ID} | Ansu content failed to load`, err);
       ui.notifications?.error(game.i18n.localize("SHARDS.Ansu.ContentError"));
     }
-    // Token-badge edits are level changes; refresh the panel afterwards.
-    registerSyncHooks(async (actor, _from, next) => {
-      await setAttunement(actor, next, game.i18n.localize("SHARDS.Ansu.BadgeNote"));
-      refreshAnsuPanel();
-    });
+    // Token-badge edits are level changes; refresh the panel afterwards. The
+    // second handler resolves an expired Communion that pf2e auto-removed (B11).
+    registerSyncHooks(
+      async (actor, _from, next) => {
+        await setAttunement(actor, next, game.i18n.localize("SHARDS.Ansu.BadgeNote"));
+        refreshAnsuPanel();
+      },
+      (actor) => handleExpiry(actor),
+    );
     registerCommunionHooks();
     registerReleaseHooks();
     registerCallHooks();

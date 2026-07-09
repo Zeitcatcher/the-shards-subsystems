@@ -8,7 +8,7 @@
   "sort": 100,
   "system": {
     "description": {
-      "value": "<p>For 1 minute you gain a fly Speed equal to your Speed, your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet (the dice and radius upgrades are adjudicated by the GM). When this effect ends, you are drained 1.</p>"
+      "value": "<p>For 1 minute you gain a fly Speed equal to your Speed (minimum 20 feet), your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet (the dice and radius upgrades are adjudicated by the GM). When this effect ends, you are drained 1.</p>"
     },
     "slug": "shards-izir-pack-izirheraldruin00",
     "duration": {
@@ -33,7 +33,7 @@
       {
         "key": "BaseSpeed",
         "selector": "fly",
-        "value": "max(20,@actor.attributes.speed.total)"
+        "value": "max(20,@actor.system.movement.speeds.land.value)"
       },
       {
         "key": "Note",
@@ -50,7 +50,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

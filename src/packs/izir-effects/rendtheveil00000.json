@@ -8,7 +8,7 @@
   "sort": 7250,
   "system": {
     "description": {
-      "value": "<p>You tear the skin of the world and let the void pour through.</p><hr /><p><strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each creature in the area takes @Damage[(@actor.level)d6[void]|options:area-damage] damage (@Check[reflex|dc:your Izir DC|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+      "value": "<p>You tear the skin of the world and let the void pour through.</p><hr /><p><strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each creature in the area takes @Damage[(@actor.level)d6[void]|options:area-damage] damage (@Check[reflex|dc:|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
     },
     "slug": "shards-izir-rend-the-veil",
     "actionType": {
@@ -30,7 +30,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

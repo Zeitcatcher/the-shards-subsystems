@@ -8,7 +8,7 @@
   "sort": 9500,
   "system": {
     "description": {
-      "value": "<p>It speaks now, and part of you always listens. You are permanently stupefied 1 and doomed 1. This is the last step before the fall.</p>"
+      "value": "<p>It speaks now, and part of you always listens. While immersed at this depth, you are stupefied 1 and doomed 1. This is the last step before the fall.</p>"
     },
     "slug": "shards-izir-the-voice-of-izir",
     "duration": {
@@ -45,7 +45,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

@@ -8,7 +8,7 @@
   "sort": 1250,
   "system": {
     "description": {
-      "value": "<p>The arena blow, learned. Make a melee Strike that deals 1-per-tierd6 extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone}.</p>"
+      "value": "<p>The arena blow, learned. Make a melee Strike that deals 1d6 per tier extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit, the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone}.</p>"
     },
     "slug": "shards-ansu-makers-wrath",
     "actionType": {
@@ -29,7 +29,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

@@ -8,7 +8,7 @@
   "sort": 10250,
   "system": {
     "description": {
-      "value": "<p>The mind-summons perfected. You Interact with an object at a distance — up to 120 feet, through walls and barriers: seize it, drag it to your hand, shove it, turn a wheel, throw a bolt. Call the Blade now works anywhere on the scene, and you can Disarm or Shove a creature at range with the telekinetic grip (Athletics vs. Reflex DC). Creatures holding an object otherwise keep their grip.</p>"
+      "value": "<p>The mind-summons perfected. You Interact with an object at a distance, up to 120 feet, through walls and barriers: seize it, drag it to your hand, shove it, turn a wheel, throw a bolt. Call the Blade now works anywhere in sight, and you can Disarm or Shove a creature at range with the telekinetic grip (Athletics against the target's Reflex DC to Disarm, or its Fortitude DC to Shove). Creatures holding an object otherwise keep their grip.</p>"
     },
     "slug": "shards-ansu-hand-of-the-ansu",
     "actionType": {
@@ -30,7 +30,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

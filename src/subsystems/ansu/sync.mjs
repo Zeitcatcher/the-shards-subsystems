@@ -22,7 +22,7 @@ import {
 import { clampLevel, tierForLevel, MAX_LEVEL } from "./logic/model.mjs";
 import { loadContent } from "./content.mjs";
 
-const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "OGL", remaster: true };
+const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "ORC", remaster: true };
 // icons/ancestries/ does not exist on the hosted install (playtest 2026-07-07) —
 // the broken-horn bearer wears a horn instead.
 const MARKER_IMG = "icons/commodities/bones/horn-curved-worn-brown.webp";
@@ -35,16 +35,24 @@ const tokenIconsOn = () => game.settings.get(MODULE_ID, SETTINGS.ANSU_TOKEN_ICON
 
 const charLevelOf = (actor) => Math.max(1, Number(actor?.system?.details?.level?.value ?? actor?.level ?? 1) || 1);
 
+// A dial value, defaulting only when the stored value isn't a finite number — so a
+// deliberate 0 (e.g. a flat DC ladder) survives, and a malformed value can't leak
+// NaN downstream (Number(x) ?? d never guards, since Number returns NaN not null).
+const dial = (key, d) => {
+  const n = Number(game.settings.get(MODULE_ID, key));
+  return Number.isFinite(n) ? n : d;
+};
+
 /** The GM-tunable number dials, read once per sync. */
 export function readDials() {
   return {
-    dcBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_BASE)) || 20,
-    dcStep: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_STEP)) || 2,
-    dcCap: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_DC_CAP)) || 5,
-    callBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_BASE)) || 20,
-    callStep: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_STEP)) ?? 2,
-    climbBase: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CLIMB_BASE)) || 2,
-    climbStep: Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CLIMB_STEP)) ?? 1,
+    dcBase: dial(SETTINGS.ANSU_DC_BASE, 20),
+    dcStep: dial(SETTINGS.ANSU_DC_STEP, 2),
+    dcCap: dial(SETTINGS.ANSU_DC_CAP, 5),
+    callBase: dial(SETTINGS.ANSU_CALL_BASE, 20),
+    callStep: dial(SETTINGS.ANSU_CALL_STEP, 2),
+    climbBase: dial(SETTINGS.ANSU_CLIMB_BASE, 2),
+    climbStep: dial(SETTINGS.ANSU_CLIMB_STEP, 1),
   };
 }
 
@@ -60,7 +68,7 @@ function attunementDescription(composed) {
   const t = (k) => game.i18n.localize(k);
   const tierName = game.i18n.localize(`SHARDS.Ansu.Tier.${composed.tier}`);
   const parts = [];
-  parts.push(`<p><em>${t("SHARDS.Ansu.Attunement")} ${composed.level} — ${tierName}.</em></p>`);
+  parts.push(`<p><em>${t("SHARDS.Ansu.Attunement")} ${composed.level}: ${tierName}.</em></p>`);
   if (composed.terminal === "taken") {
     parts.push(`<p>${t("SHARDS.Ansu.TerminalTaken")}</p>`);
   } else if (composed.terminal === "subjugated") {
@@ -244,13 +252,37 @@ export function inActiveCombat(actor) {
   return combat.combatants.some((c) => c.actor === actor || c.actor?.uuid === actor.uuid);
 }
 
+/** This actor's combatant initiative in the active combat, or null. */
+function combatantInitiative(actor) {
+  const combat = game.combat;
+  if (!combat?.started) return null;
+  const c = combat.combatants.find((x) => x.actor === actor || x.actor?.uuid === actor.uuid);
+  return c?.initiative ?? null;
+}
+
 // Guard so our own writes don't re-trigger the watchers.
 const syncing = new Set();
 export const isSyncing = (actorId) => syncing.has(actorId);
 
+// Per-actor promise chain so overlapping syncs serialize (see syncActor).
+const syncChain = new Map();
+
 /** Converge one actor's items to the composed model. Idempotent; GM-side. */
 export async function syncActor(actor) {
   if (!actor) return;
+  // Serialize per actor: two overlapping runs must not each project "no marker
+  // yet" and both create the composed effect before either write lands. (C1)
+  const prev = syncChain.get(actor.id) ?? Promise.resolve();
+  const run = prev.catch(() => {}).then(() => syncActorInner(actor));
+  syncChain.set(actor.id, run);
+  try {
+    await run;
+  } finally {
+    if (syncChain.get(actor.id) === run) syncChain.delete(actor.id);
+  }
+}
+
+async function syncActorInner(actor) {
   let content;
   try {
     content = await loadContent();
@@ -272,7 +304,41 @@ export async function syncActor(actor) {
   const feats = attuned ? composeFeats(state, content, opts) : [];
   const actions = attuned ? composeActions(state, content, opts) : [];
   const desired = [...(attunement ? [attunement] : []), ...(communion ? [communion] : []), ...feats, ...actions];
-  const { toCreate, toUpdate, toDeleteIds } = diffAll(desired, projectTagged(actor));
+  const tagged = projectTagged(actor);
+  const { toCreate, toUpdate, toDeleteIds } = diffAll(desired, tagged);
+
+  // Force-refresh baked frequency uses even when the composed content is
+  // unchanged: pf2e decrements an item's own system.frequency.value on Use, which
+  // the content hash can't see. Without this, a spent door (the dormant Invoke,
+  // whose baked value is always max) or a just-lapsed cooldown would stay greyed
+  // after a resync because diffAll finds no hash change. (B10)
+  const updateIds = new Set(toUpdate.map((u) => u.itemId));
+  for (const d of desired) {
+    const fv = d.actionData?.frequencyValue;
+    if (fv === undefined || fv === null) continue;
+    const t = tagged.find((x) => x.entryId === d.entryId);
+    if (!t || updateIds.has(t.itemId)) continue;
+    const current = actor.items.get(t.itemId)?.system?.frequency?.value;
+    if (current !== undefined && current !== fv) {
+      toUpdate.push({ itemId: t.itemId, desired: d });
+      updateIds.add(t.itemId);
+    }
+  }
+
+  // Force-refresh the Attunement marker when its live badge was nudged out of
+  // sync: the badge value isn't in the composed hash, so a terminal's fixed badge
+  // (or a reverted player edit) wouldn't otherwise snap back. (C3)
+  if (attunement) {
+    const t = tagged.find((x) => x.entryId === ATTUNEMENT_ENTRY_ID);
+    if (t && !updateIds.has(t.itemId)) {
+      const live = actor.items.get(t.itemId)?.system?.badge?.value;
+      if (live !== undefined && live !== attunement.badge?.value) {
+        toUpdate.push({ itemId: t.itemId, desired: attunement });
+        updateIds.add(t.itemId);
+      }
+    }
+  }
+
   if (!toCreate.length && !toUpdate.length && !toDeleteIds.length) return;
 
   const inCombat = inActiveCombat(actor);
@@ -291,11 +357,22 @@ export async function syncActor(actor) {
       const updates = toUpdate.map(({ itemId, desired: d }) => {
         const src = build(d);
         const update = { _id: itemId, name: src.name, img: src.img, system: src.system, flags: src.flags };
-        // A content-only update (same mode) must not clobber a running combat
-        // countdown; a mode change (active → lingering, → seized) stamps fresh.
+        // The Communion effect carries a live countdown. pf2e stamps `start` only
+        // on create and never re-stamps it on update, so an update that carried our
+        // source's start:0 would read as expired far in the past and silently
+        // ignore every boon. Never send start on a same-mode content update
+        // (preserve the running clock and its duration); stamp a fresh start only
+        // when a new in-combat rounds countdown begins on a mode change. (A1)
         if (d.entryId === COMMUNION_ENTRY_ID) {
           const prevMode = actor.items.get(itemId)?.getFlag?.(MODULE_ID, ANSU)?.mode;
-          if (prevMode === d.mode) delete update.system.duration;
+          if (prevMode === d.mode) {
+            delete update.system.duration;
+            delete update.system.start;
+          } else if (update.system.duration?.unit === "rounds") {
+            update.system.start = { value: game.time?.worldTime ?? 0, initiative: combatantInitiative(actor) };
+          } else {
+            delete update.system.start;
+          }
         }
         return update;
       });
@@ -360,7 +437,7 @@ function scheduleResync(actor) {
 }
 
 /** Badge edits, manual deletions, and character level-ups all feed back into sync. */
-export function registerSyncHooks(onLevelFromBadge) {
+export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
   // Self-heal: a manually deleted module item is restored (suppress in the panel instead).
   Hooks.on("deleteItem", (item) => {
     if (!isPrimaryGM()) return;
@@ -368,11 +445,24 @@ export function registerSyncHooks(onLevelFromBadge) {
     if (!actor || syncing.has(actor.id)) return;
     const tag = item.getFlag?.(MODULE_ID, ANSU);
     if (!tag?.entryId || !isAttuned(actor)) return;
+    // A Communion effect that pf2e auto-removed on expiry (or a player dismissed)
+    // must resolve the countdown, not be resurrected with a fresh clock — else the
+    // effect never expires and the Release save never fires. (B11)
+    if (tag.entryId === COMMUNION_ENTRY_ID) {
+      const st = readAnsu(actor);
+      const wasExpired = item.isExpired === true || item.system?.expired === true;
+      if (!st.terminal && st.communion.mode === "active" && wasExpired) {
+        Promise.resolve(onCommunionExpired?.(actor)).catch((err) =>
+          console.error(`${MODULE_ID} | ansu communion expiry on delete`, err),
+        );
+        return;
+      }
+    }
     scheduleResync(actor);
   });
 
   // Two-way badge: click-adjusting the counter on the Attunement marker IS a level change.
-  Hooks.on("updateItem", (item, changes) => {
+  Hooks.on("updateItem", (item, changes, _options, userId) => {
     if (!isPrimaryGM()) return;
     const actor = item.parent;
     if (!actor || syncing.has(actor.id)) return;
@@ -380,9 +470,15 @@ export function registerSyncHooks(onLevelFromBadge) {
     if (tag?.entryId !== ATTUNEMENT_ENTRY_ID || !isAttuned(actor)) return;
     const badge = changes?.system?.badge?.value;
     if (badge === undefined || badge === null) return;
+    // Only a GM drives the level from the badge. A player editing their own marker
+    // counter is snapped back (resync recomposes at the unchanged level). (C2)
+    if (!game.users?.get(userId)?.isGM) {
+      scheduleResync(actor);
+      return;
+    }
     const st = readAnsu(actor);
     if (st.terminal) {
-      scheduleResync(actor); // terminal badge is fixed — snap it back
+      scheduleResync(actor); // terminal badge is fixed — snap it back (C3)
       return;
     }
     const next = clampLevel(Math.min(badge, MAX_LEVEL - 1));

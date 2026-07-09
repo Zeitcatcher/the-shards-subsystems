@@ -53,7 +53,8 @@ describe("data/ansu/content.json", () => {
   it("The Ansu Refuses runs the module-owned 10-minute cooldown", () => {
     const refuses = raw.entries.find((e) => e.id === "the-ansu-refuses");
     expect(refuses.actionData.cooldownMinutes).toBe(10);
-    expect(refuses.actionData.frequency).toEqual({ max: 1, per: "day" });
+    // per "PT10M" so the sheet reads "once every 10 minutes", matching the cooldown (D3).
+    expect(refuses.actionData.frequency).toEqual({ max: 1, per: "PT10M" });
     expect(refuses.actionData.actionType).toBe("reaction");
   });
   it("Stature has no size change — reach rides a Note rule", () => {

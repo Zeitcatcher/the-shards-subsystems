@@ -23,9 +23,9 @@ const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
 
 /** The default Call DC for an actor's current attunement (settings dials). */
 export function suggestedCallDC(state) {
-  const base = Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_BASE)) || 20;
-  const step = Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_STEP)) ?? 2;
-  return callDC(state.level, base, step);
+  const base = Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_BASE));
+  const step = Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_STEP));
+  return callDC(state.level, Number.isFinite(base) ? base : 20, Number.isFinite(step) ? step : 2);
 }
 
 /** Non-GM users who own this actor (players who can roll for it). */
@@ -84,15 +84,17 @@ async function rollNpcCall(actor, id, dc) {
   });
 }
 
-function resolveActor(message, ctx) {
-  const uuid = ctx.actor;
-  if (uuid) {
-    const doc = fromUuidSync(uuid);
-    if (doc?.documentName === "Actor") return doc;
-    if (doc?.actor) return doc.actor;
+function resolveActor(message) {
+  // pf2e's ChatMessage#actor (speakerActor) is scene/token aware and resolves
+  // unlinked (synthetic) token actors. flags.pf2e.context.actor is only a bare
+  // world-actor id, which misses them entirely. (B1)
+  if (message.actor) return message.actor;
+  const { scene, token, actor } = message.speaker ?? {};
+  if (scene && token) {
+    const t = game.scenes?.get(scene)?.tokens?.get(token);
+    if (t?.actor) return t.actor;
   }
-  const sid = message.speaker?.actor;
-  return sid ? game.actors.get(sid) : null;
+  return actor ? game.actors.get(actor) : null;
 }
 
 /** Register the createChatMessage capture. Primary GM only. Call on ready. */
@@ -106,25 +108,21 @@ export function registerCallHooks() {
 async function captureFromMessage(message) {
   const ctx = message.flags?.pf2e?.context;
   if (!ctx || ctx.type !== "skill-check") return;
-  const actor = resolveActor(message, ctx);
+  const actor = resolveActor(message);
   if (!actor || !isAttuned(actor)) return;
 
   const st = readAnsu(actor);
   const pending = st.pendingCall;
   if (!pending) return;
 
+  // Match only on the injected roll-option id: present on both the player's card
+  // click and the GM's NPC roll. Off-card rolls use the panel's manual recorder,
+  // so there is no fuzzy DC/time fallback that could capture an unrelated skill
+  // check (e.g. an Athletics check) at the same DC. (B2)
   const options = ctx.options ?? [];
-  let matches = false;
-  if (options.includes("shards-ansu-call")) {
-    // Primary channel: the injected roll option carries the pending id.
-    const idOpt = options.find((o) => o.startsWith("shards-ansu-call-id:"));
-    matches = idOpt?.slice("shards-ansu-call-id:".length) === pending.id;
-  } else {
-    // Fallback: an Intimidation check against the same DC within 30 minutes.
-    const within = Date.now() - (pending.createdAt ?? 0) < 30 * 60 * 1000;
-    matches = ctx.dc?.value === pending.dc && within;
-  }
-  if (!matches) return;
+  if (!options.includes("shards-ansu-call")) return;
+  const idOpt = options.find((o) => o.startsWith("shards-ansu-call-id:"));
+  if (idOpt?.slice("shards-ansu-call-id:".length) !== pending.id) return;
 
   const outcome = ctx.outcome ?? null;
   const total = message.rolls?.[0]?.total ?? null;
@@ -138,12 +136,28 @@ async function captureFromMessage(message) {
 export async function recordCallOutcome(actor, outcome, total = null) {
   const st = readAnsu(actor);
   const pending = st.pendingCall;
+  if (!pending) return; // already recorded (auto-capture cleared it) — nothing to do
+  // Guard a double-apply when auto-capture and the manual recorder fire for the
+  // same pending Call at once (a crit would otherwise Climb twice). (C5)
+  const key = `${actor.id}:${pending.id}`;
+  if (recording.has(key)) return;
+  recording.add(key);
+  try {
+    await recordCallOutcomeInner(actor, st, pending, outcome, total);
+  } finally {
+    recording.delete(key);
+  }
+}
+
+const recording = new Set();
+
+async function recordCallOutcomeInner(actor, st, pending, outcome, total) {
   const log = [
     ...st.log,
     {
       t: Date.now(),
       type: "call",
-      data: { id: pending?.id ?? null, dc: pending?.dc ?? null, outcome, total },
+      data: { id: pending.id, dc: pending.dc ?? null, outcome, total },
     },
   ];
   await patchAnsu(actor, { log, pendingCall: null });

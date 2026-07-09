@@ -8,7 +8,7 @@
   "sort": 8250,
   "system": {
     "description": {
-      "value": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize every enemy within 30 feet. You don't take the penalty for not sharing a language, and each target treats its result one degree of success worse. On what becomes a critical failure the target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened} 3 and @UUID[Compendium.pf2e.conditionitems.Item.sDPxOjQ9kx2RZE8D]{Fleeing} for 1 round.</p><p><em>Once per Communion.</em></p>"
+      "value": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize each enemy within 30 feet. You don't take the penalty for not sharing a language, and each target treats its result as one degree of success worse. If the result becomes a critical failure, the target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened 3} and @UUID[Compendium.pf2e.conditionitems.Item.sDPxOjQ9kx2RZE8D]{Fleeing} for 1 round.</p><p><em>Once per Communion.</em></p>"
     },
     "slug": "shards-ansu-roar-of-the-old-blood",
     "actionType": {
@@ -36,7 +36,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

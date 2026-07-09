@@ -8,7 +8,7 @@
   "sort": 4250,
   "system": {
     "description": {
-      "value": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair — it was arithmetic. Make one melee Strike and compare the attack roll against every enemy within your reach. The Strike deals 10 extra damage; roll damage once and apply it to each target you hit. Your multiple attack penalty counts this as one attack.</p>"
+      "value": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair, only arithmetic. Make one melee Strike and compare the attack roll result to the AC of each enemy within your melee reach. The Strike deals 10 extra damage; roll that damage once and apply it to each target you hit. This counts as one attack for your multiple attack penalty.</p>"
     },
     "slug": "shards-ansu-fair-battle",
     "actionType": {
@@ -29,7 +29,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

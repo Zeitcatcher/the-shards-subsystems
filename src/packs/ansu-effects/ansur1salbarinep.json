@@ -8,7 +8,7 @@
   "sort": 5250,
   "system": {
     "description": {
-      "value": "<p><strong>Trigger</strong> An attack hits you.</p><hr /><p>The sheen hardens into plate where the blow lands: you gain resistance twice your attunement against the triggering attack.</p>"
+      "value": "<p><strong>Trigger</strong> An attack hits you.</p><hr /><p>The sheen hardens into plate where the blow lands: you gain resistance to all damage against the triggering attack equal to twice your attunement.</p>"
     },
     "slug": "shards-ansu-salbarine-parry",
     "actionType": {
@@ -27,7 +27,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

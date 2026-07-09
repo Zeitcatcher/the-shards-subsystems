@@ -8,7 +8,7 @@
   "sort": 8250,
   "system": {
     "description": {
-      "value": "<p>The void in you drinks the light from the world.</p><hr /><p><strong>Effect</strong> @Template[emanation|distance:20] Nonmagical light sources in the emanation are extinguished and magical light is suppressed for 1 minute. Each enemy in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[fortitude|dc:your Izir DC|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+      "value": "<p>The void in you drinks the light from the world.</p><hr /><p><strong>Effect</strong> @Template[emanation|distance:20] Nonmagical light sources in the emanation are extinguished and magical light is suppressed for 1 minute. Each enemy in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[fortitude|dc:|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
     },
     "slug": "shards-izir-devour-light",
     "actionType": {
@@ -31,7 +31,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

@@ -8,7 +8,7 @@
   "sort": 4000,
   "system": {
     "description": {
-      "value": "<p>What the Ansu broke, the Ansu rebuilds — while it's close. During Communion your shattered horns knit into whole ridged weapons: you gain a horns unarmed Strike (1d10 piercing, shove). When Communion ends, they crumble back to stumps.</p>"
+      "value": "<p>What the Ansu broke, the Ansu rebuilds, while it stays close. During Communion your shattered horns knit into whole ridged weapons: you gain a horns unarmed attack that deals 1d10 piercing damage and has the shove trait. When Communion ends, they crumble back to stumps.</p>"
     },
     "slug": "shards-ansu-horns-reforged",
     "duration": {
@@ -57,7 +57,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

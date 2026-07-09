@@ -8,7 +8,7 @@
   "sort": 7500,
   "system": {
     "description": {
-      "value": "<p>The first time you are bloodied each combat, attempt a Will save against your temptation DC or be compelled to Strike the nearest creature (allies included) for 1 round. While below half Hit Points, you are doomed 1.</p>"
+      "value": "<p>The first time you are reduced below half your maximum Hit Points each combat, attempt a Will save against your temptation DC or be compelled to Strike the nearest creature (allies included) for 1 round. While below half your maximum Hit Points, you are doomed 1.</p>"
     },
     "slug": "shards-izir-slipping-control",
     "duration": {
@@ -34,7 +34,7 @@
         "key": "Note",
         "selector": "all",
         "title": "Slipping Control",
-        "text": "First time bloodied each combat: Will vs temptation DC or compelled to Strike the nearest creature (allies included) for 1 round. Doomed 1 while below half HP.",
+        "text": "First time reduced below half HP each combat: Will vs temptation DC or compelled to Strike the nearest creature (allies included) for 1 round. Doomed 1 while below half HP.",
         "visibility": "gm"
       }
     ],
@@ -45,7 +45,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

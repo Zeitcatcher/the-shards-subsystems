@@ -47,9 +47,18 @@ export async function ensureLauncherMacros() {
   for (const sub of getSubsystems()) {
     const name = game.i18n.localize(sub.titleKey);
     const img = sub.macroImg ?? "icons/svg/d20.svg";
-    const existing = game.macros.find((m) => m.name === name);
+    // Match our own macro by flag first; fall back to a name AND command match for
+    // macros created before the flag existed. Never adopt an unrelated user macro
+    // that merely shares the localized title.
+    const openCmd = `openPanel("${sub.id}")`;
+    const existing = game.macros.find(
+      (m) => m.getFlag?.(MODULE_ID, "launcher") === sub.id || (m.name === name && m.command?.includes(openCmd)),
+    );
     if (existing) {
-      if (existing.img !== img && existing.isOwner) await existing.update({ img });
+      const patch = {};
+      if (existing.img !== img) patch.img = img;
+      if (existing.getFlag?.(MODULE_ID, "launcher") !== sub.id) patch[`flags.${MODULE_ID}.launcher`] = sub.id;
+      if (Object.keys(patch).length && existing.isOwner) await existing.update(patch);
       continue;
     }
     await Macro.create({
@@ -57,6 +66,7 @@ export async function ensureLauncherMacros() {
       type: "script",
       img,
       command: `game.modules.get("${MODULE_ID}").api.openPanel("${sub.id}");`,
+      flags: { [MODULE_ID]: { launcher: sub.id } },
     });
   }
 }

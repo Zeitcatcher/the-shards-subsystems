@@ -8,7 +8,7 @@
   "sort": 5000,
   "system": {
     "description": {
-      "value": "<p>The void stitches you back together mid-fight. Once per hour, when you roll initiative, gain temporary Hit Points equal to your level.</p>"
+      "value": "<p>The void stitches you back together mid-fight. Once per hour, when you roll initiative, you gain temporary Hit Points equal to your level.</p>"
     },
     "slug": "shards-izir-unnatural-vigor",
     "duration": {
@@ -45,7 +45,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

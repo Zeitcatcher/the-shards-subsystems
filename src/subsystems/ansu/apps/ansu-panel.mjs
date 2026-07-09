@@ -257,8 +257,16 @@ async function onSeize() {
   const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const st = readAnsu(actor);
-  if (isSeized(st)) await returnFromSeizure(actor, {}); // exact snapshot restore
-  else await startSeizure(actor, { auto: false });
+  if (isSeized(st)) {
+    // A manual (GM) seizure restores the exact pre-seizure snapshot. An auto
+    // seizure returned by hand must still land in its thenMode — otherwise an
+    // out-of-combat Call crit-fail (thenMode "active") never delivers the
+    // Communion the "Ansu comes anyway" beat promises. (B9)
+    const toMode = st.seizure?.auto ? (st.seizure.thenMode === "active" ? "active" : "lingering") : null;
+    await returnFromSeizure(actor, toMode ? { toMode } : {});
+  } else {
+    await startSeizure(actor, { auto: false });
+  }
   this.render();
 }
 

@@ -8,7 +8,7 @@
   "sort": 10000,
   "system": {
     "description": {
-      "value": "<p>There is no longer a door to hold shut — there is only you, larger inside than before. Communion no longer expires and never requires a Release save. You can enter or end it as a free action once per turn. Every Communion boon and Inheritance is simply yours now.</p>"
+      "value": "<p>There is no longer a door to hold shut, only you, larger inside than before. Communion no longer expires and never requires a Release save. You can enter or end it as a free action once per turn. Every Communion boon and Inheritance is simply yours now.</p>"
     },
     "slug": "shards-ansu-permanent-communion",
     "duration": {
@@ -37,7 +37,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

@@ -8,7 +8,7 @@
   "sort": 6250,
   "system": {
     "description": {
-      "value": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, the target is automatically Shoved 5 feet or knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone} (your choice — no check). On a critical hit, both, and the shove is 10 feet.</p><p><em>(This is the arena: the construct's head, Стаф and Иримэ each dropped by a single hit.)</em></p>"
+      "value": "<p>One blow, the way the Ansu fights. Make a melee Strike. If it hits, the target is automatically pushed 5 feet or knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone} (your choice, no check). On a critical hit, both happen, and the push is 10 feet.</p><p><em>(This is the arena, where even the mightiest foe drops to a single perfect blow.)</em></p>"
     },
     "slug": "shards-ansu-overwhelm",
     "actionType": {
@@ -29,7 +29,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

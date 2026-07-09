@@ -21,10 +21,10 @@ jobs:
         run: find src test scripts -name '*.mjs' -print0 | xargs -0 -r -n1 node --check
       - name: JSON validity
         run: |
-          for f in module.json lang/en.json data/izir/content.json; do
+          for f in module.json lang/en.json data/izir/content.json data/ansu/content.json; do
             node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" || exit 1
           done
-      - name: Validate Izir content
+      - name: Validate content
         run: npm run validate:content
       - name: Pack sources up to date
         run: |

@@ -8,7 +8,7 @@
   "sort": 100,
   "system": {
     "description": {
-      "value": "<p>You are inside Izir's Terror. On entering, attempt a Will save against the bearer's temptation DC: frightened 1 on a failure, frightened 2 on a critical failure.</p>"
+      "value": "<p>You are inside Izir's Terror. The first time you enter, attempt a Will save against the bearer's temptation DC: frightened 1 on a failure, frightened 2 on a critical failure. Whatever the result, you are then immune to it for 1 minute.</p>"
     },
     "slug": "shards-izir-pack-izirterroraura00",
     "duration": {
@@ -37,7 +37,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

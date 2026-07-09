@@ -8,7 +8,7 @@
   "sort": 5500,
   "system": {
     "description": {
-      "value": "<p>You begin to see the world the way your people built it: as mechanism. You gain a +1 circumstance bonus to Recall Knowledge about constructs, traps and mechanisms, and to Crafting checks to Disable a Device on mechanical devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>"
+      "value": "<p>You begin to see the world the way your people built it: as mechanism. You gain a +1 circumstance bonus to Recall Knowledge checks about constructs, traps, and mechanisms, and to Thievery checks to Disable a Device on mechanical devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>"
     },
     "slug": "shards-ansu-engineers-eye",
     "category": "bonus",
@@ -32,11 +32,11 @@
     "rules": [
       {
         "key": "FlatModifier",
-        "selector": "crafting",
+        "selector": "thievery",
         "type": "circumstance",
         "value": 1,
         "predicate": [
-          "action:disable-device"
+          "action:disable-a-device"
         ],
         "label": "Engineer's Eye"
       },
@@ -44,13 +44,13 @@
         "key": "Note",
         "selector": "all",
         "title": "Engineer's Eye",
-        "text": "+1 circumstance to Recall Knowledge about constructs, traps and mechanisms."
+        "text": "+1 circumstance to Recall Knowledge about constructs, traps, and mechanisms."
       }
     ],
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

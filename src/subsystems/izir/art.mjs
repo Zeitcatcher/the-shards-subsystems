@@ -10,13 +10,24 @@ import { pickThresholdForLevel } from "./logic/art.mjs";
 
 const artSwapOn = () => game.settings.get(MODULE_ID, SETTINGS.IZIR_ART_SWAP) === true;
 
+/** The token art source, synthetic-actor aware. */
+function currentTokenSrc(actor) {
+  return actor.isToken ? actor.token?.texture?.src : actor.prototypeToken?.texture?.src;
+}
+
+/** Write portrait (+ prototype token for world actors) without touching a synthetic delta's missing prototype. */
+async function updateActorArt(actor, portrait, token) {
+  if (actor.isToken) await actor.update({ img: portrait });
+  else await actor.update({ img: portrait, "prototypeToken.texture.src": token });
+}
+
 /** Capture the current portrait + token art once (idempotent). */
 export async function captureOriginalArt(actor) {
   const st = readIzir(actor);
   if (st.art.original) return st.art.original;
   const original = {
     portrait: actor.img,
-    token: actor.prototypeToken?.texture?.src ?? actor.img,
+    token: currentTokenSrc(actor) ?? actor.img,
   };
   await patchIzir(actor, { art: { original } });
   return original;
@@ -24,6 +35,12 @@ export async function captureOriginalArt(actor) {
 
 async function updatePlacedTokens(actor, src) {
   if (!src) return;
+  // Unlinked (synthetic) token actors are never matched by actorId — update their
+  // own token document directly. Linked actors update every placed token. (C6)
+  if (actor.isToken) {
+    if (actor.token) await actor.token.update({ "texture.src": src });
+    return;
+  }
   for (const scene of game.scenes ?? []) {
     const toks = scene.tokens.filter((t) => t.actorId === actor.id);
     if (toks.length) {
@@ -43,8 +60,8 @@ export async function applyThresholdArt(actor, threshold) {
 
   await captureOriginalArt(actor);
   const portrait = slot.portrait || actor.img;
-  const token = slot.token || slot.portrait || actor.prototypeToken?.texture?.src;
-  await actor.update({ img: portrait, "prototypeToken.texture.src": token });
+  const token = slot.token || slot.portrait || currentTokenSrc(actor);
+  await updateActorArt(actor, portrait, token);
   await updatePlacedTokens(actor, token);
   await patchIzir(actor, { art: { applied: String(threshold) } });
   await appendLog(actor, "art", { threshold: String(threshold) });
@@ -56,7 +73,7 @@ export async function revertArt(actor) {
   const st = readIzir(actor);
   const orig = st.art.original;
   if (!orig) return false;
-  await actor.update({ img: orig.portrait, "prototypeToken.texture.src": orig.token });
+  await updateActorArt(actor, orig.portrait, orig.token);
   await updatePlacedTokens(actor, orig.token);
   await patchIzir(actor, { art: { applied: null } });
   await appendLog(actor, "art", { threshold: "revert" });

@@ -67,11 +67,11 @@
       "kind": "boon",
       "form": "strike",
       "name": "Void Lash",
-      "description": "<p>A whip of living black snaps from your hand. Void Lash is a ranged Strike (30 feet) using your Izir attack modifier ({{izirAttack}}). It deals void damage that scales with your level and can be used at will.</p>",
+      "description": "<p>A whip of living black snaps from your hand. Void Lash is a ranged Strike with a 30-foot range increment that deals void damage scaling with your level, and it can be used at will.</p>",
       "img": "icons/magic/unholy/projectile-helix-blood-red.webp",
       "rules": [],
       "strikeData": {
-        "range": 30,
+        "range": { "increment": 30 },
         "die": "d4",
         "damageType": "void",
         "traits": [
@@ -135,7 +135,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Umbral Grasp",
-      "description": "<p>A hand of living void reaches where yours cannot.</p><hr /><p><strong>Range</strong> 15 feet; <strong>Targets</strong> 1 creature</p><p><strong>Effect</strong> The target attempts a Fortitude save (@Check[fortitude|dc:{{izirDC}}]).</p><ul><li><strong>Failure</strong> The void drags the target 10 feet toward you.</li><li><strong>Critical Failure</strong> As failure, and the target is off-guard until the end of its next turn.</li></ul><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>A hand of living void reaches where yours cannot.</p><hr /><p><strong>Range</strong> 15 feet; <strong>Targets</strong> 1 creature</p><p><strong>Effect</strong> The target must attempt a @Check[fortitude|dc:{{izirDC}}] save.</p><ul><li><strong>Success</strong> The target is unaffected.</li><li><strong>Failure</strong> The void drags the target 10 feet toward you.</li><li><strong>Critical Failure</strong> As failure, and the target is off-guard until the end of its next turn.</li></ul><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/magic/unholy/hand-grasping-green.webp",
       "rules": [],
       "actionData": {
@@ -156,7 +156,7 @@
       "kind": "bane",
       "form": "effect",
       "name": "The Mark Spreads",
-      "description": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen them.</p>",
+      "description": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen your eyes change.</p>",
       "img": "icons/magic/unholy/hand-marked-pink.webp",
       "rules": [
         {
@@ -264,7 +264,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Predator's Lunge",
-      "description": "<p>The void pulls you toward wounded prey.</p><hr /><p><strong>Effect</strong> Stride toward the nearest bloodied enemy, ignoring difficult terrain. If you end your movement adjacent to it, your next Strike against it this turn gains a +1 circumstance bonus to the attack roll.</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
+      "description": "<p>The void pulls you toward wounded prey.</p><hr /><p><strong>Effect</strong> Stride toward the nearest enemy that is below half its maximum Hit Points, ignoring difficult terrain. If you end your movement adjacent to it, your next Strike against it this turn gains a +1 circumstance bonus to the attack roll.</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>",
       "img": "icons/skills/melee/strike-dagger-blood-red.webp",
       "rules": [],
       "actionData": {
@@ -315,7 +315,7 @@
       "kind": "boon",
       "form": "effect",
       "name": "Unnatural Vigor",
-      "description": "<p>The void stitches you back together mid-fight. Once per hour, when you roll initiative, gain temporary Hit Points equal to your level.</p>",
+      "description": "<p>The void stitches you back together mid-fight. Once per hour, when you roll initiative, you gain temporary Hit Points equal to your level.</p>",
       "img": "icons/magic/life/heart-shadow-red.webp",
       "rules": [
         {
@@ -443,7 +443,7 @@
       "kind": "boon",
       "form": "effect",
       "name": "Terror's Mantle",
-      "description": "<p>Dread pours off you like cold. When an enemy enters the 10-foot aura, it attempts a Will save against your temptation DC: frightened 1 on a failure, frightened 2 on a critical failure.</p>",
+      "description": "<p>Dread pours off you like cold. When an enemy first enters the 10-foot aura, it attempts a Will save against your temptation DC: frightened 1 on a failure, frightened 2 on a critical failure. Whatever the result, that creature is then temporarily immune for 1 minute.</p>",
       "img": "icons/magic/unholy/orb-glowing-purple.webp",
       "auraEffectId": "izirterroraura00",
       "rules": [
@@ -499,14 +499,14 @@
       "kind": "bane",
       "form": "effect",
       "name": "Slipping Control",
-      "description": "<p>The first time you are bloodied each combat, attempt a Will save against your temptation DC or be compelled to Strike the nearest creature (allies included) for 1 round. While below half Hit Points, you are doomed 1.</p>",
+      "description": "<p>The first time you are reduced below half your maximum Hit Points each combat, attempt a Will save against your temptation DC or be compelled to Strike the nearest creature (allies included) for 1 round. While below half your maximum Hit Points, you are doomed 1.</p>",
       "img": "icons/magic/unholy/hand-claw-glow-orange.webp",
       "rules": [
         {
           "key": "Note",
           "selector": "all",
           "title": "Slipping Control",
-          "text": "First time bloodied each combat: Will vs temptation DC or compelled to Strike the nearest creature (allies included) for 1 round. Doomed 1 while below half HP.",
+          "text": "First time reduced below half HP each combat: Will vs temptation DC or compelled to Strike the nearest creature (allies included) for 1 round. Doomed 1 while below half HP.",
           "visibility": "gm"
         }
       ]
@@ -616,7 +616,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Herald of Ruin",
-      "description": "<p>For one minute, you are what the Nineveh only dream of being, and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed, your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet. When the minute ends, you are drained 1.</p>",
+      "description": "<p>For one minute, you are what the Nineveh only dream of being, and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed (minimum 20 feet), your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet. When the minute ends, you are drained 1.</p>",
       "img": "icons/magic/control/buff-flight-wings-runes-purple.webp",
       "rules": [],
       "actionData": {
@@ -641,7 +641,7 @@
       "kind": "bane",
       "form": "effect",
       "name": "The Voice of Izir",
-      "description": "<p>It speaks now, and part of you always listens. You are permanently stupefied 1 and doomed 1. This is the last step before the fall.</p>",
+      "description": "<p>It speaks now, and part of you always listens. While immersed at this depth, you are stupefied 1 and doomed 1. This is the last step before the fall.</p>",
       "img": "icons/magic/unholy/silhouette-robe-evil-power.webp",
       "rules": [
         {
@@ -661,7 +661,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Perfect Stillness",
-      "description": "<p>You unmake sound and thought for one held breath.</p><hr /><p><strong>Frequency</strong> once per day; <strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each enemy in the area attempts a Will save (@Check[will|dc:{{izirDC}}]).</p><ul><li><strong>Success</strong> Off-guard until the end of its next turn.</li><li><strong>Failure</strong> Stunned 1.</li><li><strong>Critical Failure</strong> Stunned 2.</li></ul>",
+      "description": "<p>You unmake sound and thought for one held breath.</p><hr /><p><strong>Frequency</strong> once per day; <strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each enemy in the area must attempt a @Check[will|dc:{{izirDC}}] save.</p><ul><li><strong>Critical Success</strong> The creature is unaffected.</li><li><strong>Success</strong> The creature is off-guard until the end of its next turn.</li><li><strong>Failure</strong> The creature is stunned 1.</li><li><strong>Critical Failure</strong> The creature is stunned 2.</li></ul>",
       "img": "icons/magic/control/silhouette-hold-beam-blue.webp",
       "gate": "subjugated",
       "rules": [],
@@ -709,7 +709,7 @@
       "_id": "izirterroraura00",
       "name": "Izir's Terror",
       "img": "icons/magic/unholy/orb-glowing-purple.webp",
-      "description": "<p>You are inside Izir's Terror. On entering, attempt a Will save against the bearer's temptation DC: frightened 1 on a failure, frightened 2 on a critical failure.</p>",
+      "description": "<p>You are inside Izir's Terror. The first time you enter, attempt a Will save against the bearer's temptation DC: frightened 1 on a failure, frightened 2 on a critical failure. Whatever the result, you are then immune to it for 1 minute.</p>",
       "rules": []
     },
     {
@@ -717,12 +717,12 @@
       "name": "Herald of Ruin",
       "img": "icons/magic/control/buff-flight-wings-runes-purple.webp",
       "durationMinutes": 1,
-      "description": "<p>For 1 minute you gain a fly Speed equal to your Speed, your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet (the dice and radius upgrades are adjudicated by the GM). When this effect ends, you are drained 1.</p>",
+      "description": "<p>For 1 minute you gain a fly Speed equal to your Speed (minimum 20 feet), your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet (the dice and radius upgrades are adjudicated by the GM). When this effect ends, you are drained 1.</p>",
       "rules": [
         {
           "key": "BaseSpeed",
           "selector": "fly",
-          "value": "max(20,@actor.attributes.speed.total)"
+          "value": "max(20,@actor.system.movement.speeds.land.value)"
         },
         {
           "key": "Note",

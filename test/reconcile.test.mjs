@@ -124,7 +124,8 @@ describe("composeEffect", () => {
     const strike = c.rules.find((r) => r.key === "Strike");
     expect(strike.attackModifier).toBe(izirAttack(5, 5));
     expect(strike.damage.base.dice).toBe(Math.ceil(5 / 2));
-    expect(strike.range).toBe(30);
+    // pf2e Strike RE range is a {increment, max} object, not a bare number (B3).
+    expect(strike.range).toEqual({ increment: 30 });
     // official Strike shape: no category field (pf2e drops invalid REs silently)
     expect("category" in strike).toBe(false);
   });
@@ -214,5 +215,17 @@ describe("diffAll", () => {
     ];
     const r = diffAll(null, [], tagged);
     expect(r.toDeleteIds.sort()).toEqual(["i1", "i2"]);
+  });
+
+  it("deletes a surplus duplicate of a desired entry, keeping the first (C1)", () => {
+    const tagged = [
+      { itemId: "i1", entryId: EFFECT_ENTRY_ID, contentHash: "e1" },
+      { itemId: "iDUP", entryId: EFFECT_ENTRY_ID, contentHash: "e1" }, // a concurrent-sync duplicate
+      { itemId: "i2", entryId: "wave2", contentHash: "w1" },
+    ];
+    const r = diffAll(effect, [wave], tagged);
+    expect(r.toDeleteIds).toEqual(["iDUP"]);
+    expect(r.toCreate).toEqual([]);
+    expect(r.toUpdate).toEqual([]);
   });
 });

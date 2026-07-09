@@ -22,7 +22,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULE_ID = "the-shards-subsystems";
 const DEFAULT_EFFECT_IMG = "icons/magic/unholy/orb-glowing-purple.webp";
 const DEFAULT_ACTION_IMG = "icons/magic/unholy/projectile-helix-blood-red.webp";
-const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "OGL", remaster: true };
+const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "ORC", remaster: true };
 
 const content = JSON.parse(readFileSync(resolve(ROOT, "data/izir/content.json"), "utf8"));
 
@@ -31,11 +31,11 @@ const makeId = (s) => s.replace(/[^A-Za-z0-9]/g, "").padEnd(16, "0").slice(0, 16
 
 // Tier folders (browsing structure inside the pack).
 const FOLDERS = [
-  { key: "whisper", name: "Tier I — Whisper (Lv 1–3)" },
-  { key: "grip", name: "Tier II — Grip (Lv 4–6)" },
-  { key: "call", name: "Tier III — Call (Lv 7–9)" },
-  { key: "nineveh", name: "Terminal — Nineveh & Subjugation (Lv 10)" },
-  { key: "internal", name: "Internal — Aura Effects" },
+  { key: "whisper", name: "Tier I: Whisper (Lv 1-3)" },
+  { key: "grip", name: "Tier II: Grip (Lv 4-6)" },
+  { key: "call", name: "Tier III: Call (Lv 7-9)" },
+  { key: "nineveh", name: "Terminal: Nineveh & Subjugation (Lv 10)" },
+  { key: "internal", name: "Internal: Aura Effects" },
 ];
 const folderId = (key) => makeId(`izirfolder-${key}`);
 
@@ -50,6 +50,10 @@ function tierKeyFor(entry) {
 /** Pack copies are static: replace the runtime number tokens with readable text. */
 function scrub(text) {
   return String(text ?? "")
+    // Inside an inline @Check the DC must be numeric/resolvable/empty, never prose.
+    // Static pack copies can't compute it, so emit an empty dc (the official
+    // glossary pattern) so the save stays clickable and the GM reads the DC. (T1)
+    .replaceAll("dc:{{izirDC}}", "dc:")
     .replaceAll("{{izirDC}}", "your Izir DC")
     .replaceAll("{{izirAttack}}", "your Izir attack modifier")
     .replaceAll("{{izirLevel}}", "your immersion level")
@@ -122,7 +126,7 @@ function actionItem(entry) {
       category: a.category ?? null,
       traits: { value: a.traits ?? [], rarity: "common" },
       frequency: a.frequency ?? null,
-      rules: Array.isArray(entry.rules) ? entry.rules : [],
+      rules: scrubRules(entry.rules), // scrub tokens so an action's REs can't ship raw {{…}} (F)
       publication: PUBLICATION,
     },
     flags: { [MODULE_ID]: { izirPack: { entryId: entry.id, family: entry.family, kind: entry.kind } } },
@@ -146,7 +150,8 @@ function entryItem(entry) {
         img: entry.img,
         group: s.group ?? "brawling",
         traits: s.traits ?? ["magical", "unarmed", "void"],
-        range: s.range ?? null,
+        // Strike RE range must be a {increment, max} object, not a bare number. (B3)
+        range: typeof s.range === "number" ? { increment: s.range } : (s.range ?? null),
         damage: { base: { damageType: s.damageType ?? "void", dice: 1, die: s.die ?? "d4" } },
       },
     ];
@@ -264,10 +269,10 @@ const ANSU_DEFAULT_ACTION_IMG = "icons/magic/control/buff-strength-muscle-damage
 const ansuContent = JSON.parse(readFileSync(resolve(ROOT, "data/ansu/content.json"), "utf8"));
 
 const ANSU_FOLDERS = [
-  { key: "trial", name: "Tier I — Trial (Att 1–3)" },
-  { key: "discipline", name: "Tier II — Discipline (Att 4–6)" },
-  { key: "union", name: "Tier III — Union (Att 7–9)" },
-  { key: "mastery", name: "Terminal — Mastery (Att 10)" },
+  { key: "trial", name: "Tier I: Trial (Att 1-3)" },
+  { key: "discipline", name: "Tier II: Discipline (Att 4-6)" },
+  { key: "union", name: "Tier III: Union (Att 7-9)" },
+  { key: "mastery", name: "Terminal: Mastery (Att 10)" },
 ];
 const ansuFolderId = (key) => makeId(`ansufolder-${key}`);
 
@@ -291,7 +296,8 @@ function ansuScrub(text) {
     .replaceAll("{{ansuTempHp}}", "three times your attunement")
     .replaceAll("{{ansuResist}}", "⌈attunement / 2⌉")
     .replaceAll("{{ansuParry}}", "twice your attunement")
-    .replaceAll("{{ansuTierDice}}", "1-per-tier")
+    .replaceAll("{{ansuTierDice}}d6", "1d6 per tier") // handle the die as a unit so it doesn't read "1-per-tierd6"
+    .replaceAll("{{ansuTierDice}}", "1 per tier")
     .replaceAll("{{ansuLevel}}", "your attunement")
     .replaceAll("{{ansuDuration}}", "1 round / 3 rounds / 1 minute by tier");
 }
@@ -364,7 +370,7 @@ function ansuActionItem(entry) {
       category: a.category ?? null,
       traits: { value: a.traits ?? [], rarity: "common" },
       frequency: a.frequency ?? null,
-      rules: Array.isArray(entry.rules) ? entry.rules : [],
+      rules: ansuScrubRules(entry.rules), // scrub tokens so an action's REs can't ship raw {{…}} (F)
       publication: PUBLICATION,
     },
     flags: { [MODULE_ID]: { ansuPack: { entryId: entry.id, family: entry.family, kind: entry.kind } } },

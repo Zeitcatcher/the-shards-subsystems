@@ -15,6 +15,11 @@ import { NAMELESS_TRAIT } from "./traits.mjs";
 
 /** Add or remove the pf2e "nameless" creature trait, keeping it in sync with marking. */
 async function setNamelessTrait(actor, on) {
+  // pf2e characters rebuild system.traits from scratch every data prep, so a
+  // source write is both a no-op AND persists junk (the prepared ancestry traits)
+  // into character source. Only NPC-type actors keep a written creature trait; a
+  // PC that needs the tag gets it from the registered homebrew trait selector. (C4)
+  if (actor?.type === "character") return;
   const traits = actor.system?.traits?.value;
   if (!Array.isArray(traits)) return;
   const has = traits.includes(NAMELESS_TRAIT);
@@ -121,9 +126,12 @@ export async function patchIzir(actor, patch) {
   await patchSubsystemFlag(actor, IZIR, patch);
 }
 
-/** Append one entry to the append-only history log. GM-side only. */
+/** Newest-N cap on the history log so a long campaign can't grow it without bound. */
+const LOG_CAP = 300;
+
+/** Append one entry to the history log (capped to the newest LOG_CAP). GM-side only. */
 export async function appendLog(actor, type, data = {}, note = "") {
   const st = readIzir(actor);
-  const log = [...st.log, { t: Date.now(), type, data, note }];
+  const log = [...st.log, { t: Date.now(), type, data, note }].slice(-LOG_CAP);
   await patchIzir(actor, { log });
 }

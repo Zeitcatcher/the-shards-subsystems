@@ -8,7 +8,7 @@
   "sort": 6250,
   "system": {
     "description": {
-      "value": "<p>Афина leaves your hands the way a verdict leaves a judge. Throw your held melee weapon at an enemy within 30 feet as a ranged Strike using your melee attack modifier, with no penalty for the throw. On a critical hit the blade punches through — the target takes 1d6 persistent bleed damage. However it lands, the weapon instantly flies back to your grasp: the Ansu never lets it go.</p>"
+      "value": "<p>The blade leaves your hands the way a verdict leaves a judge. Throw your held melee weapon at an enemy within 30 feet as a ranged Strike using your melee attack modifier, with no penalty for the throw. On a critical hit, the blade punches through and the target takes 1d6 persistent bleed damage. However it lands, the weapon instantly flies back to your grasp: the Ansu never lets it go.</p>"
     },
     "slug": "shards-ansu-hurl-the-blade",
     "actionType": {
@@ -29,7 +29,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

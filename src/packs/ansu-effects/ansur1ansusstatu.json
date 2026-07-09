@@ -8,7 +8,7 @@
   "sort": 7000,
   "system": {
     "description": {
-      "value": "<p>You carry the Ansu's presence rather than its bulk. Your reach with melee Strikes increases by 5 feet — the space around you belongs to something larger than your body. Your size, square, and gear stay unchanged.</p>"
+      "value": "<p>You carry the Ansu's presence rather than its bulk. Your reach with melee Strikes increases by 5 feet, as the space around you belongs to something larger than your body. Your size, square, and gear stay unchanged.</p>"
     },
     "slug": "shards-ansu-ansus-stature",
     "duration": {
@@ -44,7 +44,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

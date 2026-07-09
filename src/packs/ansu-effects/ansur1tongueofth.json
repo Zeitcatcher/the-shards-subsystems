@@ -8,7 +8,7 @@
   "sort": 2500,
   "system": {
     "description": {
-      "value": "<p>The Ansu murmurs the old words until they are yours. You can speak, read and write Murkhor and recognize the maker-glyphs of your people. You gain a +1 circumstance bonus to Decipher Writing and to Recall Knowledge about murkhor works, ruins and devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>"
+      "value": "<p>The Ansu murmurs the old words until they are yours. You can speak, read, and write Murkhor and recognize the maker-glyphs of your people. You gain a +1 circumstance bonus to checks to Decipher Writing and to Recall Knowledge checks about murkhor works, ruins, and devices.</p><p><em>This knowledge stays even while the Ansu sleeps.</em></p>"
     },
     "slug": "shards-ansu-tongue-of-the-makers",
     "category": "bonus",
@@ -40,7 +40,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

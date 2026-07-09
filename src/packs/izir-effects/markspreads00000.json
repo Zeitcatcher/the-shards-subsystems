@@ -8,7 +8,7 @@
   "sort": 2500,
   "system": {
     "description": {
-      "value": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen them.</p>"
+      "value": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen your eyes change.</p>"
     },
     "slug": "shards-izir-mark-spreads",
     "duration": {
@@ -48,7 +48,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

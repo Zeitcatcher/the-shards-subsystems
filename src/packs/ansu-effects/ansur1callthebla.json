@@ -8,7 +8,7 @@
   "sort": 3250,
   "system": {
     "description": {
-      "value": "<p>You remember where your weapon is the way you remember where your hand is. One weapon you own flies to your open grasp from up to 60 feet — walls and physical barriers don't block the call, though sealed magical wards do. If a creature is holding it, the weapon strains but doesn't tear free.</p><p><em>(The Ansu once called Афина through the walls of a fighting club. This is that, learned.)</em></p>"
+      "value": "<p>You remember where your weapon is the way you remember where your hand is. One weapon you own flies to your open grasp from up to 60 feet away. Walls and physical barriers don't block the call, though sealed magical wards do. If a creature is holding it, the weapon strains but doesn't tear free.</p><p><em>(The Ansu once called a bearer's blade through the walls of a fighting pit. This is that, learned.)</em></p>"
     },
     "slug": "shards-ansu-call-the-blade",
     "actionType": {
@@ -30,7 +30,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

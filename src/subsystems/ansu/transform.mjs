@@ -98,6 +98,7 @@ async function applySubjugation(actor) {
     climb: 0,
     communion: { mode: "active", rounds: null },
     pendingRelease: null,
+    pendingCall: null,
     seizure: null,
   });
   await appendLog(actor, "transform", { path: "subjugated" });
@@ -114,6 +115,7 @@ async function applyTaken(actor) {
     climb: 0,
     communion: { mode: "active", rounds: null },
     pendingRelease: null,
+    pendingCall: null,
     seizure: null,
   });
   await appendLog(actor, "transform", { path: "taken" });

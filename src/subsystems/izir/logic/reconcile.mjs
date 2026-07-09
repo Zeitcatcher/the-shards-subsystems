@@ -125,7 +125,9 @@ function strikeRuleFor(entry, ctx) {
     img: entry.img,
     group: s.group ?? "brawling",
     traits: s.traits ?? ["magical", "unarmed", "void"],
-    range: s.range ?? null,
+    // pf2e's Strike RE range is a {increment, max} object, not a bare number —
+    // a number is cast to {} and the true range is lost. Coerce defensively. (B3)
+    range: typeof s.range === "number" ? { increment: s.range } : (s.range ?? null),
     attackModifier: ctx.attack,
     damage: { base: { damageType: s.damageType ?? "void", dice: diceNumber, die: s.die ?? "d4" } },
   };
@@ -246,19 +248,27 @@ export function composeActions(state, content, opts = {}) {
 export function diffAll(desiredEffect, desiredActions, tagged) {
   const desired = [...(desiredEffect ? [desiredEffect] : []), ...desiredActions];
   const desiredById = new Map(desired.map((d) => [d.entryId, d]));
-  const taggedById = new Map(tagged.map((t) => [t.entryId, t]));
 
   const toCreate = [];
   const toUpdate = [];
   const toDeleteIds = [];
+  const matched = new Set();
 
-  for (const d of desired) {
-    const t = taggedById.get(d.entryId);
-    if (!t) toCreate.push(d);
-    else if (t.contentHash !== d.hash) toUpdate.push({ itemId: t.itemId, desired: d });
-  }
+  // Walk the actor's tagged items once. An item whose entryId isn't desired — or a
+  // surplus DUPLICATE of an already-matched entryId (left by a concurrent-sync
+  // slip) — is deleted; the first match of each entryId updates on hash drift. The
+  // old Map-by-entryId collapsed duplicates and could never remove them. (C1)
   for (const t of tagged) {
-    if (!desiredById.has(t.entryId)) toDeleteIds.push(t.itemId);
+    const d = desiredById.get(t.entryId);
+    if (!d || matched.has(t.entryId)) {
+      toDeleteIds.push(t.itemId);
+      continue;
+    }
+    matched.add(t.entryId);
+    if (t.contentHash !== d.hash) toUpdate.push({ itemId: t.itemId, desired: d });
+  }
+  for (const d of desired) {
+    if (!matched.has(d.entryId)) toCreate.push(d);
   }
   return { toCreate, toUpdate, toDeleteIds };
 }

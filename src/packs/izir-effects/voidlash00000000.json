@@ -8,7 +8,7 @@
   "sort": 1000,
   "system": {
     "description": {
-      "value": "<p>A whip of living black snaps from your hand. Void Lash is a ranged Strike (30 feet) using your Izir attack modifier (your Izir attack modifier). It deals void damage that scales with your level and can be used at will.</p>"
+      "value": "<p>A whip of living black snaps from your hand. Void Lash is a ranged Strike with a 30-foot range increment that deals void damage scaling with your level, and it can be used at will.</p>"
     },
     "slug": "shards-izir-void-lash",
     "duration": {
@@ -41,7 +41,9 @@
           "unarmed",
           "void"
         ],
-        "range": 30,
+        "range": {
+          "increment": 30
+        },
         "damage": {
           "base": {
             "damageType": "void",
@@ -58,7 +60,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

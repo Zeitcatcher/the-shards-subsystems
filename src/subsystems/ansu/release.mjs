@@ -69,6 +69,7 @@ async function rollNpcRelease(actor, id, dc) {
   const will = actor.getStatistic?.("will") ?? actor.saves?.will;
   if (!will?.roll) {
     ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.NoWill"));
+    await patchAnsu(actor, { pendingRelease: null }); // don't wedge the release block (C7)
     return;
   }
   await will.roll({
@@ -79,15 +80,17 @@ async function rollNpcRelease(actor, id, dc) {
   });
 }
 
-function resolveActor(message, ctx) {
-  const uuid = ctx.actor;
-  if (uuid) {
-    const doc = fromUuidSync(uuid);
-    if (doc?.documentName === "Actor") return doc;
-    if (doc?.actor) return doc.actor;
+function resolveActor(message) {
+  // pf2e's ChatMessage#actor (speakerActor) is scene/token aware and resolves
+  // unlinked (synthetic) token actors. flags.pf2e.context.actor is only a bare
+  // world-actor id, which misses them entirely. (B1)
+  if (message.actor) return message.actor;
+  const { scene, token, actor } = message.speaker ?? {};
+  if (scene && token) {
+    const t = game.scenes?.get(scene)?.tokens?.get(token);
+    if (t?.actor) return t.actor;
   }
-  const sid = message.speaker?.actor;
-  return sid ? game.actors.get(sid) : null;
+  return actor ? game.actors.get(actor) : null;
 }
 
 /** Register the createChatMessage capture. Primary GM only. Call on ready. */
@@ -101,25 +104,21 @@ export function registerReleaseHooks() {
 async function captureFromMessage(message) {
   const ctx = message.flags?.pf2e?.context;
   if (!ctx || ctx.type !== "saving-throw") return;
-  const actor = resolveActor(message, ctx);
+  const actor = resolveActor(message);
   if (!actor || !isAttuned(actor)) return;
 
   const st = readAnsu(actor);
   const pending = st.pendingRelease;
   if (!pending) return;
 
+  // Match only on the injected roll-option id: present on both the player's card
+  // click and the GM's NPC roll. Off-card rolls use the panel's manual recorder,
+  // so there is no fuzzy DC/time fallback that could capture an unrelated save
+  // (e.g. a Fortitude save vs a poison) at the same DC. (B2)
   const options = ctx.options ?? [];
-  let matches = false;
-  if (options.includes("shards-ansu-release")) {
-    // Primary channel: the injected roll option carries the pending id.
-    const idOpt = options.find((o) => o.startsWith("shards-ansu-release-id:"));
-    matches = idOpt?.slice("shards-ansu-release-id:".length) === pending.id;
-  } else {
-    // Fallback: same actor, same DC, within 30 minutes.
-    const within = Date.now() - (pending.createdAt ?? 0) < 30 * 60 * 1000;
-    matches = ctx.dc?.value === pending.dc && within;
-  }
-  if (!matches) return;
+  if (!options.includes("shards-ansu-release")) return;
+  const idOpt = options.find((o) => o.startsWith("shards-ansu-release-id:"));
+  if (idOpt?.slice("shards-ansu-release-id:".length) !== pending.id) return;
 
   const outcome = ctx.outcome ?? null;
   const total = message.rolls?.[0]?.total ?? null;
@@ -134,17 +133,33 @@ async function captureFromMessage(message) {
  * Imports of communion/seizure/transform are deferred to call time — the three
  * modules form a cycle at load otherwise.
  */
+const recording = new Set();
+
 export async function recordReleaseOutcome(actor, outcome, total = null) {
   const st = readAnsu(actor);
   const pending = st.pendingRelease;
+  if (!pending) return; // already recorded (auto-capture cleared it) — nothing to do
+  // Guard a double-apply when auto-capture and the manual recorder fire for the
+  // same pending Release at once (a crit would otherwise Climb twice). (C5)
+  const key = `${actor.id}:${pending.id}`;
+  if (recording.has(key)) return;
+  recording.add(key);
+  try {
+    await recordReleaseOutcomeInner(actor, st, pending, outcome, total);
+  } finally {
+    recording.delete(key);
+  }
+}
+
+async function recordReleaseOutcomeInner(actor, st, pending, outcome, total) {
   const delta = climbDeltaFor(outcome);
   const log = [
     ...st.log,
     {
       t: Date.now(),
       type: "release",
-      data: { id: pending?.id ?? null, dc: pending?.dc ?? null, outcome, total, climbDelta: delta },
-      note: pending?.reason ?? "",
+      data: { id: pending.id, dc: pending.dc ?? null, outcome, total, climbDelta: delta },
+      note: pending.reason ?? "",
     },
   ];
   await patchAnsu(actor, { log, pendingRelease: null });

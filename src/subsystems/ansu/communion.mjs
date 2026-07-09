@@ -96,7 +96,10 @@ export async function requestInvoke(actor) {
 export async function endCommunion(actor, { via = "gm" } = {}) {
   const st = readAnsu(actor);
   if (st.communion.mode === "none") return;
-  await patchAnsu(actor, { communion: { mode: "none", rounds: null } });
+  // Ending Communion clears any open release roll and any seizure blob, so a stale
+  // pendingRelease can't wedge the next communion's automation and a seizure can't
+  // be stranded with the panel Return button dead. (B6, B7)
+  await patchAnsu(actor, { communion: { mode: "none", rounds: null }, pendingRelease: null, seizure: null });
   await appendLog(actor, "communion", { on: false, via });
   await syncActor(actor);
   refreshAnsuPanel();
@@ -120,7 +123,7 @@ export async function slipToLingering(actor) {
  * On expiry of the Communion countdown: post the Release save and slip to
  * Lingering — the boons stay on while the bearer wrestles the Ansu back down.
  */
-async function handleExpiry(actor) {
+export async function handleExpiry(actor) {
   const st = readAnsu(actor);
   if (st.communion.mode !== "active" || st.terminal) return;
   await slipToLingering(actor);
@@ -193,7 +196,9 @@ async function handleActionCard(message) {
       await endCommunion(actor, { via: "mastery" });
       return;
     }
-    if (st.communion.mode === "none" || st.pendingRelease) return;
+    // No Release while the Ansu holds the body: a seizure must be returned (GM
+    // button), not dismissed by a save that would strand the snapshot. (B6)
+    if (st.communion.mode === "none" || st.communion.mode === "seized" || st.pendingRelease) return;
     await callRelease(actor, suggestedDC(st), game.i18n.localize("SHARDS.Ansu.ReleaseByPlayer"));
   } else {
     await maybeStartCooldown(actor, tag.entryId);
@@ -296,4 +301,10 @@ export function registerCommunionHooks() {
       );
     }
   });
+
+  // Sweep once on load: a cooldown that lapsed while the world was closed should
+  // re-enable its Use button without waiting for the next world-time tick. (F)
+  if (isPrimaryGM()) {
+    sweepCooldowns().catch((err) => console.error(`${MODULE_ID} | ansu cooldown ready-sweep`, err));
+  }
 }

@@ -8,7 +8,7 @@
   "sort": 7000,
   "system": {
     "description": {
-      "value": "<p>Dread pours off you like cold. When an enemy enters the 10-foot aura, it attempts a Will save against your temptation DC: frightened 1 on a failure, frightened 2 on a critical failure.</p>"
+      "value": "<p>Dread pours off you like cold. When an enemy first enters the 10-foot aura, it attempts a Will save against your temptation DC: frightened 1 on a failure, frightened 2 on a critical failure. Whatever the result, that creature is then temporarily immune for 1 minute.</p>"
     },
     "slug": "shards-izir-terror-mantle",
     "duration": {
@@ -59,7 +59,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

@@ -13,7 +13,7 @@ import { composeEffect, composeActions, diffAll, EFFECT_ENTRY_ID } from "./logic
 import { clampLevel, tierForLevel, MAX_LEVEL } from "./logic/model.mjs";
 import { loadContent } from "./content.mjs";
 
-const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "OGL", remaster: true };
+const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "ORC", remaster: true };
 const MARKER_IMG = "icons/magic/perception/eye-ringed-glow-angry-red.webp";
 const NINEVEH_IMG = "icons/magic/death/skull-horned-worn-fire-blue.webp";
 const SUBJUGATED_IMG = "icons/magic/control/buff-flight-wings-runes-purple.webp";
@@ -44,7 +44,7 @@ function effectDescription(composed) {
   const t = (k) => game.i18n.localize(k);
   const parts = [];
   const tierName = game.i18n.localize(`SHARDS.Izir.Tier.${composed.tier}`);
-  parts.push(`<p><em>${t("SHARDS.Izir.Immersion")} ${composed.level} — ${tierName}.</em></p>`);
+  parts.push(`<p><em>${t("SHARDS.Izir.Immersion")} ${composed.level}: ${tierName}.</em></p>`);
   if (composed.terminal === "nineveh") {
     parts.push(`<p>${t("SHARDS.Izir.TerminalNineveh")}</p>`);
     return parts.join("\n");
@@ -158,9 +158,25 @@ export function projectTagged(actor) {
 const syncing = new Set();
 export const isSyncing = (actorId) => syncing.has(actorId);
 
+// Per-actor promise chain so overlapping syncs serialize (see syncActor).
+const syncChain = new Map();
+
 /** Converge one actor's items to the composed model. Idempotent; GM-side. */
 export async function syncActor(actor) {
   if (!actor) return;
+  // Serialize per actor: two overlapping runs must not each project "no effect
+  // yet" and both create the composed effect before either write lands. (C1)
+  const prev = syncChain.get(actor.id) ?? Promise.resolve();
+  const run = prev.catch(() => {}).then(() => syncActorInner(actor));
+  syncChain.set(actor.id, run);
+  try {
+    await run;
+  } finally {
+    if (syncChain.get(actor.id) === run) syncChain.delete(actor.id);
+  }
+}
+
+async function syncActorInner(actor) {
   let content;
   try {
     content = await loadContent();
@@ -174,7 +190,20 @@ export async function syncActor(actor) {
   const marked = isMarked(actor);
   const effect = marked ? composeEffect(state, content, opts) : null;
   const actions = marked ? composeActions(state, content, opts) : [];
-  const { toCreate, toUpdate, toDeleteIds } = diffAll(effect, actions, projectTagged(actor));
+  const tagged = projectTagged(actor);
+  const { toCreate, toUpdate, toDeleteIds } = diffAll(effect, actions, tagged);
+
+  // Force-refresh the composed effect when its live badge was nudged out of sync.
+  // The badge value isn't part of the composed hash, so a terminal's fixed badge
+  // (or a badge edit that shouldn't change level) wouldn't otherwise snap back. (C3)
+  if (effect) {
+    const t = tagged.find((x) => x.entryId === EFFECT_ENTRY_ID);
+    if (t && !toUpdate.some((u) => u.itemId === t.itemId)) {
+      const live = actor.items.get(t.itemId)?.system?.badge?.value;
+      if (live !== undefined && live !== effect.badge?.value) toUpdate.push({ itemId: t.itemId, desired: effect });
+    }
+  }
+
   if (!toCreate.length && !toUpdate.length && !toDeleteIds.length) return;
 
   syncing.add(actor.id);
@@ -260,7 +289,7 @@ export function registerSyncHooks(onLevelFromBadge) {
   });
 
   // Two-way badge: click-adjusting the counter on the effect IS a level change.
-  Hooks.on("updateItem", (item, changes) => {
+  Hooks.on("updateItem", (item, changes, _options, userId) => {
     if (!isPrimaryGM()) return;
     const actor = item.parent;
     if (!actor || syncing.has(actor.id)) return;
@@ -268,9 +297,15 @@ export function registerSyncHooks(onLevelFromBadge) {
     if (tag?.entryId !== EFFECT_ENTRY_ID || !isMarked(actor)) return;
     const badge = changes?.system?.badge?.value;
     if (badge === undefined || badge === null) return;
+    // Only a GM drives the level from the badge. A player editing their own effect
+    // counter is snapped back (resync recomposes at the unchanged level). (C2)
+    if (!game.users?.get(userId)?.isGM) {
+      scheduleResync(actor);
+      return;
+    }
     const st = readIzir(actor);
     if (st.terminal) {
-      scheduleResync(actor); // terminal badge is fixed — snap it back
+      scheduleResync(actor); // terminal badge is fixed — snap it back (C3)
       return;
     }
     const next = clampLevel(Math.min(badge, MAX_LEVEL - 1));

@@ -8,7 +8,7 @@
   "sort": 5000,
   "system": {
     "description": {
-      "value": "<p>A pale metal sheen spreads over hide and scar — the same gleam as the Ansu's ornaments. You gain resistance ⌈attunement / 2⌉ to physical damage (3 at attunement 5, 4 at 7, 5 at 9).</p>"
+      "value": "<p>A pale metal sheen spreads over hide and scar, the same gleam as the Ansu's ornaments. You gain resistance ⌈attunement / 2⌉ to physical damage (3 at attunement 5, 4 at 7, 5 at 9).</p>"
     },
     "slug": "shards-ansu-salbarine-skin",
     "duration": {
@@ -44,7 +44,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

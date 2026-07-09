@@ -8,7 +8,7 @@
   "sort": 1250,
   "system": {
     "description": {
-      "value": "<p>The power is never owed — it answers strength. Attempt an Intimidation check against the Call DC (your Call DC: 20 + 2 × attunement, and unlike the Release DC it never stops growing).</p><ul><li><strong>Critical Success</strong> The Ansu answers eagerly: Communion begins and the mastery feeds the Climb (+1).</li><li><strong>Success</strong> Communion begins.</li><li><strong>Failure</strong> The Ansu does not deign. The action is spent; you may try again.</li><li><strong>Critical Failure</strong> The Ansu comes <em>anyway</em> — it seizes the body for 1 round (the GM plays you), then Communion continues under your control.</li></ul><hr /><p><strong>Duration</strong> 1 round / 3 rounds / 1 minute by tier (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). Every Communion active materializes on your sheet alongside the buff and vanishes when it ends. Ending Communion early — or when it expires — takes a Will save against the Release DC (your Release DC). From attunement 2, a successful Invoke includes a free Stride (Bull's Footing). At Mastery the Call is no longer rolled.</p>"
+      "value": "<p>The power is never owed; it answers strength. Attempt an Intimidation check against the Call DC (your Call DC), which is 20 + 2 × attunement and, unlike the Release DC, never stops growing.</p><ul><li><strong>Critical Success</strong> The Ansu answers eagerly: Communion begins and the mastery feeds the Climb (+1).</li><li><strong>Success</strong> Communion begins.</li><li><strong>Failure</strong> The Ansu does not deign. The action is spent, and you may try again next round.</li><li><strong>Critical Failure</strong> The Ansu comes <em>anyway</em>: it seizes the body for 1 round (the GM plays you), then Communion continues under your control.</li></ul><hr /><p><strong>Duration</strong> 1 round / 3 rounds / 1 minute by tier (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). Every Communion active materializes on your sheet alongside the buff and vanishes when it ends. Ending Communion, whether early or when it expires, takes a Will save against the Release DC (your Release DC). From attunement 2, a successful Invoke includes a free Stride (Bull's Footing). At Mastery the Call is no longer rolled.</p>"
     },
     "slug": "shards-ansu-invoke-the-ansu",
     "actionType": {
@@ -32,7 +32,7 @@
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

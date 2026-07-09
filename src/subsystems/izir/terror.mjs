@@ -13,6 +13,8 @@ import { suggestedDC } from "./temptation.mjs";
 
 const MARKER_SLUG = "shards-izir-pack-izirterroraura00";
 const ROLL_OPTION = "shards-izir-terror";
+const IMMUNITY_SLUG = "shards-izir-terror-immune";
+const IMMUNITY_MINUTES = 1;
 
 /** Resolve the aura's origin (the Nameless bearer) from the marker effect. */
 function bearerOf(markerItem) {
@@ -28,6 +30,11 @@ async function promptTerrorSave(markerItem) {
   if (!target) return;
   const bearer = bearerOf(markerItem);
   if (!bearer || !isMarked(bearer)) return;
+
+  // Frightful Presence shape: only the FIRST entry each minute prompts a save; a
+  // foe that steps out and back in is immune, so the aura can't be farmed by
+  // yo-yoing across its edge. (D2)
+  if (hasTerrorImmunity(target, bearer)) return;
 
   const dc = suggestedDC(readIzir(bearer));
   const check = `@Check[will|dc:${dc}|traits:emotion,fear,mental|name:Izir's Terror|showDC:gm|options:${ROLL_OPTION}]`;
@@ -48,6 +55,47 @@ async function promptTerrorSave(markerItem) {
     whisper: [...new Set([...owners, ...gmIds])],
     speaker: ChatMessage.getSpeaker({ actor: target }),
   });
+
+  await grantTerrorImmunity(target, bearer);
+}
+
+/** Does this target already carry a live Terror immunity from this bearer? */
+function hasTerrorImmunity(target, bearer) {
+  return (target.items ?? []).some(
+    (i) =>
+      i.type === "effect" &&
+      i.system?.slug === IMMUNITY_SLUG &&
+      i.getFlag?.(MODULE_ID, "terrorImmuneFrom") === bearer.uuid &&
+      !(i.isExpired === true || i.system?.expired === true),
+  );
+}
+
+/** Apply a 1-minute per-bearer immunity so re-entry doesn't re-prompt. */
+async function grantTerrorImmunity(target, bearer) {
+  try {
+    await target.createEmbeddedDocuments("Item", [
+      {
+        name: game.i18n.localize("SHARDS.Izir.TerrorImmuneName"),
+        type: "effect",
+        img: "icons/magic/unholy/orb-glowing-purple.webp",
+        system: {
+          slug: IMMUNITY_SLUG,
+          description: { value: `<p>${game.i18n.localize("SHARDS.Izir.TerrorImmuneDesc")}</p>` },
+          duration: { value: IMMUNITY_MINUTES, unit: "minutes", sustained: false, expiry: "turn-start" },
+          unidentified: false,
+          level: { value: 1 },
+          tokenIcon: { show: false },
+          traits: { value: [], rarity: "common" },
+          rules: [],
+          start: { value: 0, initiative: null },
+          publication: { title: "The Shards", authors: "Zeitcatcher", license: "ORC", remaster: true },
+        },
+        flags: { [MODULE_ID]: { terrorImmuneFrom: bearer.uuid } },
+      },
+    ]);
+  } catch (err) {
+    console.warn(`${MODULE_ID} | could not apply terror immunity`, err);
+  }
 }
 
 /** Raise frightened to at least `value` (bounded; frightened caps at 4). */
@@ -64,12 +112,24 @@ async function captureFromMessage(message) {
   if (!ctx || ctx.type !== "saving-throw") return;
   if (!ctx.options?.includes(ROLL_OPTION)) return;
 
-  const doc = ctx.actor ? fromUuidSync(ctx.actor) : null;
-  const actor = doc?.documentName === "Actor" ? doc : (doc?.actor ?? game.actors.get(message.speaker?.actor));
+  // Token-aware resolution: the aura's victims are usually unlinked enemy tokens,
+  // which flags.pf2e.context.actor (a bare world-actor id) cannot resolve. (B1)
+  const actor = resolveActor(message);
   if (!actor) return;
 
   if (ctx.outcome === "failure") await applyFrightened(actor, 1);
   else if (ctx.outcome === "criticalFailure") await applyFrightened(actor, 2);
+}
+
+/** Resolve the saving actor, scene/token aware (works for unlinked tokens). */
+function resolveActor(message) {
+  if (message.actor) return message.actor;
+  const { scene, token, actor } = message.speaker ?? {};
+  if (scene && token) {
+    const t = game.scenes?.get(scene)?.tokens?.get(token);
+    if (t?.actor) return t.actor;
+  }
+  return actor ? game.actors.get(actor) : null;
 }
 
 /** Register the marker watcher and the save capture. Primary GM only. Call on ready. */

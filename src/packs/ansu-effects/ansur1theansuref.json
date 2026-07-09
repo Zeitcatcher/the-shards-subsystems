@@ -8,7 +8,7 @@
   "sort": 7250,
   "system": {
     "description": {
-      "value": "<p><strong>Trigger</strong> You would be reduced to 0 Hit Points while Communion lasts.</p><hr /><p>The Ansu does not permit the vessel to break — and it answers. You remain at 1 Hit Point, you immediately make one melee Strike against the creature that downed you (if it's within your reach), and you increase your @UUID[Compendium.pf2e.conditionitems.Item.Yl48xTdMh3aeQYL2]{Wounded} condition by 1 — the body keeps the bill.</p><p><em>Cooldown: 10 minutes.</em></p>"
+      "value": "<p><strong>Trigger</strong> You would be reduced to 0 Hit Points while Communion lasts.</p><hr /><p>The Ansu does not permit the vessel to break, and it answers. You remain at 1 Hit Point, you immediately make one melee Strike against the creature that reduced you to 0 Hit Points (if it is within your melee reach), and you increase your @UUID[Compendium.pf2e.conditionitems.Item.Yl48xTdMh3aeQYL2]{Wounded} condition by 1: the body keeps the bill.</p><p><em>You can't use this reaction again for 10 minutes.</em></p>"
     },
     "slug": "shards-ansu-the-ansu-refuses",
     "actionType": {
@@ -24,13 +24,13 @@
     },
     "frequency": {
       "max": 1,
-      "per": "day"
+      "per": "PT10M"
     },
     "rules": [],
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",
-      "license": "OGL",
+      "license": "ORC",
       "remaster": true
     }
   },

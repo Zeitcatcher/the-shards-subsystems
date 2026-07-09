@@ -51,7 +51,10 @@ export async function startSeizure(actor, { auto = false, thenMode = "lingering"
   await patchAnsu(actor, {
     communion: { mode: "seized", rounds: null },
     pendingRelease: null,
-    seizure: { snapshot, at: Date.now(), auto, thenMode, roundsLeft: auto ? 1 : null },
+    // startRound anchors the "1 round" auto-return: a seizure that begins on the
+    // bearer's own turn (Invoke → Call → crit fail) must survive that turn's end
+    // and return at the end of their NEXT turn, not collapse to zero actions. (B8)
+    seizure: { snapshot, at: Date.now(), auto, thenMode, startRound: game.combat?.round ?? null },
   });
   await appendLog(actor, "seizure", { on: true, auto });
   await syncActor(actor);
@@ -111,10 +114,12 @@ export async function maybeReturnFromSeizure(actor, combat, { force = false } = 
   const prevActor = combat?.combatants.get(combat.previous?.combatantId)?.actor ?? null;
   if (!prevActor || prevActor.uuid !== actor.uuid) return; // not their turn-end
 
-  const left = Math.max(0, Number(st.seizure.roundsLeft ?? 1) - 1);
-  if (left > 0) {
-    await patchAnsu(actor, { seizure: { ...st.seizure, roundsLeft: left } });
-    return;
-  }
+  // "1 round" means the end of the bearer's NEXT turn. A combatant acts once per
+  // round, so their next turn is always a later round than the one the seizure
+  // began in; don't let the starting turn's own end cancel it. (B8)
+  const startRound = Number(st.seizure.startRound);
+  const round = Number(combat?.round);
+  if (Number.isFinite(startRound) && Number.isFinite(round) && round <= startRound) return;
+
   await returnFromSeizure(actor, { toMode: landing });
 }

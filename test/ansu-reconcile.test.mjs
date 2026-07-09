@@ -258,4 +258,14 @@ describe("diffAll", () => {
     const { toUpdate } = diffAll([att], tagged);
     expect(toUpdate).toEqual([{ itemId: "a", desired: att }]);
   });
+  it("deletes a surplus duplicate of a desired entry, keeping the first (C1)", () => {
+    const tagged = [
+      { itemId: "a", entryId: att.entryId, contentHash: att.hash },
+      { itemId: "aDUP", entryId: att.entryId, contentHash: att.hash }, // a concurrent-sync duplicate
+    ];
+    const r = diffAll([att], tagged);
+    expect(r.toDeleteIds).toEqual(["aDUP"]);
+    expect(r.toCreate).toEqual([]);
+    expect(r.toUpdate).toEqual([]);
+  });
 });
