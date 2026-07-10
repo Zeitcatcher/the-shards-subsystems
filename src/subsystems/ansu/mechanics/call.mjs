@@ -13,11 +13,11 @@
  * bypasses it when the story says so.
  */
 
-import { MODULE_ID, SETTINGS } from "../../core/constants.mjs";
-import { isPrimaryGM } from "../../core/platform.mjs";
-import { readAnsu, patchAnsu, isAttuned } from "./state.mjs";
-import { callDC } from "./logic/model.mjs";
-import { refreshAnsuPanel } from "./apps/ansu-panel.mjs";
+import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
+import { isPrimaryGM } from "../../../core/platform.mjs";
+import { readAnsu, patchAnsu, isAttuned } from "../state.mjs";
+import { callDC } from "../logic/model.mjs";
+import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
 
@@ -166,7 +166,7 @@ async function recordCallOutcomeInner(actor, st, pending, outcome, total) {
 
   if (outcome === "criticalSuccess") {
     await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.CallCrit"));
-    const { applyClimbChange } = await import("./transform.mjs");
+    const { applyClimbChange } = await import("../transform.mjs");
     await applyClimbChange(actor, { delta: 1, source: "call" });
     await whisperGM(actor, game.i18n.format("SHARDS.Ansu.CallCritReport", { name: actor.name }));
   } else if (outcome === "success") {

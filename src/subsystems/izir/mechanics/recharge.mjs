@@ -10,9 +10,10 @@
  * the world doesn't auto-remove them. No frequency, no counters, no use-state.
  */
 
-import { MODULE_ID, IZIR } from "../../core/constants.mjs";
-import { isPrimaryGM } from "../../core/platform.mjs";
-import { loadContent } from "./content.mjs";
+import { MODULE_ID, IZIR } from "../../../core/constants.mjs";
+import { isPrimaryGM } from "../../../core/platform.mjs";
+import { loadContent } from "../content.mjs";
+import { isMarked } from "../state.mjs";
 
 const RECHARGE_IMG = "icons/magic/time/hourglass-tilted-glowing-gold.webp";
 
@@ -204,5 +205,40 @@ async function sweepExpired(combat) {
       (i) => i.getFlag?.(MODULE_ID, "izirRecharge") && (i.isExpired === true || i.system?.expired === true),
     );
     if (expired.length) await actor.deleteEmbeddedDocuments("Item", expired.map((i) => i.id));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Sheet shim: grey a recharging ability's Use button on every client  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Presentational shim on every client: while a recharge effect is active, grey the
+ * ability's Use button and show the remaining rounds. Enforcement never depends on
+ * this; if a pf2e update shifts the sheet DOM, the whisper guard still holds.
+ */
+export function rechargeSheetShim(app, root) {
+  const actor = app?.actor ?? app?.document;
+  if (!actor || !isMarked(actor)) return;
+  for (const item of actor.items) {
+    const tag = item.getFlag?.(MODULE_ID, IZIR);
+    if (!tag?.entryId || item.type !== "action") continue;
+    const running = findRechargeEffect(actor, tag.entryId);
+    const row = root.querySelector?.(`[data-item-id="${item.id}"]`);
+    if (!row) continue;
+    const btn = row.querySelector('button[data-action="use-action"], [data-action="use-action"]');
+    if (!btn) continue;
+    if (running) {
+      const rounds = remainingRounds(running);
+      btn.disabled = true;
+      btn.classList.add("izir-recharging");
+      btn.dataset.tooltip = game.i18n.format("SHARDS.Izir.StillRecharging", { name: item.name, rounds });
+      if (!row.querySelector(".izir-cd")) {
+        const badge = document.createElement("span");
+        badge.className = "izir-cd";
+        badge.textContent = game.i18n.format("SHARDS.Izir.RoundsShort", { rounds });
+        btn.before(badge);
+      }
+    }
   }
 }

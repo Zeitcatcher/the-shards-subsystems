@@ -8,12 +8,12 @@
  * critical failure hands the body to the GM for one round (the hard rule).
  */
 
-import { MODULE_ID, SETTINGS } from "../../core/constants.mjs";
-import { isPrimaryGM } from "../../core/platform.mjs";
-import { readAnsu, patchAnsu, isAttuned } from "./state.mjs";
-import { releaseDC, climbDeltaFor, climbNeeded } from "./logic/model.mjs";
-import { readDials } from "./sync.mjs";
-import { refreshAnsuPanel } from "./apps/ansu-panel.mjs";
+import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
+import { isPrimaryGM } from "../../../core/platform.mjs";
+import { readAnsu, patchAnsu, isAttuned } from "../state.mjs";
+import { releaseDC, climbDeltaFor, climbNeeded } from "../logic/model.mjs";
+import { readDials } from "../sync.mjs";
+import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
 
@@ -168,7 +168,7 @@ async function recordReleaseOutcomeInner(actor, st, pending, outcome, total) {
 
   if (outcome === "success" || outcome === "criticalSuccess") {
     await endCommunion(actor, { via: "release" });
-    const { applyClimbChange } = await import("./transform.mjs");
+    const { applyClimbChange } = await import("../transform.mjs");
     const r = await applyClimbChange(actor, { delta, source: "release" });
     if (r) await whisperClimbReport(actor, delta, r);
   } else if (outcome === "criticalFailure") {

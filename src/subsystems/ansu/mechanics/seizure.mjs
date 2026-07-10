@@ -9,11 +9,11 @@
  * Lingering resumes, per the hard rule).
  */
 
-import { MODULE_ID } from "../../core/constants.mjs";
-import { readAnsu, patchAnsu, appendLog } from "./state.mjs";
-import { durationRounds } from "./logic/model.mjs";
-import { syncActor } from "./sync.mjs";
-import { refreshAnsuPanel } from "./apps/ansu-panel.mjs";
+import { MODULE_ID } from "../../../core/constants.mjs";
+import { readAnsu, patchAnsu, appendLog } from "../state.mjs";
+import { durationRounds } from "../logic/model.mjs";
+import { syncActor } from "../sync.mjs";
+import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 async function whisperGM(actor, key, data = {}) {
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);

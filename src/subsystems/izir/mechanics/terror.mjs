@@ -6,9 +6,9 @@
  * official Frightful Presence outcomes).
  */
 
-import { MODULE_ID } from "../../core/constants.mjs";
-import { isPrimaryGM } from "../../core/platform.mjs";
-import { readIzir, isMarked } from "./state.mjs";
+import { MODULE_ID } from "../../../core/constants.mjs";
+import { isPrimaryGM } from "../../../core/platform.mjs";
+import { readIzir, isMarked } from "../state.mjs";
 import { suggestedDC } from "./temptation.mjs";
 
 const MARKER_SLUG = "shards-izir-pack-izirterroraura00";

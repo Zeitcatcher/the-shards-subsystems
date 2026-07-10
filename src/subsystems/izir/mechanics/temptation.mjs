@@ -7,12 +7,12 @@
  * and clears the pending marker. Nothing auto-applies — the GM acts on suggestions.
  */
 
-import { MODULE_ID, SETTINGS } from "../../core/constants.mjs";
-import { isPrimaryGM } from "../../core/platform.mjs";
-import { readIzir, patchIzir, isMarked } from "./state.mjs";
-import { dcFor, slideDeltaFor, slideNeeded } from "./logic/model.mjs";
-import { applySlideChange } from "./transform.mjs";
-import { refreshIzirPanel } from "./apps/izir-panel.mjs";
+import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
+import { isPrimaryGM } from "../../../core/platform.mjs";
+import { readIzir, patchIzir, isMarked } from "../state.mjs";
+import { dcFor, slideDeltaFor, slideNeeded } from "../logic/model.mjs";
+import { applySlideChange } from "../transform.mjs";
+import { refreshIzirPanel } from "../apps/izir-panel.mjs";
 
 const dcBase = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_BASE)) || 20;
 const dcStep = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_STEP)) || 0;

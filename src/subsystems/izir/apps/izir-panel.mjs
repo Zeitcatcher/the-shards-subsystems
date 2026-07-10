@@ -29,7 +29,7 @@ import {
   clearPendingTemptation,
   postSurge,
   postReminder,
-} from "../temptation.mjs";
+} from "../mechanics/temptation.mjs";
 import { exportLog } from "../journal.mjs";
 import { triggerFork, setImmersion, applySlideChange } from "../transform.mjs";
 import { openArtDialog, openHistoryDialog } from "./izir-dialogs.mjs";

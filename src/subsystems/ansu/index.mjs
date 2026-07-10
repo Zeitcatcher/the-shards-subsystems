@@ -9,9 +9,9 @@ import { registerSubsystem } from "../../core/subsystems.mjs";
 import { openAnsuPanel, refreshAnsuPanel } from "./apps/ansu-panel.mjs";
 import { loadContent } from "./content.mjs";
 import { registerSyncHooks, syncAllAttuned } from "./sync.mjs";
-import { registerCommunionHooks, handleExpiry } from "./communion.mjs";
-import { registerReleaseHooks } from "./release.mjs";
-import { registerCallHooks } from "./call.mjs";
+import { registerCommunionHooks, handleExpiry } from "./mechanics/communion.mjs";
+import { registerReleaseHooks } from "./mechanics/release.mjs";
+import { registerCallHooks } from "./mechanics/call.mjs";
 import { setAttunement } from "./transform.mjs";
 import { registerAnsuTraits } from "./traits.mjs";
 

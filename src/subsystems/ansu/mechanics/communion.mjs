@@ -9,17 +9,17 @@
  * posts a chat card; a createChatMessage capture turns those cards into state.
  */
 
-import { MODULE_ID, ANSU } from "../../core/constants.mjs";
-import { isPrimaryGM } from "../../core/platform.mjs";
-import { readAnsu, patchAnsu, appendLog, isAttuned, listAttunedActors } from "./state.mjs";
-import { durationRounds } from "./logic/model.mjs";
-import { COMMUNION_ENTRY_ID } from "./logic/reconcile.mjs";
-import { syncActor } from "./sync.mjs";
-import { loadContent } from "./content.mjs";
+import { MODULE_ID, ANSU } from "../../../core/constants.mjs";
+import { isPrimaryGM } from "../../../core/platform.mjs";
+import { readAnsu, patchAnsu, appendLog, isAttuned, listAttunedActors } from "../state.mjs";
+import { durationRounds } from "../logic/model.mjs";
+import { COMMUNION_ENTRY_ID } from "../logic/reconcile.mjs";
+import { syncActor } from "../sync.mjs";
+import { loadContent } from "../content.mjs";
 import { callRelease, suggestedDC } from "./release.mjs";
 import { callTheCall, suggestedCallDC } from "./call.mjs";
 import { maybeReturnFromSeizure } from "./seizure.mjs";
-import { refreshAnsuPanel } from "./apps/ansu-panel.mjs";
+import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 /** The live Communion effect item on an actor, if any. */
 export function findCommunionEffect(actor) {

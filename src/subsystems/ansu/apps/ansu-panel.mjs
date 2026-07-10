@@ -24,16 +24,16 @@ import { selectEntries, buildCtx, injectNumbers, durationLabel, communionMode } 
 import { suggestChips } from "../logic/suggest.mjs";
 import { loadContent } from "../content.mjs";
 import { syncActor, syncAllAttuned, displayTier, readDials, inActiveCombat } from "../sync.mjs";
-import { invokeCommunion, requestInvoke, endCommunion, findCommunionEffect, remainingRounds } from "../communion.mjs";
+import { invokeCommunion, requestInvoke, endCommunion, findCommunionEffect, remainingRounds } from "../mechanics/communion.mjs";
 import {
   callRelease,
   suggestedDC,
   recordReleaseOutcome,
   clearPendingRelease,
   postUrge,
-} from "../release.mjs";
-import { suggestedCallDC, recordCallOutcome, clearPendingCall } from "../call.mjs";
-import { startSeizure, returnFromSeizure, isSeized } from "../seizure.mjs";
+} from "../mechanics/release.mjs";
+import { suggestedCallDC, recordCallOutcome, clearPendingCall } from "../mechanics/call.mjs";
+import { startSeizure, returnFromSeizure, isSeized } from "../mechanics/seizure.mjs";
 import { exportLog } from "../journal.mjs";
 import { triggerFork, triggerTaken, setAttunement, applyClimbChange } from "../transform.mjs";
 import { openArtDialog, openHistoryDialog } from "./ansu-dialogs.mjs";
