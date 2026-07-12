@@ -310,6 +310,8 @@ function ansuScrubRules(rules) {
       if (typeof v === "string" && v.includes("{{ansuTempHp}}")) out[k] = 3;
       if (typeof v === "string" && v.includes("{{ansuResist}}")) out[k] = 3;
       if (typeof v === "string" && v.includes("{{ansuParry}}")) out[k] = 2;
+      // Static copies can't know the bearer's tier; ship the Trial value.
+      if (typeof v === "string" && v.includes("{{ansuTierDice}}")) out[k] = 1;
     }
     return out;
   });

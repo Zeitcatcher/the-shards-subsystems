@@ -320,6 +320,7 @@
   "SHARDS.Ansu.OutcomeShort.failure": "F",
   "SHARDS.Ansu.OutcomeShort.criticalFailure": "CF",
 
+  "SHARDS.Ansu.CommunionDeleted": "{name}: the Communion effect was deleted, so the state is cleared without a Release save. Invoke again to restore it, or use Seizure if the Ansu should have the body.",
   "SHARDS.Ansu.RefusesUsed": "{name}: the Ansu refuses. Set HP to 1, resolve the retaliation Strike, wounded increased by 1 (applied). Cooldown: 10 minutes.",
   "SHARDS.Ansu.CooldownRunning": "{name} is still recovering: about {minutes} minute(s) left.",
   "SHARDS.Ansu.SeizureStart": "{name}: the Ansu takes hold. Full Communion applied: the GM plays the body until Return is pressed.",

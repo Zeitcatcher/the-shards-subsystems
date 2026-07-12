@@ -468,7 +468,7 @@ function buildComm(actor, st) {
     pendingCall: st.pendingCall ? { ...st.pendingCall } : null,
     callOutcomes: OUTCOME_KEYS.map((o) => ({ key: o, label: game.i18n.localize(`SHARDS.Ansu.OutcomeShort.${o}`) })),
     canForceInvoke: !running && !st.terminal && st.level >= 1,
-    canRelease: running && !seized && !st.pendingRelease && st.terminal !== "taken",
+    canRelease: running && !seized && st.terminal !== "taken",
     releaseIsToggle: st.terminal === "subjugated",
     canEndNoSave: running && !st.terminal && mode !== "seized",
     showSeize: !st.terminal,

@@ -33,7 +33,9 @@ function playerOwners(actor) {
 /**
  * Start a Release save with a known DC and reason. Writes the pending marker,
  * then whispers the card (PC) or rolls (NPC). No-op for subjugated masters —
- * they end Communion at will.
+ * they end Communion at will. A fresh call REPLACES any stale pending Release
+ * (new id, new card): an un-rolled card from an earlier scene must never wedge
+ * the door shut — the same rule the Call got in v0.6.1.
  */
 export async function callRelease(actor, dc, reason = "") {
   if (!actor || !Number.isFinite(dc)) return;

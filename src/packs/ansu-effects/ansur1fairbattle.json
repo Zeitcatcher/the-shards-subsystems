@@ -8,7 +8,7 @@
   "sort": 4250,
   "system": {
     "description": {
-      "value": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair, only arithmetic. Make one melee Strike and compare the attack roll result to the AC of each enemy within your melee reach. The Strike deals 10 extra damage; roll that damage once and apply it to each target you hit. This counts as one attack for your multiple attack penalty.</p>"
+      "value": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair, only arithmetic. Make one melee Strike and compare the attack roll result to the AC of each enemy within your melee reach. The Strike deals 10 extra damage; roll that damage once and apply it to each target you hit. This counts as one attack for your multiple attack penalty.</p><p><em>Automation: switch on the Fair Battle toggle before the Strike; the 10 extra damage adds itself. Switch it off after.</em></p>"
     },
     "slug": "shards-ansu-fair-battle",
     "actionType": {
@@ -25,7 +25,24 @@
       "rarity": "common"
     },
     "frequency": null,
-    "rules": [],
+    "rules": [
+      {
+        "key": "RollOption",
+        "domain": "melee-strike-damage",
+        "option": "fair-battle",
+        "toggleable": true,
+        "label": "Fair Battle"
+      },
+      {
+        "key": "FlatModifier",
+        "selector": "melee-strike-damage",
+        "value": 10,
+        "predicate": [
+          "fair-battle"
+        ],
+        "label": "Fair Battle"
+      }
+    ],
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",

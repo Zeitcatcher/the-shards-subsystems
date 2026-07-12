@@ -198,7 +198,9 @@ async function handleActionCard(message) {
     }
     // No Release while the Ansu holds the body: a seizure must be returned (GM
     // button), not dismissed by a save that would strand the snapshot. (B6)
-    if (st.communion.mode === "none" || st.communion.mode === "seized" || st.pendingRelease) return;
+    // A pending Release does NOT block: callRelease replaces the stale card,
+    // so a missed roll is recoverable by clicking Release again.
+    if (st.communion.mode === "none" || st.communion.mode === "seized") return;
     await callRelease(actor, suggestedDC(st), game.i18n.localize("SHARDS.Ansu.ReleaseByPlayer"));
   } else {
     await maybeStartCooldown(actor, tag.entryId);

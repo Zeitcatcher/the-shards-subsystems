@@ -2,6 +2,16 @@
 
 Notable changes, newest first. Every version is also on the [Releases page](https://github.com/Zeitcatcher/the-shards-subsystems/releases); to update inside Foundry VTT, press Update on the module.
 
+## 0.6.3
+
+Playtest round 2 fixes for Ansu.
+
+- Release un-wedged. A Release card left un-rolled used to silently block every later Release: the sheet action returned without a word and the panel button disappeared. Clicking Release now replaces the stale card with a fresh one, the same rule the Call follows since 0.6.1. If a save was rolled from the sheet instead of the card, just click Release again or record the outcome in the panel.
+- Deleting a running Communion effect now ends the state. It used to come back on its own with a full fresh timer, forever. An expired removal still resolves through the Release save; a manual delete counts as the GM ending it, with a whisper saying so.
+- Maker's Wrath and Fair Battle add their damage themselves. Each carries a toggle (the same pattern as the summoner's Furious Strike): switch it on before the Strike and the extra dice or the flat 10 land in the damage roll, in the weapon's own damage type. Switch it off after — toggles don't clear themselves.
+
+Verified on Pathfinder 2e (Foundry v14.364, pf2e 8.2.0). 144 tests green; content and pack checks clean.
+
 ## 0.6.2
 
 A correctness and rules-language pass over both subsystems, from a full code and content audit. No new features — a lot of quieter things now work the way they already read.

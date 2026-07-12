@@ -8,7 +8,7 @@
   "sort": 1250,
   "system": {
     "description": {
-      "value": "<p>The arena blow, learned. Make a melee Strike that deals 1d6 per tier extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit, the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone}.</p>"
+      "value": "<p>The arena blow, learned. Make a melee Strike that deals 1d6 per tier extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit, the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone}.</p><p><em>Automation: switch on the Maker's Wrath toggle before the Strike; the extra dice add themselves. Switch it off after.</em></p>"
     },
     "slug": "shards-ansu-makers-wrath",
     "actionType": {
@@ -25,7 +25,25 @@
       "rarity": "common"
     },
     "frequency": null,
-    "rules": [],
+    "rules": [
+      {
+        "key": "RollOption",
+        "domain": "melee-strike-damage",
+        "option": "makers-wrath",
+        "toggleable": true,
+        "label": "Maker's Wrath"
+      },
+      {
+        "key": "DamageDice",
+        "selector": "melee-strike-damage",
+        "diceNumber": 1,
+        "dieSize": "d6",
+        "predicate": [
+          "makers-wrath"
+        ],
+        "label": "Maker's Wrath"
+      }
+    ],
     "publication": {
       "title": "The Shards",
       "authors": "Zeitcatcher",

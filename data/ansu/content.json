@@ -72,9 +72,12 @@
       "kind": "boon",
       "form": "action",
       "name": "Maker's Wrath",
-      "description": "<p>The arena blow, learned. Make a melee Strike that deals {{ansuTierDice}}d6 extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit, the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone}.</p>",
+      "description": "<p>The arena blow, learned. Make a melee Strike that deals {{ansuTierDice}}d6 extra damage of your weapon's damage type (1d6 at Trial, 2d6 at Discipline, 3d6 at Union). On a critical hit, the target is also knocked @UUID[Compendium.pf2e.conditionitems.Item.j91X7x0XSomq8d60]{Prone}.</p><p><em>Automation: switch on the Maker's Wrath toggle before the Strike; the extra dice add themselves. Switch it off after.</em></p>",
       "img": "icons/weapons/axes/axe-battle-heavy-jagged.webp",
-      "rules": [],
+      "rules": [
+        { "key": "RollOption", "domain": "melee-strike-damage", "option": "makers-wrath", "toggleable": true, "label": "Maker's Wrath" },
+        { "key": "DamageDice", "selector": "melee-strike-damage", "diceNumber": "{{ansuTierDice}}", "dieSize": "d6", "predicate": ["makers-wrath"], "label": "Maker's Wrath" }
+      ],
       "chipTag": "+{{ansuTierDice}}d6 strike",
       "actionData": {
         "actionType": "action",
@@ -161,9 +164,12 @@
       "kind": "boon",
       "form": "action",
       "name": "Fair Battle",
-      "description": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair, only arithmetic. Make one melee Strike and compare the attack roll result to the AC of each enemy within your melee reach. The Strike deals 10 extra damage; roll that damage once and apply it to each target you hit. This counts as one attack for your multiple attack penalty.</p>",
+      "description": "<p><strong>Requirements</strong> Three or more enemies are within your melee reach.</p><hr /><p>The Ansu remembers the arena: five against one was never unfair, only arithmetic. Make one melee Strike and compare the attack roll result to the AC of each enemy within your melee reach. The Strike deals 10 extra damage; roll that damage once and apply it to each target you hit. This counts as one attack for your multiple attack penalty.</p><p><em>Automation: switch on the Fair Battle toggle before the Strike; the 10 extra damage adds itself. Switch it off after.</em></p>",
       "img": "icons/weapons/axes/axe-battle-elemental-lava.webp",
-      "rules": [],
+      "rules": [
+        { "key": "RollOption", "domain": "melee-strike-damage", "option": "fair-battle", "toggleable": true, "label": "Fair Battle" },
+        { "key": "FlatModifier", "selector": "melee-strike-damage", "value": 10, "predicate": ["fair-battle"], "label": "Fair Battle" }
+      ],
       "chipTag": "3+ foes · hits all · +10",
       "actionData": {
         "actionType": "action",

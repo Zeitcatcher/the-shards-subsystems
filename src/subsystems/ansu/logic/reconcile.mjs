@@ -305,6 +305,9 @@ export function composeActions(state, content, opts = {}) {
     .map((e) => {
       const description = injectNumbers(e.description ?? "", ctx);
       const actionData = deepInject(e.actionData ?? {}, ctx);
+      // Action items carry their entry's rule elements too (Maker's Wrath /
+      // Fair Battle toggle-damage), with number tokens baked like everywhere else.
+      const rules = deepInject(Array.isArray(e.rules) ? e.rules : [], ctx);
       if (Number.isInteger(e.actionData?.cooldownMinutes)) {
         const until = Number((state.cooldowns ?? []).find((c) => c?.id === e.id)?.until) || 0;
         const onCooldown = Number.isFinite(opts.now) && opts.now < until;
@@ -315,8 +318,8 @@ export function composeActions(state, content, opts = {}) {
         // Every dormant resync restores its uses.
         actionData.frequencyValue = e.actionData.frequency.max ?? null;
       }
-      const data = { entryId: e.id, family: e.family, name: e.name, img: e.img, description, actionData, entry: e };
-      return { ...data, hash: hashString(stableStringify({ name: e.name, img: e.img, description, actionData })) };
+      const data = { entryId: e.id, family: e.family, name: e.name, img: e.img, description, actionData, rules, entry: e };
+      return { ...data, hash: hashString(stableStringify({ name: e.name, img: e.img, description, actionData, rules })) };
     });
 }
 

@@ -190,7 +190,7 @@ export function buildActionSource(desired) {
     category: a.category ?? null,
     traits: { value: a.traits ?? [], rarity: "common" },
     frequency: a.frequency ?? null,
-    rules: [],
+    rules: desired.rules ?? [],
     publication: PUBLICATION,
   };
   // Module-owned cooldowns bake the remaining uses (0 while cooling down);
@@ -437,6 +437,21 @@ function scheduleResync(actor) {
 }
 
 /** Badge edits, manual deletions, and character level-ups all feed back into sync. */
+/**
+ * Deleting a running (non-expired) Communion effect ends the state cleanly and
+ * whispers the GM. Deferred import: mechanics/communion.mjs imports this module.
+ */
+async function endCommunionAfterDelete(actor) {
+  const { endCommunion } = await import("./mechanics/communion.mjs");
+  await endCommunion(actor, { via: "deleted" });
+  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+  await ChatMessage.create({
+    content: `<div class="ansu-card"><p>${game.i18n.format("SHARDS.Ansu.CommunionDeleted", { name: actor.name })}</p></div>`,
+    whisper: gmIds,
+    speaker: ChatMessage.getSpeaker({ actor }),
+  });
+}
+
 export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
   // Self-heal: a manually deleted module item is restored (suppress in the panel instead).
   Hooks.on("deleteItem", (item) => {
@@ -454,6 +469,16 @@ export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
       if (!st.terminal && st.communion.mode === "active" && wasExpired) {
         Promise.resolve(onCommunionExpired?.(actor)).catch((err) =>
           console.error(`${MODULE_ID} | ansu communion expiry on delete`, err),
+        );
+        return;
+      }
+      // A NON-expired delete of a running Communion is a deliberate end (a GM
+      // clearing the buff), not damage to self-heal. Resurrecting it here handed
+      // the effect a fresh full countdown every time, so it never expired and no
+      // Release ever fired. End the state instead and tell the GM.
+      if (!st.terminal && (st.communion.mode === "active" || st.communion.mode === "lingering")) {
+        endCommunionAfterDelete(actor).catch((err) =>
+          console.error(`${MODULE_ID} | ansu communion end on delete`, err),
         );
         return;
       }

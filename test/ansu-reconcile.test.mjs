@@ -20,7 +20,11 @@ const CONTENT = {
     { id: "invoke", family: "invoke", rank: 1, level: 1, kind: "boon", form: "action", name: "Invoke",
       actionData: { actionType: "action", actions: 1, frequency: { max: 1, per: "round" }, alwaysAvailable: true }, rules: [] },
     { id: "wrath", family: "wrath", rank: 1, level: 1, kind: "boon", form: "action", name: "Wrath",
-      description: "<p>+{{ansuTierDice}}d6.</p>", actionData: { actionType: "action", actions: 2 }, rules: [] },
+      description: "<p>+{{ansuTierDice}}d6.</p>", actionData: { actionType: "action", actions: 2 },
+      rules: [
+        { key: "RollOption", domain: "melee-strike-damage", option: "wrath", toggleable: true },
+        { key: "DamageDice", selector: "melee-strike-damage", diceNumber: "{{ansuTierDice}}", dieSize: "d6", predicate: ["wrath"] },
+      ] },
     { id: "vigor", family: "vigor", rank: 1, level: 1, kind: "boon", form: "effect", name: "Vigor",
       description: "<p>{{ansuTempHp}} temp HP.</p>",
       rules: [{ key: "TempHP", value: "{{ansuTempHp}}" }, { key: "FlatModifier", selector: "melee-strike-damage", type: "status", value: 2 }] },
@@ -201,6 +205,24 @@ describe("composeActions — communion gating", () => {
   it("seizure unlocks every active including the gate", () => {
     const acts = composeActions(state({ level: 1, communion: { mode: "seized" } }), CONTENT, { charLevel: 4 });
     expect(acts.map((a) => a.entryId)).toEqual(expect.arrayContaining(["invoke", "wrath", "refuses", "capstone"]));
+  });
+});
+
+describe("composeActions — rule elements ride the action items", () => {
+  it("forwards entry rules with number tokens baked (toggle-damage pattern)", () => {
+    const acts = composeActions(state({ level: 5, communion: { mode: "active" } }), CONTENT, { charLevel: 5 });
+    const wrath = acts.find((a) => a.entryId === "wrath");
+    expect(wrath.rules.map((r) => r.key)).toEqual(["RollOption", "DamageDice"]);
+    expect(wrath.rules[0].toggleable).toBe(true);
+    expect(wrath.rules[1].diceNumber).toBe(2); // {{ansuTierDice}} baked to a NUMBER at Discipline
+    expect(wrath.rules[1].predicate).toEqual(["wrath"]);
+  });
+  it("rules participate in the hash so a rules change updates the item", () => {
+    const at5 = composeActions(state({ level: 5, communion: { mode: "active" } }), CONTENT, { charLevel: 5 });
+    const at8 = composeActions(state({ level: 8, communion: { mode: "active" } }), CONTENT, { charLevel: 8 });
+    const w5 = at5.find((a) => a.entryId === "wrath");
+    const w8 = at8.find((a) => a.entryId === "wrath");
+    expect(w5.hash).not.toBe(w8.hash); // tier dice 2 → 3 changes the baked rule
   });
 });
 

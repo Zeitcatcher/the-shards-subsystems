@@ -57,6 +57,18 @@ describe("data/ansu/content.json", () => {
     expect(refuses.actionData.frequency).toEqual({ max: 1, per: "PT10M" });
     expect(refuses.actionData.actionType).toBe("reaction");
   });
+  it("Maker's Wrath and Fair Battle carry the Furious Strike toggle-damage pattern", () => {
+    const wrath = raw.entries.find((e) => e.id === "makers-wrath");
+    expect(wrath.rules.map((r) => r.key)).toEqual(["RollOption", "DamageDice"]);
+    expect(wrath.rules[0]).toMatchObject({ domain: "melee-strike-damage", option: "makers-wrath", toggleable: true });
+    expect(wrath.rules[1]).toMatchObject({ selector: "melee-strike-damage", diceNumber: "{{ansuTierDice}}", dieSize: "d6", predicate: ["makers-wrath"] });
+    expect(wrath.rules[1].damageType).toBeUndefined(); // omitted = the weapon's own type
+
+    const fair = raw.entries.find((e) => e.id === "fair-battle");
+    expect(fair.rules.map((r) => r.key)).toEqual(["RollOption", "FlatModifier"]);
+    expect(fair.rules[0]).toMatchObject({ option: "fair-battle", toggleable: true });
+    expect(fair.rules[1]).toMatchObject({ selector: "melee-strike-damage", value: 10, predicate: ["fair-battle"] });
+  });
   it("Stature has no size change — reach rides a Note rule", () => {
     const stature = raw.entries.find((e) => e.id === "ansus-stature");
     expect(stature.rules.some((r) => r.key === "CreatureSize")).toBe(false);
