@@ -2,6 +2,12 @@
 
 Notable changes, newest first. Every version is also on the [Releases page](https://github.com/Zeitcatcher/the-shards-subsystems/releases); to update inside Foundry VTT, press Update on the module.
 
+## 0.6.4
+
+Compatibility release for Foundry VTT build 14.365 (Stable 7). The build is additive upstream: no deprecations or removals, and nothing in it touches the APIs this module uses (ApplicationV2, DialogV2, flag deletion, scene controls, FilePicker, effect items, compendium packs, macros). No behavior changes in the module itself.
+
+Verified on Pathfinder 2e (Foundry v14.365, pf2e 8.2.0). 144 tests green; content and pack checks clean.
+
 ## 0.6.3
 
 Playtest round 2 fixes for Ansu.
