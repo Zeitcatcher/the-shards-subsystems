@@ -2,6 +2,17 @@
 
 Notable changes, newest first. Every version is also on the [Releases page](https://github.com/Zeitcatcher/the-shards-subsystems/releases); to update inside Foundry VTT, press Update on the module.
 
+## 0.6.5
+
+Ansu expiry and Release fixes, and the platform bump to Foundry 14.367 and pf2e 8.5.0.
+
+- Platform: audited against Foundry builds 14.366 and 14.367 and a full source diff of pf2e 8.2.0 through 8.5.0. Nothing the module uses changed (effect expiry, rule elements, chat-card flags, inline checks, the end-of-turn hook, item schemas, condition ids), so there are no code changes for it. The manifest now declares pf2e 8.5.0 as verified and keeps 8.2.0 as the minimum.
+- One Release card when the Communion timer runs out. Two identical Will-save cards used to go up at once, and only the second one counted: a player who clicked the first saw the roll do nothing, and the dead marker it left behind then stopped the next end-of-turn save from appearing at all. The expiry is resolved once now, whichever watcher notices it first.
+- Every posted card counts. A roll from a card that was replaced or duplicated is recorded instead of dropped, with a console line naming both card ids. A save rolled anywhere else still needs the card or the panel's manual recorder, so an unrelated save at the same DC can't be taken for a Release.
+- The end-of-turn re-save while Lingering now comes from Pathfinder's own end-of-turn signal instead of being read off the combat tracker, and it posts a fresh card every turn. An un-rolled card from the previous turn is replaced rather than left to block the next one.
+
+Verified on Pathfinder 2e (Foundry v14.367, pf2e 8.5.0). 174 tests green; content and pack checks clean.
+
 ## 0.6.4
 
 Compatibility release for Foundry VTT build 14.365 (Stable 7). The build is additive upstream: no deprecations or removals, and nothing in it touches the APIs this module uses (ApplicationV2, DialogV2, flag deletion, scene controls, FilePicker, effect items, compendium packs, macros). No behavior changes in the module itself.

@@ -12,6 +12,7 @@
 import { MODULE_ID } from "../../../core/constants.mjs";
 import { readAnsu, patchAnsu, appendLog } from "../state.mjs";
 import { durationRounds } from "../logic/model.mjs";
+import { seizureReturnDue } from "../logic/timing.mjs";
 import { syncActor } from "../sync.mjs";
 import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
@@ -97,29 +98,23 @@ export async function returnFromSeizure(actor, { toMode = null } = {}) {
 }
 
 /**
- * Combat-sweep hook: an auto seizure returns at the end of the bearer's next
- * turn, landing in its `thenMode`. `force` returns any auto seizure immediately
+ * Turn-end hook: an auto seizure returns at the end of the bearer's next turn,
+ * landing in its `thenMode`. `force` returns any auto seizure immediately
  * (combat deleted mid-hold). Manual seizures never auto-return.
+ *
+ * The caller establishes whose turn ended — pf2e's own end-of-turn signal names
+ * the combatant — so there is no combat.previous guessing here. The round check
+ * still holds the seizure through the turn it began on. (B8, 0.6.5)
  */
 export async function maybeReturnFromSeizure(actor, combat, { force = false } = {}) {
   const st = readAnsu(actor);
-  if (!isSeized(st) || !st.seizure?.auto) return;
-  const landing = st.seizure.thenMode === "active" ? "active" : "lingering";
-
-  if (force) {
-    await returnFromSeizure(actor, { toMode: landing });
-    return;
-  }
-
-  const prevActor = combat?.combatants.get(combat.previous?.combatantId)?.actor ?? null;
-  if (!prevActor || prevActor.uuid !== actor.uuid) return; // not their turn-end
-
-  // "1 round" means the end of the bearer's NEXT turn. A combatant acts once per
-  // round, so their next turn is always a later round than the one the seizure
-  // began in; don't let the starting turn's own end cancel it. (B8)
-  const startRound = Number(st.seizure.startRound);
-  const round = Number(combat?.round);
-  if (Number.isFinite(startRound) && Number.isFinite(round) && round <= startRound) return;
-
-  await returnFromSeizure(actor, { toMode: landing });
+  const due = seizureReturnDue({
+    seized: isSeized(st),
+    auto: st.seizure?.auto === true,
+    startRound: st.seizure?.startRound,
+    round: combat?.round,
+    force,
+  });
+  if (!due) return;
+  await returnFromSeizure(actor, { toMode: st.seizure.thenMode === "active" ? "active" : "lingering" });
 }

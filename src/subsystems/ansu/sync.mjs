@@ -20,6 +20,7 @@ import {
   COMMUNION_ENTRY_ID,
 } from "./logic/reconcile.mjs";
 import { clampLevel, tierForLevel, MAX_LEVEL } from "./logic/model.mjs";
+import { classifyCommunionDelete } from "./logic/timing.mjs";
 import { loadContent } from "./content.mjs";
 
 const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "ORC", remaster: true };
@@ -463,25 +464,35 @@ export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
     // A Communion effect that pf2e auto-removed on expiry (or a player dismissed)
     // must resolve the countdown, not be resurrected with a fresh clock — else the
     // effect never expires and the Release save never fires. (B11)
+    // Expiry is read FIRST: pf2e's own removal of an expired effect is never a
+    // deliberate delete, whether or not the sweep got to the state first. (0.6.5)
     if (tag.entryId === COMMUNION_ENTRY_ID) {
       const st = readAnsu(actor);
       const wasExpired = item.isExpired === true || item.system?.expired === true;
-      if (!st.terminal && st.communion.mode === "active" && wasExpired) {
+      const verdict = classifyCommunionDelete({ terminal: st.terminal, mode: st.communion.mode, wasExpired });
+      if (verdict === "expiry") {
         Promise.resolve(onCommunionExpired?.(actor)).catch((err) =>
           console.error(`${MODULE_ID} | ansu communion expiry on delete`, err),
         );
+        return;
+      }
+      // Already lingering: the sweep resolved this expiry, pf2e is only clearing
+      // the spent item. Put the lingering effect back; never end the state.
+      if (verdict === "resync") {
+        scheduleResync(actor);
         return;
       }
       // A NON-expired delete of a running Communion is a deliberate end (a GM
       // clearing the buff), not damage to self-heal. Resurrecting it here handed
       // the effect a fresh full countdown every time, so it never expired and no
       // Release ever fired. End the state instead and tell the GM.
-      if (!st.terminal && (st.communion.mode === "active" || st.communion.mode === "lingering")) {
+      if (verdict === "end") {
         endCommunionAfterDelete(actor).catch((err) =>
           console.error(`${MODULE_ID} | ansu communion end on delete`, err),
         );
         return;
       }
+      // "heal" falls through to the plain self-heal resync below.
     }
     scheduleResync(actor);
   });

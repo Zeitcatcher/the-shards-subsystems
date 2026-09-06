@@ -12,6 +12,7 @@ import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM } from "../../../core/platform.mjs";
 import { readAnsu, patchAnsu, isAttuned } from "../state.mjs";
 import { releaseDC, climbDeltaFor, climbNeeded } from "../logic/model.mjs";
+import { acceptReleaseRoll } from "../logic/timing.mjs";
 import { readDials } from "../sync.mjs";
 import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
@@ -113,14 +114,20 @@ async function captureFromMessage(message) {
   const pending = st.pendingRelease;
   if (!pending) return;
 
-  // Match only on the injected roll-option id: present on both the player's card
-  // click and the GM's NPC roll. Off-card rolls use the panel's manual recorder,
-  // so there is no fuzzy DC/time fallback that could capture an unrelated save
+  // Match on the injected roll option: present on both the player's card click
+  // and the GM's NPC roll. Off-card rolls use the panel's manual recorder, so
+  // there is no fuzzy DC/time fallback that could capture an unrelated save
   // (e.g. a Fortitude save vs a poison) at the same DC. (B2)
-  const options = ctx.options ?? [];
-  if (!options.includes("shards-ansu-release")) return;
-  const idOpt = options.find((o) => o.startsWith("shards-ansu-release-id:"));
-  if (idOpt?.slice("shards-ansu-release-id:".length) !== pending.id) return;
+  // The card id decides which card was rolled, but a mismatch no longer throws
+  // the roll away: a replaced or duplicated card still carries a real roll, and
+  // dropping it left the pending marker open and the wrestle stuck. (0.6.5)
+  const { accept, idMatch, rolledId } = acceptReleaseRoll({ options: ctx.options ?? [], pendingId: pending.id });
+  if (!accept) return;
+  if (!idMatch) {
+    console.warn(
+      `${MODULE_ID} | release roll for "${actor.name}" carries card id ${rolledId ?? "none"} but the open Release is ${pending.id} — recording it anyway (the card was replaced or duplicated).`,
+    );
+  }
 
   const outcome = ctx.outcome ?? null;
   const total = message.rolls?.[0]?.total ?? null;

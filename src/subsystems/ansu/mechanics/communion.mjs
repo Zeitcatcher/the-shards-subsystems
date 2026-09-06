@@ -13,6 +13,7 @@ import { MODULE_ID, ANSU } from "../../../core/constants.mjs";
 import { isPrimaryGM } from "../../../core/platform.mjs";
 import { readAnsu, patchAnsu, appendLog, isAttuned, listAttunedActors } from "../state.mjs";
 import { durationRounds } from "../logic/model.mjs";
+import { sweepHandlesExpiry, turnEndReleaseDue } from "../logic/timing.mjs";
 import { COMMUNION_ENTRY_ID } from "../logic/reconcile.mjs";
 import { syncActor } from "../sync.mjs";
 import { loadContent } from "../content.mjs";
@@ -119,6 +120,11 @@ export async function slipToLingering(actor) {
 /* Combat watchers                                                      */
 /* ------------------------------------------------------------------ */
 
+// One expiry chain per actor. Our combat sweep and pf2e's deletion of the expired
+// effect can both reach handleExpiry on the same turn change; whichever arrives
+// first owns it, and the other must not post a second Release card. (0.6.5)
+const expiring = new Set();
+
 /**
  * On expiry of the Communion countdown: post the Release save and slip to
  * Lingering — the boons stay on while the bearer wrestles the Ansu back down.
@@ -126,43 +132,60 @@ export async function slipToLingering(actor) {
 export async function handleExpiry(actor) {
   const st = readAnsu(actor);
   if (st.communion.mode !== "active" || st.terminal) return;
-  await slipToLingering(actor);
-  if (!st.pendingRelease) {
-    await callRelease(actor, suggestedDC(st), game.i18n.localize("SHARDS.Ansu.ExpiryReason"));
+  if (expiring.has(actor.id)) return;
+  expiring.add(actor.id);
+  try {
+    await slipToLingering(actor);
+    // Re-read before deciding: the state was just written, and a player's own
+    // Release click could have landed a pending marker while we awaited.
+    const now = readAnsu(actor);
+    if (!now.pendingRelease) {
+      await callRelease(actor, suggestedDC(now), game.i18n.localize("SHARDS.Ansu.ExpiryReason"));
+    }
+  } finally {
+    expiring.delete(actor.id);
   }
 }
 
-/** End-of-turn re-save while Lingering (once per turn, only without a pending roll). */
+/**
+ * End-of-turn re-save while Lingering. A fresh card goes up every turn:
+ * callRelease replaces the stale pending marker, so a card nobody rolled (or a
+ * duplicate from an earlier race) can never wedge the wrestle shut. (0.6.5)
+ */
 async function handleTurnEnd(actor) {
   const st = readAnsu(actor);
-  if (st.communion.mode !== "lingering" || st.terminal) return;
-  if (st.pendingRelease) return; // one open roll at a time
+  if (!turnEndReleaseDue({ mode: st.communion.mode, terminal: st.terminal })) return;
   await callRelease(actor, suggestedDC(st), game.i18n.localize("SHARDS.Ansu.LingerReason"));
 }
 
-async function sweepCombat(combat, changes) {
-  // Whose turn just ended? combat.previous survives the update.
-  const prevActor = combat.combatants.get(combat.previous?.combatantId)?.actor ?? null;
+// Actors whose Communion effect a previous sweep already found expired. pf2e's
+// effect tracker normally deletes it right after this hook, and that delete is
+// what resolves the expiry; the sweep only steps in when pf2e demonstrably
+// didn't (auto-removal off, or the item still sitting there a sweep later).
+const seenExpired = new Set();
+
+async function sweepCombat(combat) {
+  const removeEffects = game.pf2e?.settings?.automation?.removeEffects;
 
   for (const combatant of combat.combatants) {
     const actor = combatant.actor;
     if (!actor || !isAttuned(actor)) continue;
-    const st = readAnsu(actor);
-
-    // Auto-return from a 1-round crit-fail seizure.
-    await maybeReturnFromSeizure(actor, combat);
 
     // Expired countdown → release save + lingering.
-    if (st.communion.mode === "active") {
-      const effect = findCommunionEffect(actor);
-      if (effect && (effect.isExpired === true || effect.system?.expired === true)) {
-        await handleExpiry(actor);
-      }
+    const st = readAnsu(actor);
+    const effect = st.communion.mode === "active" ? findCommunionEffect(actor) : null;
+    const expired = Boolean(effect) && (effect.isExpired === true || effect.system?.expired === true);
+    if (!expired) {
+      seenExpired.delete(actor.id);
+      continue;
+    }
+    if (sweepHandlesExpiry(removeEffects, seenExpired.has(actor.id))) {
+      seenExpired.delete(actor.id);
+      await handleExpiry(actor);
+    } else {
+      seenExpired.add(actor.id);
     }
   }
-
-  // Lingering re-save fires when the bearer's own turn ends.
-  if (prevActor && isAttuned(prevActor)) await handleTurnEnd(prevActor);
 }
 
 /* ------------------------------------------------------------------ */
@@ -282,7 +305,20 @@ export function registerCommunionHooks() {
   Hooks.on("updateCombat", (combat, changes) => {
     if (!isPrimaryGM()) return;
     if (changes?.round === undefined && changes?.turn === undefined) return;
-    sweepCombat(combat, changes).catch((err) => console.error(`${MODULE_ID} | ansu combat sweep`, err));
+    sweepCombat(combat).catch((err) => console.error(`${MODULE_ID} | ansu combat sweep`, err));
+  });
+
+  // Turn ends come from pf2e's own signal rather than combat.previous: it fires
+  // on the active GM client after pf2e finished its turn-end processing, and it
+  // names the combatant whose turn ended, so there is nothing to infer. (0.6.5)
+  Hooks.on("pf2e.endTurn", (combatant, encounter) => {
+    if (!isPrimaryGM()) return;
+    const actor = combatant?.actor;
+    if (!actor || !isAttuned(actor)) return;
+    (async () => {
+      await maybeReturnFromSeizure(actor, encounter); // 1-round crit-fail seizure
+      await handleTurnEnd(actor); // lingering re-save
+    })().catch((err) => console.error(`${MODULE_ID} | ansu turn end`, err));
   });
 
   // Cooldowns run on world time (combat rounds advance it; so does the GM's clock).
