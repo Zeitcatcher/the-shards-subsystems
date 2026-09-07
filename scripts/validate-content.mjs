@@ -1,7 +1,10 @@
 /**
- * CI + pretest guard: validate every subsystem's content.json against the same
- * schema the module uses at runtime (reused from each content.mjs, so there's
- * one source of truth per subsystem).
+ * CI guard: validate every subsystem's content.json against the same schema the
+ * module uses at runtime (reused from each content.mjs, so there's one source of
+ * truth per subsystem), then scan the generated pack sources.
+ *
+ * The pack-source checks live in scripts/pack-checks.mjs and are also run by
+ * test/ansu-packs.test.mjs, so `npm test` catches what this catches.
  *
  *   node scripts/validate-content.mjs
  */
@@ -10,6 +13,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateContent as validateIzir } from "../src/subsystems/izir/content.mjs";
 import { validateContent as validateAnsu } from "../src/subsystems/ansu/content.mjs";
+import { packSourceTextProblems, ansuBakedNumberProblems } from "./pack-checks.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -32,10 +36,10 @@ for (const t of TARGETS) {
   );
 }
 
-// Scan the generated pack sources for two defect classes the schema can't see:
-// unresolved {{tokens}} that leaked past a scrub, and inline @Check enrichers whose
-// dc is prose (a letter after "dc:") instead of a number/path/empty. Both shipped
-// broken content before this guard existed.
+// Scan the generated pack sources for defects the schema can't see: unresolved
+// {{tokens}} that leaked past a scrub, inline @Check enrichers whose dc is prose,
+// and (Ansu) a baked rule number that disagrees with model.mjs at the entry's own
+// unlock attunement. All three shipped broken content before these guards existed.
 for (const dir of ["src/packs/izir-effects", "src/packs/ansu-effects"]) {
   let files;
   try {
@@ -43,20 +47,28 @@ for (const dir of ["src/packs/izir-effects", "src/packs/ansu-effects"]) {
   } catch {
     continue;
   }
-  let scanned = 0;
+  const docs = [];
   for (const f of files) {
     const text = readFileSync(resolve(ROOT, dir, f), "utf8");
-    if (text.includes("{{")) {
-      console.error(`pack source ${dir}/${f}: unresolved {{token}} left in a static pack copy`);
+    for (const p of packSourceTextProblems(`${dir}/${f}`, text)) {
+      console.error(p);
       failed = true;
     }
-    if (/dc:[A-Za-z]/.test(text)) {
-      console.error(`pack source ${dir}/${f}: malformed inline @Check dc (prose after "dc:")`);
+    try {
+      docs.push(JSON.parse(text));
+    } catch (err) {
+      console.error(`pack source ${dir}/${f}: not valid JSON (${err.message})`);
       failed = true;
     }
-    scanned += 1;
   }
-  console.log(`validate-content: ${dir} ok (${scanned} pack sources scanned).`);
+  if (dir.endsWith("ansu-effects")) {
+    const content = JSON.parse(readFileSync(resolve(ROOT, "data/ansu/content.json"), "utf8"));
+    for (const p of ansuBakedNumberProblems(content, docs)) {
+      console.error(p);
+      failed = true;
+    }
+  }
+  console.log(`validate-content: ${dir} ok (${files.length} pack sources scanned).`);
 }
 
 if (failed) process.exit(1);

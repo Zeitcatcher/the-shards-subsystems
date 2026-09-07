@@ -11,16 +11,20 @@ describe("healDefaults", () => {
     const healed = healDefaults({ level: 4, climb: 3 });
     expect(healed.level).toBe(4);
     expect(healed.climb).toBe(3);
-    expect(healed.communion).toEqual({ mode: "none", rounds: null });
+    expect(healed.communion).toEqual({ mode: "none", rounds: null, startAt: null });
     expect(healed.seizure).toBeNull();
     expect(healed.cooldowns).toEqual([]);
     expect(healed.art.thresholds[7]).toEqual({ portrait: "", token: "" });
   });
   it("recurses into nested objects without dropping siblings", () => {
     const healed = healDefaults({ communion: { mode: "active" }, art: { applied: "4" } });
-    expect(healed.communion).toEqual({ mode: "active", rounds: null });
+    expect(healed.communion).toEqual({ mode: "active", rounds: null, startAt: null });
     expect(healed.art.applied).toBe("4");
     expect(healed.art.original).toBeNull();
+  });
+  it("keeps the seizure return's one-shot clock stamp (merge only walks default keys)", () => {
+    const healed = healDefaults({ communion: { mode: "active", rounds: 1, startAt: 126 } });
+    expect(healed.communion.startAt).toBe(126);
   });
   it("takes arrays and nullable objects wholesale from raw", () => {
     const log = [{ t: 1, type: "mark", data: {} }];

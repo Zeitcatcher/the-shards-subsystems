@@ -20,6 +20,10 @@
         </div>
         {{#if this.seized}}<i class="fa-solid fa-hand-back-fist ansu-dot ansu-dot-seized"
           data-tooltip="{{localize 'SHARDS.Ansu.SeizedDot'}}"></i>{{/if}}
+        {{#if this.active}}<i class="fa-solid fa-fire ansu-dot ansu-dot-active"
+          data-tooltip="{{localize 'SHARDS.Ansu.Mode.active'}}"></i>{{/if}}
+        {{#if this.lingering}}<i class="fa-solid fa-link ansu-dot ansu-dot-lingering"
+          data-tooltip="{{localize 'SHARDS.Ansu.Mode.lingering'}}"></i>{{/if}}
         {{#if this.pending}}<i class="fa-solid fa-hourglass-half ansu-dot ansu-dot-pending"
           data-tooltip="{{localize 'SHARDS.Ansu.PendingRelease'}}"></i>{{/if}}
         {{#if this.dualIzir}}<span class="ansu-dual" data-tooltip="{{localize 'SHARDS.Ansu.DualIzir'}}">⧉</span>{{/if}}
@@ -74,9 +78,10 @@
       </button>
       {{/if}}
       <span class="ansu-state st-{{comm.mode}}">{{comm.modeLabel}}</span>
-      {{#if comm.rounds}}
-      <span class="ansu-rounds" data-tooltip="{{localize 'SHARDS.Ansu.RoundsHint'}}">
-        <i class="fa-solid fa-hourglass-half"></i> {{localize "SHARDS.Ansu.RoundsLeft"}} {{comm.rounds}}
+      {{#if comm.hasRounds}}
+      <span class="ansu-rounds {{#if comm.finalRound}}final{{/if}}" data-tooltip="{{localize 'SHARDS.Ansu.RoundsHint'}}">
+        <i class="fa-solid fa-hourglass-half"></i>
+        {{#if comm.finalRound}}{{localize "SHARDS.Ansu.FinalRound"}}{{else}}{{localize "SHARDS.Ansu.RoundsLeft"}} {{comm.rounds}}{{/if}}
       </span>
       {{/if}}
       {{#if comm.canEndNoSave}}
@@ -86,12 +91,26 @@
       <span class="ansu-spacer"></span>
       {{#if comm.showSeize}}
       <button type="button" class="ansu-seize {{#if comm.seized}}held{{/if}}" data-action="seize"
-        data-tooltip="{{#if comm.seized}}{{localize 'SHARDS.Ansu.SeizeReturnHint'}}{{else}}{{localize 'SHARDS.Ansu.SeizeHint'}}{{/if}}">
+        data-tooltip="{{#if comm.seized}}{{#if comm.seizeReturnsTo}}{{#if (shardsEq comm.seizeReturnsTo 'active')}}{{localize 'SHARDS.Ansu.SeizeReturnAutoActiveHint'}}{{else}}{{localize 'SHARDS.Ansu.SeizeReturnAutoLingeringHint'}}{{/if}}{{else}}{{localize 'SHARDS.Ansu.SeizeReturnHint'}}{{/if}}{{else}}{{localize 'SHARDS.Ansu.SeizeHint'}}{{/if}}">
         {{#if comm.seized}}<i class="fa-solid fa-rotate-left"></i> {{localize "SHARDS.Ansu.SeizeReturn"}}
         {{else}}<i class="fa-solid fa-hand-back-fist"></i> {{localize "SHARDS.Ansu.Seize"}}{{/if}}
       </button>
       {{/if}}
     </div>
+
+    {{#if comm.callReroll}}
+    <div class="ansu-reroll">
+      <p><i class="fa-solid fa-circle-h"></i> {{localize "SHARDS.Ansu.RerollCallTitle"}} —
+        {{comm.callReroll.fromLabel}} → <strong>{{comm.callReroll.toLabel}}</strong>
+        {{#if comm.callReroll.total}}<small>({{comm.callReroll.total}})</small>{{/if}}</p>
+      <div class="ansu-outcomes">
+        <button type="button" class="ansu-outcome-btn outcome-{{comm.callReroll.outcome}}" data-action="recordCallReroll"
+          data-tooltip="{{localize 'SHARDS.Ansu.RerollApplyHint'}}">{{localize "SHARDS.Ansu.RerollApply"}}</button>
+        <button type="button" class="ansu-ghost" data-action="dismissCallReroll"
+          data-tooltip="{{localize 'SHARDS.Ansu.RerollDismiss'}}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    {{/if}}
 
     {{#if comm.pendingCall}}
     <div class="ansu-pending ansu-pending-call">
@@ -118,7 +137,9 @@
       <span class="ansu-step-note">{{localize "SHARDS.Ansu.BadgeHint"}}</span>
       <span class="ansu-spacer"></span>
       {{#unless detail.terminal}}
-      <button type="button" class="ansu-tenth {{#if climb.full}}ready{{/if}}" data-action="fork">
+      <button type="button" class="ansu-tenth {{#if climb.full}}ready{{/if}}" data-action="fork"
+        {{#unless detail.atNinth}}disabled{{/unless}}
+        data-tooltip="{{#unless detail.atNinth}}{{localize 'SHARDS.Ansu.TenthLocked'}}{{/unless}}">
         <i class="fa-solid fa-crown"></i> {{localize "SHARDS.Ansu.ForkTitle"}}…
       </button>
       {{/unless}}
@@ -158,11 +179,12 @@
         <div class="ansu-ldisc">{{this.level}}</div>
         <div class="ansu-chips">
           {{#each this.chips}}
-          <span class="ansu-chip {{#if this.isAlways}}always{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}}">
+          <span class="ansu-chip {{#if this.isAlways}}always{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}} {{#if this.dead}}dead{{/if}}">
             {{this.name}}
             {{#if this.actionsGlyph}}<span class="cost">{{this.actionsGlyph}}</span>{{/if}}
             {{#if this.tag}}<span class="tag">{{this.tag}}</span>{{/if}}
             {{#if this.reason}}<i class="fa-solid fa-comment-dots why" data-tooltip="{{this.reason}}"></i>{{/if}}
+            {{#unless this.dead}}
             <span class="kit">
               {{#if this.suppressed}}
               <button type="button" data-action="editReason" data-family="{{this.family}}"
@@ -173,6 +195,7 @@
                 <i class="fa-solid {{#if this.suppressed}}fa-rotate-left{{else}}fa-ban{{/if}}"></i>
               </button>
             </span>
+            {{/unless}}
           </span>
           {{/each}}
         </div>
@@ -189,14 +212,28 @@
             {{#if (shardsEq detail.terminal "taken")}}☠ {{localize "SHARDS.Ansu.ForkTaken"}}{{else}}♛ {{localize "SHARDS.Ansu.ForkSubjugated"}}{{/if}}
           </span>
           {{else}}
-          <button type="button" class="ansu-fork-chip sub" data-action="fork">♛ {{localize "SHARDS.Ansu.ForkSubjugated"}}</button>
-          <button type="button" class="ansu-fork-chip tak" data-action="fork">☠ {{localize "SHARDS.Ansu.ForkTaken"}}</button>
+          <button type="button" class="ansu-fork-chip sub" data-action="fork"
+            {{#unless detail.atNinth}}disabled data-tooltip="{{localize 'SHARDS.Ansu.TenthLocked'}}"{{/unless}}>♛ {{localize "SHARDS.Ansu.ForkSubjugated"}}</button>
+          <button type="button" class="ansu-fork-chip tak" data-action="taken"
+            {{#unless detail.atNinth}}disabled data-tooltip="{{localize 'SHARDS.Ansu.TenthLockedTaken'}}"{{/unless}}>☠ {{localize "SHARDS.Ansu.ForkTaken"}}</button>
           {{/if}}
           {{#each ladder.gateChips}}
-          <span class="ansu-chip passive gate {{#if this.suppressed}}suppressed{{/if}}">
+          <span class="ansu-chip {{#if this.isAlways}}always{{else if this.isActive}}active{{else}}passive{{/if}} gate {{#if this.suppressed}}suppressed{{/if}}">
             {{this.name}}
             {{#if this.actionsGlyph}}<span class="cost">{{this.actionsGlyph}}</span>{{/if}}
+            {{#if this.tag}}<span class="tag">{{this.tag}}</span>{{/if}}
             <span class="tag">{{localize "SHARDS.Ansu.UnlockMastery"}}</span>
+            {{#if this.reason}}<i class="fa-solid fa-comment-dots why" data-tooltip="{{this.reason}}"></i>{{/if}}
+            <span class="kit">
+              {{#if this.suppressed}}
+              <button type="button" data-action="editReason" data-family="{{this.family}}"
+                data-tooltip="{{localize 'SHARDS.Ansu.ReasonEdit'}}"><i class="fa-solid fa-pen"></i></button>
+              {{/if}}
+              <button type="button" data-action="toggleSuppress" data-family="{{this.family}}"
+                data-tooltip="{{#if this.suppressed}}{{localize 'SHARDS.Ansu.Unsuppress'}}{{else}}{{localize 'SHARDS.Ansu.Suppress'}}{{/if}}">
+                <i class="fa-solid {{#if this.suppressed}}fa-rotate-left{{else}}fa-ban{{/if}}"></i>
+              </button>
+            </span>
           </span>
           {{/each}}
         </div>
@@ -215,6 +252,20 @@
           <i class="fa-solid fa-dice-d20"></i> {{localize "SHARDS.Ansu.ReleaseTrigger"}}
         </button>
       </div>
+
+      {{#if release.reroll}}
+      <div class="ansu-reroll">
+        <p><i class="fa-solid fa-circle-h"></i> {{localize "SHARDS.Ansu.RerollReleaseTitle"}} —
+          {{release.reroll.fromLabel}} → <strong>{{release.reroll.toLabel}}</strong>
+          {{#if release.reroll.total}}<small>({{release.reroll.total}})</small>{{/if}}</p>
+        <div class="ansu-outcomes">
+          <button type="button" class="ansu-outcome-btn outcome-{{release.reroll.outcome}}" data-action="recordReroll"
+            data-tooltip="{{localize 'SHARDS.Ansu.RerollApplyHint'}}">{{localize "SHARDS.Ansu.RerollApply"}}</button>
+          <button type="button" class="ansu-ghost" data-action="dismissReroll"
+            data-tooltip="{{localize 'SHARDS.Ansu.RerollDismiss'}}"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      {{/if}}
 
       {{#if release.pending}}
       <div class="ansu-pending">

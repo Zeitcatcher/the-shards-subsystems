@@ -132,6 +132,21 @@ export function climbDeltaFor(outcome) {
 }
 
 /**
+ * May the Tenth Step fork be opened for this state?
+ *
+ * The fork is the last rung of the ladder, not a shortcut: only a bearer sitting
+ * at attunement 9 may choose Mastery or Taken through it, and a terminal has
+ * already chosen. Taken at ANY attunement is a separate door (the panel footer),
+ * because the Ansu does not have to wait for the bearer to climb. (0.6.6)
+ *
+ * @param {{terminal: unknown, level: number}} state
+ */
+export function forkAllowed({ terminal, level } = {}) {
+  if (terminal) return false;
+  return clampLevel(level) >= MAX_LEVEL - 1;
+}
+
+/**
  * Apply a climb delta (or an absolute set via `{ set }`): overflow carries the
  * level upward; a full bar at attunement 9 does NOT enter 10 — it caps and raises
  * `atTenth` so the GM chooses the fork (Mastery / Taken). Level 0 has no climb.

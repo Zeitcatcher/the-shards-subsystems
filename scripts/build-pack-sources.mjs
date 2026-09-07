@@ -17,6 +17,7 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ansuRuleTokenValues, ansuRulesCarryTokens, ansuScrubbedValue } from "./pack-checks.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULE_ID = "the-shards-subsystems";
@@ -302,19 +303,32 @@ function ansuScrub(text) {
     .replaceAll("{{ansuDuration}}", "1 round / 3 rounds / 1 minute by tier");
 }
 
-/** Pack-copy rules with number tokens neutralized (static docs can't compute). */
-function ansuScrubRules(rules) {
+/**
+ * Pack-copy rules with number tokens resolved at the entry's OWN unlock
+ * attunement. This used to substitute one flat constant per token whatever the
+ * entry, which happened to be right for the three level-gated entries and wrong
+ * for the Union upgrade of Ancestral Vigor: it shipped 3 temporary Hit Points
+ * where tempHpFor(7) is 21. The values come from model.mjs so a pack copy and a
+ * tracked sheet cannot drift. (0.6.6)
+ */
+function ansuScrubRules(rules, entry) {
+  const subs = ansuRuleTokenValues(entry);
   return (Array.isArray(rules) ? rules : []).map((r) => {
     const out = { ...r };
-    for (const [k, v] of Object.entries(out)) {
-      if (typeof v === "string" && v.includes("{{ansuTempHp}}")) out[k] = 3;
-      if (typeof v === "string" && v.includes("{{ansuResist}}")) out[k] = 3;
-      if (typeof v === "string" && v.includes("{{ansuParry}}")) out[k] = 2;
-      // Static copies can't know the bearer's tier; ship the Trial value.
-      if (typeof v === "string" && v.includes("{{ansuTierDice}}")) out[k] = 1;
-    }
+    for (const [k, v] of Object.entries(out)) out[k] = ansuScrubbedValue(v, subs);
     return out;
   });
+}
+
+/**
+ * A pack copy is one document at one attunement while its prose stays relative,
+ * so say which attunement its numbers are.
+ */
+function ansuDescription(entry) {
+  const text = ansuScrub(entry.description);
+  if (!ansuRulesCarryTokens(entry)) return text;
+  const level = Math.max(1, Number(entry.level) || 1);
+  return `${text}<hr /><p><em>Numbers in this copy are fixed at attunement ${level}. On a tracked bearer the module sets them from current attunement.</em></p>`;
 }
 
 function ansuFolderDoc(f, index) {
@@ -324,7 +338,7 @@ function ansuFolderDoc(f, index) {
 
 function ansuBaseSystemEffect(entry) {
   return {
-    description: { value: ansuScrub(entry.description) },
+    description: { value: ansuDescription(entry) },
     slug: `shards-ansu-${entry.id}`,
     duration: { value: -1, unit: "unlimited", sustained: false, expiry: null },
     unidentified: false,
@@ -332,7 +346,7 @@ function ansuBaseSystemEffect(entry) {
     tokenIcon: { show: true },
     badge: null,
     traits: { value: [], rarity: "common" },
-    rules: ansuScrubRules(entry.rules),
+    rules: ansuScrubRules(entry.rules, entry),
     start: { value: 0, initiative: null },
     publication: PUBLICATION,
   };
@@ -365,14 +379,14 @@ function ansuActionItem(entry) {
     folder: ansuFolderId(ansuTierKeyFor(entry)),
     sort: entry.level * 1000 + 250,
     system: {
-      description: { value: ansuScrub(entry.description) },
+      description: { value: ansuDescription(entry) },
       slug: `shards-ansu-${entry.id}`,
       actionType: { value: a.actionType ?? "action" },
       actions: { value: a.actions ?? null },
       category: a.category ?? null,
       traits: { value: a.traits ?? [], rarity: "common" },
       frequency: a.frequency ?? null,
-      rules: ansuScrubRules(entry.rules), // scrub tokens so an action's REs can't ship raw {{…}} (F)
+      rules: ansuScrubRules(entry.rules, entry), // scrub tokens so an action's REs can't ship raw {{…}} (F)
       publication: PUBLICATION,
     },
     flags: { [MODULE_ID]: { ansuPack: { entryId: entry.id, family: entry.family, kind: entry.kind } } },
@@ -390,7 +404,7 @@ function ansuFeatItem(entry) {
     folder: ansuFolderId(ansuTierKeyFor(entry)),
     sort: entry.level * 1000 + 500,
     system: {
-      description: { value: ansuScrub(entry.description) },
+      description: { value: ansuDescription(entry) },
       slug: `shards-ansu-${entry.id}`,
       category: "bonus",
       level: { value: entry.level },
@@ -399,7 +413,7 @@ function ansuFeatItem(entry) {
       prerequisites: { value: [] },
       traits: { value: [], rarity: "common" },
       frequency: null,
-      rules: ansuScrubRules(entry.rules),
+      rules: ansuScrubRules(entry.rules, entry),
       publication: PUBLICATION,
     },
     flags: { [MODULE_ID]: { ansuPack: { entryId: entry.id, family: entry.family, kind: entry.kind } } },
@@ -415,7 +429,7 @@ function ansuEntryItem(entry) {
     const s = entry.strikeData ?? {};
     const doc = ansuEffectItem(entry);
     doc.system.rules = [
-      ...ansuScrubRules(entry.rules),
+      ...ansuScrubRules(entry.rules, entry),
       {
         key: "Strike",
         slug: `shards-ansu-${entry.id}`,

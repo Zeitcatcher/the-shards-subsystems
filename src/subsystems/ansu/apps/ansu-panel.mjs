@@ -19,8 +19,20 @@ import {
   attuneActor,
   unattuneActor,
 } from "../state.mjs";
-import { tierForLevel, climbNeeded, MAX_LEVEL } from "../logic/model.mjs";
-import { selectEntries, buildCtx, injectNumbers, durationLabel, communionMode } from "../logic/reconcile.mjs";
+import { tierForLevel, climbNeeded, forkAllowed, MAX_LEVEL } from "../logic/model.mjs";
+import {
+  selectEntries,
+  buildCtx,
+  injectNumbers,
+  durationLabel,
+  communionMode,
+  doorsDead,
+  costGlyph,
+  actionDataFor,
+  ladderCtxLevel,
+} from "../logic/reconcile.mjs";
+import { dcDraftValue, rosterDots } from "../logic/panel.mjs";
+import { seizeReturnsTo } from "../logic/seizure.mjs";
 import { suggestChips } from "../logic/suggest.mjs";
 import { loadContent } from "../content.mjs";
 import { syncActor, syncAllAttuned, displayTier, readDials, inActiveCombat } from "../sync.mjs";
@@ -30,9 +42,10 @@ import {
   suggestedDC,
   recordReleaseOutcome,
   clearPendingRelease,
+  dismissReleaseReroll,
   postUrge,
 } from "../mechanics/release.mjs";
-import { suggestedCallDC, recordCallOutcome, clearPendingCall } from "../mechanics/call.mjs";
+import { suggestedCallDC, recordCallOutcome, clearPendingCall, dismissCallReroll } from "../mechanics/call.mjs";
 import { startSeizure, returnFromSeizure, isSeized } from "../mechanics/seizure.mjs";
 import { exportLog } from "../journal.mjs";
 import { triggerFork, triggerTaken, setAttunement, applyClimbChange } from "../transform.mjs";
@@ -50,6 +63,40 @@ const resolveActor = (uuid) => (uuid ? fromUuidSync(uuid) : null);
 
 function tierLabelFor(st) {
   return game.i18n.localize(`SHARDS.Ansu.Tier.${displayTier(st)}`);
+}
+
+/* ------------------------------------------------------------------ */
+/* GM gate                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * This is a GM dashboard: every control writes another character's subsystem
+ * flags, and several of them (Seize, the terminals, Remove attunement) are
+ * one-way. Only the scene-control button was ever gated. The module API —
+ * `game.modules.get(...).api.openPanel("ansu")`, mirrored on
+ * `globalThis.TheShardsSubsystems` — is defined on every client, so a player who
+ * ran the launcher macro or typed one line in the console got the whole panel,
+ * and Foundry then happily let them drive their OWN actor's attunement, Climb
+ * and Communion, because they own it. Gated three times over: the entry point,
+ * the render, and every action handler. (0.6.6)
+ */
+const isGM = () => game.user?.isGM === true;
+
+function refuseNonGM() {
+  ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.GmOnly"));
+}
+
+/** Wrap an action map so a hand-built click can never reach a mutation. */
+function gmGuarded(actions) {
+  return Object.fromEntries(
+    Object.entries(actions).map(([name, handler]) => [
+      name,
+      function guarded(...args) {
+        if (!isGM()) return refuseNonGM();
+        return handler.apply(this, args);
+      },
+    ]),
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,7 +141,7 @@ async function onUnmark(_event, target) {
   if (!actor) return;
   const ok = await foundry.applications.api.DialogV2.confirm({
     window: { title: game.i18n.localize("SHARDS.Ansu.Unmark") },
-    content: `<p>${game.i18n.format("SHARDS.Ansu.UnmarkConfirm", { name: actor.name })}</p>`,
+    content: `<p>${game.i18n.format("SHARDS.Ansu.UnmarkConfirm", { name: foundry.utils.escapeHTML(actor.name) })}</p>`,
   }).catch(() => false);
   if (!ok) return;
   await patchAnsu(actor, { enabled: false });
@@ -129,8 +176,10 @@ async function onLevelDown() {
 async function onFork() {
   const actor = resolveActor(this._actorUuid);
   if (!actor) return;
-  const st = readAnsu(actor);
-  if (st.terminal) return;
+  // Mirror triggerFork's own gate so the panel never opens a dialog it can't
+  // finish. Below attunement 9 the button and the ladder chip are disabled, so
+  // this only catches a keyboard route or a stale render. (0.6.6)
+  if (!forkAllowed(readAnsu(actor))) return;
   await triggerFork(actor);
   this.render();
 }
@@ -248,8 +297,13 @@ async function onReleaseSave() {
 async function onEndNoSave() {
   const actor = resolveActor(this._actorUuid);
   if (!actor) return;
-  await endCommunion(actor, { via: "gm-override" });
-  await appendLog(actor, "communion", { on: false, via: "gm-override-note" }, game.i18n.localize("SHARDS.Ansu.EndNoSaveNote"));
+  // endCommunion writes the history row itself; appending a second one here put
+  // the same "Communion ended" line in twice at the same timestamp, because
+  // describeEntry ignores `via`. The note rides on the one row now. (0.6.6)
+  await endCommunion(actor, {
+    via: "gm-override",
+    note: game.i18n.localize("SHARDS.Ansu.EndNoSaveNote"),
+  });
   this.render();
 }
 
@@ -261,8 +315,9 @@ async function onSeize() {
     // A manual (GM) seizure restores the exact pre-seizure snapshot. An auto
     // seizure returned by hand must still land in its thenMode — otherwise an
     // out-of-combat Call crit-fail (thenMode "active") never delivers the
-    // Communion the "Ansu comes anyway" beat promises. (B9)
-    const toMode = st.seizure?.auto ? (st.seizure.thenMode === "active" ? "active" : "lingering") : null;
+    // Communion the "Ansu comes anyway" beat promises. (B9) The button's tooltip
+    // reads the same answer, so the two can't disagree. (0.6.6)
+    const toMode = seizeReturnsTo(st);
     await returnFromSeizure(actor, toMode ? { toMode } : {});
   } else {
     await startSeizure(actor, { auto: false });
@@ -280,6 +335,39 @@ async function onRecordOutcome(_event, target) {
 async function onClearPending() {
   const actor = resolveActor(this._actorUuid);
   if (actor) await clearPendingRelease(actor);
+  this.render();
+}
+
+// A hero point rerolled a roll the module had already resolved. The capture
+// applied nothing; record or ignore is the GM's answer. (0.6.6)
+
+async function onRecordReroll() {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  const st = readAnsu(actor);
+  if (!st.rerollRelease) return;
+  await recordReleaseOutcome(actor, st.rerollRelease.outcome, st.rerollRelease.total ?? null, { force: true });
+  this.render();
+}
+
+async function onDismissReroll() {
+  const actor = resolveActor(this._actorUuid);
+  if (actor) await dismissReleaseReroll(actor);
+  this.render();
+}
+
+async function onRecordCallReroll() {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  const st = readAnsu(actor);
+  if (!st.rerollCall) return;
+  await recordCallOutcome(actor, st.rerollCall.outcome, st.rerollCall.total ?? null, { force: true });
+  this.render();
+}
+
+async function onDismissCallReroll() {
+  const actor = resolveActor(this._actorUuid);
+  if (actor) await dismissCallReroll(actor);
   this.render();
 }
 
@@ -355,24 +443,31 @@ async function promptText(initial, titleKey) {
 /* View-model builders                                                 */
 /* ------------------------------------------------------------------ */
 
-function chipFor(entry, st, replacedIds, ctx) {
+function chipFor(entry, st, replacedIds, ctx, doorsClosed = false) {
   const suppressedRec = st.suppressed.find((s) => s.id === entry.family);
   const isActive = entry.form === "action" || entry.form === "strike";
+  // At the Taken terminal the two door actions leave the sheet (composeActions
+  // drops them), so the ladder must not go on offering them either. (0.6.6)
+  const dead = doorsClosed && entry.door === true;
   let tag = null;
   if (entry.chipTag) tag = injectNumbers(entry.chipTag, ctx);
   else if (entry.form === "strike") tag = game.i18n.localize("SHARDS.Ansu.TagStrike");
   else if (entry.actionData?.perCommunion) tag = "1/communion";
   if (replacedIds.includes(entry.id)) tag = game.i18n.localize("SHARDS.Ansu.TagReplaced");
-  const nActions = entry.actionData?.actions ?? 0;
+  if (dead) tag = game.i18n.localize("SHARDS.Ansu.TagDoorClosed");
   return {
     family: entry.family,
     name: entry.name,
     isActive,
     isAlways: Boolean(entry.always),
     isPassive: !isActive && !entry.always,
-    actionsGlyph: isActive && nActions ? "◆".repeat(nActions) : entry.actionData?.actionType === "free" ? "◇" : "",
+    // Third place the cost is read, after the sheet item and the Communion
+    // effect's ability list: a subjugated master's Invoke is a free action in
+    // all three or in none. (0.6.6)
+    actionsGlyph: costGlyph(actionDataFor(entry, st)),
     tag,
     replaced: replacedIds.includes(entry.id),
+    dead,
     suppressed: Boolean(suppressedRec),
     reason: suppressedRec?.reason ?? "",
   };
@@ -380,7 +475,15 @@ function chipFor(entry, st, replacedIds, ctx) {
 
 function buildLadder(st, content, charLevel, dials) {
   const { replacedIds } = selectEntries({ ...st, suppressed: [] }, content);
-  const ctx = buildCtx(charLevel, Math.max(1, st.level), dials);
+  const doorsClosed = doorsDead(communionMode(st));
+  // One context per LEVEL, not one for the whole ladder: a locked row previews
+  // its own unlock numbers while an unlocked row keeps the bearer's live ones.
+  const cache = new Map();
+  const ctxFor = (rowLevel) => {
+    const at = ladderCtxLevel({ rowLevel, level: st.level });
+    if (!cache.has(at)) cache.set(at, buildCtx(charLevel, at, dials));
+    return cache.get(at);
+  };
   const groups = TIER_GROUPS.map((g) => ({
     tierId: g.id,
     label: game.i18n.localize(`SHARDS.Ansu.Tier.${g.id}`),
@@ -393,13 +496,13 @@ function buildLadder(st, content, charLevel, dials) {
       chips: content.entries
         .filter((e) => e.level === lvl && !e.gate)
         .sort((a, b) => Number(Boolean(a.always)) - Number(Boolean(b.always)) || a.id.localeCompare(b.id))
-        .map((e) => chipFor(e, st, replacedIds, ctx)),
+        .map((e) => chipFor(e, st, replacedIds, ctxFor(lvl), doorsClosed)),
     })),
   }));
 
   const gateChips = content.entries
     .filter((e) => e.gate === "subjugated")
-    .map((e) => chipFor(e, st, replacedIds, ctx));
+    .map((e) => chipFor(e, st, replacedIds, ctxFor(e.level ?? MAX_LEVEL), doorsClosed));
 
   return { groups, gateChips };
 }
@@ -423,6 +526,22 @@ function buildClimb(st, dials) {
 
 const OUTCOMES = ["criticalSuccess", "success", "failure", "criticalFailure"];
 
+/**
+ * The one-line reroll notice: what was recorded against what the reroll says.
+ * Rendered outside the pending block — by the time a hero point is spent the
+ * pending marker is long gone. (0.6.6)
+ */
+function rerollView(rec) {
+  if (!rec?.outcome) return null;
+  const label = (o) => (o ? game.i18n.localize(`SHARDS.Ansu.Outcome.${o}`) : "—");
+  return {
+    outcome: rec.outcome,
+    fromLabel: label(rec.from),
+    toLabel: label(rec.outcome),
+    total: Number.isFinite(rec.total) ? rec.total : null,
+  };
+}
+
 function buildRelease(st, dcPreview) {
   const suggestionsOn = game.settings.get(MODULE_ID, SETTINGS.ANSU_SUGGESTIONS) === true;
   return {
@@ -430,6 +549,7 @@ function buildRelease(st, dcPreview) {
     subjugated: st.terminal === "subjugated",
     taken: st.terminal === "taken",
     pending: st.pendingRelease ? { ...st.pendingRelease } : null,
+    reroll: rerollView(st.rerollRelease),
     outcomes: OUTCOMES.map((o) => ({ key: o, label: game.i18n.localize(`SHARDS.Ansu.Outcome.${o}`) })),
     chips: suggestChips(st.log, { enabled: suggestionsOn }).map((c) => ({
       chip: c.action,
@@ -462,10 +582,15 @@ function buildComm(actor, st) {
     mode,
     modeLabel: game.i18n.localize(`SHARDS.Ansu.Mode.${mode === "none" || mode === "off" ? "dormant" : mode}`),
     rounds,
+    // Null is "no countdown to show"; 0 is the final round, and the template
+    // needs the two apart because {{#if 0}} is false. (0.6.6)
+    hasRounds: rounds !== null,
+    finalRound: rounds === 0,
     stamped: st.communion?.rounds ?? null,
     canInvoke: !running && st.terminal !== "taken" && (st.level >= 1 || st.terminal === "subjugated"),
     invokeIsCall: !st.terminal, // pre-Mastery the button posts the Call check
     pendingCall: st.pendingCall ? { ...st.pendingCall } : null,
+    callReroll: rerollView(st.rerollCall),
     callOutcomes: OUTCOME_KEYS.map((o) => ({ key: o, label: game.i18n.localize(`SHARDS.Ansu.OutcomeShort.${o}`) })),
     canForceInvoke: !running && !st.terminal && st.level >= 1,
     canRelease: running && !seized && st.terminal !== "taken",
@@ -474,6 +599,9 @@ function buildComm(actor, st) {
     showSeize: !st.terminal,
     seized: mode === "seized",
     seizeAuto: Boolean(st.seizure?.auto),
+    // Where Return actually lands them, so the tooltip stops promising "the
+    // exact pre-seizure state" for the two auto variants that never restore it.
+    seizeReturnsTo: seizeReturnsTo(st),
   };
 }
 
@@ -481,8 +609,46 @@ function buildComm(actor, st) {
 /* The application                                                     */
 /* ------------------------------------------------------------------ */
 
+/** The action map, before the GM guard wraps every entry. */
+const PANEL_ACTIONS = {
+  selectActor: onSelectActor,
+  markSelected: onMarkSelected,
+  unmark: onUnmark,
+  levelUp: onLevelUp,
+  levelDown: onLevelDown,
+  fork: onFork,
+  taken: onTaken,
+  climbPlus: onClimbPlus,
+  climbMinus: onClimbMinus,
+  climbSet: onClimbSet,
+  toggleSuppress: onToggleSuppress,
+  editReason: onEditReason,
+  invoke: onInvoke,
+  forceInvoke: onForceInvoke,
+  recordCall: onRecordCall,
+  clearPendingCall: onClearPendingCall,
+  releaseSave: onReleaseSave,
+  endNoSave: onEndNoSave,
+  seize: onSeize,
+  recordOutcome: onRecordOutcome,
+  clearPending: onClearPending,
+  recordReroll: onRecordReroll,
+  dismissReroll: onDismissReroll,
+  recordCallReroll: onRecordCallReroll,
+  dismissCallReroll: onDismissCallReroll,
+  chip: onChip,
+  exportJournal: onExportJournal,
+  resync: onResync,
+  openArt: onOpenArt,
+  openHistory: onOpenHistory,
+};
+
 export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   _actorUuid = null;
+  // Which bearer the DC / reason boxes were typed for. The drafts are app-level
+  // fields, so without this a DC typed for one bearer pre-filled every bearer
+  // selected afterwards and overrode their own computed suggestion. (0.6.6)
+  _draftUuid = null;
   _dcDraft = null;
   _reasonDraft = "";
 
@@ -492,39 +658,17 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     tag: "div",
     window: { title: "SHARDS.Ansu.PanelTitle", icon: "fa-solid fa-hand-fist", resizable: true },
     position: { width: 960, height: 760 },
-    actions: {
-      selectActor: onSelectActor,
-      markSelected: onMarkSelected,
-      unmark: onUnmark,
-      levelUp: onLevelUp,
-      levelDown: onLevelDown,
-      fork: onFork,
-      taken: onTaken,
-      climbPlus: onClimbPlus,
-      climbMinus: onClimbMinus,
-      climbSet: onClimbSet,
-      toggleSuppress: onToggleSuppress,
-      editReason: onEditReason,
-      invoke: onInvoke,
-      forceInvoke: onForceInvoke,
-      recordCall: onRecordCall,
-      clearPendingCall: onClearPendingCall,
-      releaseSave: onReleaseSave,
-      endNoSave: onEndNoSave,
-      seize: onSeize,
-      recordOutcome: onRecordOutcome,
-      clearPending: onClearPending,
-      chip: onChip,
-      exportJournal: onExportJournal,
-      resync: onResync,
-      openArt: onOpenArt,
-      openHistory: onOpenHistory,
-    },
+    actions: gmGuarded(PANEL_ACTIONS),
   };
 
   static PARTS = {
     main: { template: TEMPLATES.ANSU_PANEL },
   };
+
+  /** Nothing renders this dashboard for a player, whatever opened it. */
+  _canRender() {
+    return isGM();
+  }
 
   _onRender(context, options) {
     super._onRender?.(context, options);
@@ -533,7 +677,10 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const dcInput = this.element.querySelector('input[name="releaseDc"]');
     const reasonInput = this.element.querySelector('input[name="releaseReason"]');
     if (dcInput) {
-      if (this._dcDraft !== null) dcInput.value = this._dcDraft;
+      // An emptied box is not a draft: restoring "" here blanked the DC on every
+      // render until a number was typed and the trigger pressed. (0.6.6)
+      const restored = dcDraftValue({ draft: this._dcDraft, suggested: null });
+      if (restored !== null) dcInput.value = restored;
       dcInput.addEventListener("input", () => (this._dcDraft = dcInput.value));
     }
     if (reasonInput) {
@@ -547,6 +694,14 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this._actorUuid && !attuned.some((a) => a.uuid === this._actorUuid)) this._actorUuid = null;
     if (!this._actorUuid && attuned.length) this._actorUuid = attuned[0].uuid;
 
+    // Five code paths reassign _actorUuid, so the drafts are invalidated here,
+    // where the selection has finally settled, rather than in one handler.
+    if (this._draftUuid !== this._actorUuid) {
+      this._draftUuid = this._actorUuid;
+      this._dcDraft = null;
+      this._reasonDraft = "";
+    }
+
     const roster = attuned.map((a) => {
       const st = readAnsu(a);
       const izirFlag = readSubsystemFlag(a, IZIR);
@@ -559,8 +714,7 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         tierLabel: tierLabelFor(st),
         terminal: st.terminal,
         pending: Boolean(st.pendingRelease),
-        communing: st.communion?.mode === "active" || st.communion?.mode === "lingering",
-        seized: st.communion?.mode === "seized" || st.terminal === "taken",
+        ...rosterDots(st),
         dualIzir: Boolean(izirFlag) && izirFlag.enabled !== false,
         selected: a.uuid === this._actorUuid,
       };
@@ -594,7 +748,7 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         canUp: !st.terminal,
         atNinth: !st.terminal && st.level === MAX_LEVEL - 1,
       };
-      detail.releaseDcDraft = this._dcDraft ?? dcPreview;
+      detail.releaseDcDraft = dcDraftValue({ draft: this._dcDraft, suggested: dcPreview });
       const content = await loadContent().catch(() => null);
       if (content) ladder = buildLadder(st, content, charLevel, dials);
       climb = buildClimb(st, dials);
@@ -620,6 +774,12 @@ let instance;
 
 /** Open (or focus) the Ansu panel, optionally on an actor and at a handed-off position. */
 export function openAnsuPanel(actorUuid, opts = {}) {
+  // The module API reaches every client, so this is a real entry point for a
+  // player, not just the GM's toolbar button. (0.6.6)
+  if (!isGM()) {
+    refuseNonGM();
+    return;
+  }
   instance ??= new AnsuPanel();
   if (actorUuid) instance._actorUuid = actorUuid;
   instance.render({ force: true });

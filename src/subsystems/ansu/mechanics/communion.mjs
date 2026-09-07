@@ -10,12 +10,19 @@
  */
 
 import { MODULE_ID, ANSU } from "../../../core/constants.mjs";
-import { isPrimaryGM } from "../../../core/platform.mjs";
+import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
 import { readAnsu, patchAnsu, appendLog, isAttuned, listAttunedActors } from "../state.mjs";
 import { durationRounds } from "../logic/model.mjs";
-import { sweepHandlesExpiry, turnEndReleaseDue } from "../logic/timing.mjs";
+import {
+  sweepHandlesExpiry,
+  turnEndReleaseDue,
+  endedRoundOf,
+  roundRolledOver,
+  communionLooksExpired,
+  roundsLeftFrom,
+} from "../logic/timing.mjs";
 import { COMMUNION_ENTRY_ID } from "../logic/reconcile.mjs";
-import { syncActor } from "../sync.mjs";
+import { syncActor, encounterOf } from "../sync.mjs";
 import { loadContent } from "../content.mjs";
 import { callRelease, suggestedDC } from "./release.mjs";
 import { callTheCall, suggestedCallDC } from "./call.mjs";
@@ -27,16 +34,25 @@ export function findCommunionEffect(actor) {
   return actor.items.find((i) => i.getFlag?.(MODULE_ID, ANSU)?.entryId === COMMUNION_ENTRY_ID);
 }
 
-/** Remaining rounds on the Communion effect (native duration, defensively read). */
+/**
+ * Rounds left on the Communion effect (native duration, defensively read), or
+ * null when the effect carries no countdown at all. The old signature returned 0
+ * for both an unlimited effect and the final round, and the panel's `{{#if}}`
+ * hid the row in both cases. (0.6.6)
+ */
 export function remainingRounds(effect) {
+  let remaining;
   try {
-    const seconds = effect.remainingDuration?.remaining;
-    if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds / 6));
+    remaining = effect.remainingDuration?.remaining;
   } catch {
-    /* fall through to the raw duration */
+    /* pf2e computes this against world time; a bad read just means no signal */
   }
-  const v = Number(effect.system?.duration?.value);
-  return Number.isFinite(v) && v > 0 ? v : 0;
+  return roundsLeftFrom({
+    remaining,
+    value: effect.system?.duration?.value,
+    unit: effect.system?.duration?.unit,
+    roundTime: globalThis.CONFIG?.time?.roundTime,
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -59,7 +75,9 @@ export async function invokeCommunion(actor, note = "") {
     return;
   }
   const rounds = st.terminal === "subjugated" ? null : durationRounds(st.level);
-  await patchAnsu(actor, { communion: { mode: "active", rounds } });
+  // startAt is the seizure return's one-shot clock compensation; a fresh Invoke
+  // starts its countdown at the sync, so clear any leftover stamp. (0.6.6)
+  await patchAnsu(actor, { communion: { mode: "active", rounds, startAt: null } });
   await appendLog(actor, "communion", { on: true, rounds }, note);
   await syncActor(actor);
   refreshAnsuPanel();
@@ -93,26 +111,39 @@ export async function requestInvoke(actor) {
 /**
  * End Communion cleanly (successful release, subjugated free toggle, or the GM's
  * no-save override). Climb movement is the release recorder's business.
+ *
+ * `note` rides along to the history row this writes. Without it the panel's
+ * "End (no save)" had to append a SECOND row to carry its override note, and
+ * `describeEntry` ignores `via`, so the History dialog and the journal export
+ * both showed "Communion ended" twice at the same timestamp. (0.6.6)
  */
-export async function endCommunion(actor, { via = "gm" } = {}) {
+export async function endCommunion(actor, { via = "gm", note = "" } = {}) {
   const st = readAnsu(actor);
   if (st.communion.mode === "none") return;
   // Ending Communion clears any open release roll and any seizure blob, so a stale
   // pendingRelease can't wedge the next communion's automation and a seizure can't
   // be stranded with the panel Return button dead. (B6, B7)
-  await patchAnsu(actor, { communion: { mode: "none", rounds: null }, pendingRelease: null, seizure: null });
-  await appendLog(actor, "communion", { on: false, via });
+  await patchAnsu(actor, {
+    communion: { mode: "none", rounds: null, startAt: null },
+    pendingRelease: null,
+    seizure: null,
+  });
+  await appendLog(actor, "communion", { on: false, via }, note);
   await syncActor(actor);
   refreshAnsuPanel();
 }
 
-/** Slip from active into Lingering (failed release / expired duration unresolved). */
-export async function slipToLingering(actor) {
+/**
+ * Slip from active into Lingering (failed release / expired duration unresolved).
+ * `runOpts` is the expiry rebuild, passed straight to the sync that re-creates
+ * the effect pf2e just deleted.
+ */
+export async function slipToLingering(actor, runOpts = {}) {
   const st = readAnsu(actor);
   if (st.communion.mode !== "active" && st.communion.mode !== "seized") return;
-  await patchAnsu(actor, { communion: { mode: "lingering", rounds: null } });
+  await patchAnsu(actor, { communion: { mode: "lingering", rounds: null, startAt: null } });
   await appendLog(actor, "lingering", {});
-  await syncActor(actor);
+  await syncActor(actor, runOpts);
   refreshAnsuPanel();
 }
 
@@ -123,19 +154,28 @@ export async function slipToLingering(actor) {
 // One expiry chain per actor. Our combat sweep and pf2e's deletion of the expired
 // effect can both reach handleExpiry on the same turn change; whichever arrives
 // first owns it, and the other must not post a second Release card. (0.6.5)
+// Keyed by uuid: two unlinked tokens of one statblock share actor.id, and this
+// guard is held across three awaits — one token's expiry ate the other's. (0.6.6)
 const expiring = new Set();
 
 /**
  * On expiry of the Communion countdown: post the Release save and slip to
  * Lingering — the boons stay on while the bearer wrestles the Ansu back down.
+ *
+ * `runOpts` arrives only from the deleteItem path, where pf2e removed the
+ * expired effect: the Lingering sync below RE-creates it, so it must be told not
+ * to re-fire the create-time grants and given back the temp HP pool the delete
+ * zeroed. The sweep path (removeEffects off) is an in-place update and needs
+ * neither. (0.6.6)
  */
-export async function handleExpiry(actor) {
+export async function handleExpiry(actor, runOpts = {}) {
   const st = readAnsu(actor);
   if (st.communion.mode !== "active" || st.terminal) return;
-  if (expiring.has(actor.id)) return;
-  expiring.add(actor.id);
+  const key = actorKey(actor);
+  if (expiring.has(key)) return;
+  expiring.add(key);
   try {
-    await slipToLingering(actor);
+    await slipToLingering(actor, runOpts);
     // Re-read before deciding: the state was just written, and a player's own
     // Release click could have landed a pending marker while we awaited.
     const now = readAnsu(actor);
@@ -143,7 +183,7 @@ export async function handleExpiry(actor) {
       await callRelease(actor, suggestedDC(now), game.i18n.localize("SHARDS.Ansu.ExpiryReason"));
     }
   } finally {
-    expiring.delete(actor.id);
+    expiring.delete(key);
   }
 }
 
@@ -162,29 +202,76 @@ async function handleTurnEnd(actor) {
 // effect tracker normally deletes it right after this hook, and that delete is
 // what resolves the expiry; the sweep only steps in when pf2e demonstrably
 // didn't (auto-removal off, or the item still sitting there a sweep later).
+// Keyed by uuid — on actor.id a non-expired sibling token wiped its twin's
+// grace mark on every sweep, no race needed. (0.6.6)
 const seenExpired = new Set();
+
+/** Every readable expiry signal on a live Communion effect, defensively. */
+function looksExpired(effect) {
+  let remainingExpired;
+  try {
+    remainingExpired = effect.remainingDuration?.expired;
+  } catch {
+    /* pf2e computes this against world time; a bad read is simply no signal */
+  }
+  return communionLooksExpired({
+    remainingExpired,
+    isExpired: effect.isExpired,
+    systemExpired: effect.system?.expired,
+  });
+}
+
+/**
+ * Resolve one bearer's expired countdown, honouring the grace rule: with pf2e's
+ * auto-removal on, its delete of the expired item is what carries the expiry, so
+ * we stand down for exactly one pass and only step in when it demonstrably did
+ * not. Shared by the combat sweep and the world-time sweep.
+ */
+async function resolveExpiry(actor, removeEffects) {
+  const st = readAnsu(actor);
+  const effect = st.communion.mode === "active" && !st.terminal ? findCommunionEffect(actor) : null;
+  const key = actorKey(actor);
+  if (!effect || !looksExpired(effect)) {
+    seenExpired.delete(key);
+    return;
+  }
+  if (sweepHandlesExpiry(removeEffects, seenExpired.has(key))) {
+    seenExpired.delete(key);
+    await handleExpiry(actor);
+  } else {
+    seenExpired.add(key);
+  }
+}
 
 async function sweepCombat(combat) {
   const removeEffects = game.pf2e?.settings?.automation?.removeEffects;
-
   for (const combatant of combat.combatants) {
     const actor = combatant.actor;
     if (!actor || !isAttuned(actor)) continue;
+    await resolveExpiry(actor, removeEffects);
+  }
+}
 
-    // Expired countdown → release save + lingering.
-    const st = readAnsu(actor);
-    const effect = st.communion.mode === "active" ? findCommunionEffect(actor) : null;
-    const expired = Boolean(effect) && (effect.isExpired === true || effect.system?.expired === true);
-    if (!expired) {
-      seenExpired.delete(actor.id);
-      continue;
-    }
-    if (sweepHandlesExpiry(removeEffects, seenExpired.has(actor.id))) {
-      seenExpired.delete(actor.id);
-      await handleExpiry(actor);
-    } else {
-      seenExpired.add(actor.id);
-    }
+/**
+ * The same expiry check for bearers no encounter is watching.
+ *
+ * A turn change was the only thing that ever resolved an expiry: the combat
+ * sweep, or pf2e deleting the expired item. With `automation.removeEffects` off
+ * (a configuration `sweepHandlesExpiry` exists to support) the second path does
+ * not exist, so a fight that ended mid-Communion left the state "active" forever
+ * with every rule element ignored and no Release ever posted. World time moves
+ * on its own (the GM's clock, a rest) and the rounds countdown keeps running
+ * against it, so this is where that expiry lands. (0.6.6)
+ *
+ * Bearers still IN a started encounter are skipped deliberately: a round advance
+ * fires both hooks, and handling them here as well would spend the one sweep of
+ * grace `sweepHandlesExpiry` gives pf2e's own removal to act first.
+ */
+async function sweepExpiryOutsideCombat() {
+  const removeEffects = game.pf2e?.settings?.automation?.removeEffects;
+  for (const actor of listAttunedActors()) {
+    if (encounterOf(actor)) continue;
+    await resolveExpiry(actor, removeEffects);
   }
 }
 
@@ -268,10 +355,11 @@ async function maybeStartCooldown(actor, entryId) {
   refreshAnsuPanel();
 }
 
+/** GM-only card. Escaped here, at the choke point: no lang value carries markup. */
 async function whisperGMCard(actor, text) {
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   await ChatMessage.create({
-    content: `<div class="ansu-card"><p>${text}</p></div>`,
+    content: `<div class="ansu-card"><p>${foundry.utils.escapeHTML(String(text ?? ""))}</p></div>`,
     whisper: gmIds,
     speaker: ChatMessage.getSpeaker({ actor }),
   });
@@ -290,6 +378,17 @@ async function sweepCooldowns() {
     await syncActor(actor);
   }
   refreshAnsuPanel();
+}
+
+/**
+ * A bearer joining a started encounter with Communion already running: resync so
+ * the untimed effect picks up its rounds countdown. Fire-and-forget; syncActor
+ * is a no-op when there is nothing to change.
+ */
+function startCommunionClock(actor) {
+  if (!actor || !isAttuned(actor)) return;
+  if (readAnsu(actor).communion.mode !== "active") return;
+  syncActor(actor).catch((err) => console.error(`${MODULE_ID} | ansu communion clock on combat start`, err));
 }
 
 /* ------------------------------------------------------------------ */
@@ -315,19 +414,45 @@ export function registerCommunionHooks() {
     if (!isPrimaryGM()) return;
     const actor = combatant?.actor;
     if (!actor || !isAttuned(actor)) return;
+    // Resolve the round the ended turn BELONGED to. The combat update lands
+    // before this hook, so when the last combatant in the order finishes,
+    // encounter.round already shows the next one — and passing that down handed
+    // a seized body back at the end of the very turn the seizure began on. (0.6.6)
+    const endedRound = endedRoundOf({ combatant, encounter });
+    const rolledOver = roundRolledOver({ endedRound, currentRound: encounter?.round });
     (async () => {
-      await maybeReturnFromSeizure(actor, encounter); // 1-round crit-fail seizure
+      // 1-round crit-fail seizure; rolledOver also anchors the returned clock
+      await maybeReturnFromSeizure(actor, encounter, { round: endedRound, rolledOver });
       await handleTurnEnd(actor); // lingering re-save
     })().catch((err) => console.error(`${MODULE_ID} | ansu turn end`, err));
   });
 
-  // Cooldowns run on world time (combat rounds advance it; so does the GM's clock).
+  // A Communion invoked out of combat is written with no duration at all. When the
+  // fight starts — or the bearer is dropped into one already running — the tier
+  // countdown has to be installed: the composed content is identical either way,
+  // so only syncActor's own duration-drift check can see it. (0.6.6)
+  Hooks.on("combatStart", (combat) => {
+    if (!isPrimaryGM()) return;
+    for (const combatant of combat.combatants) startCommunionClock(combatant.actor);
+  });
+
+  Hooks.on("createCombatant", (combatant) => {
+    if (!isPrimaryGM()) return;
+    startCommunionClock(combatant?.actor);
+  });
+
+  // Cooldowns run on world time (combat rounds advance it; so does the GM's clock),
+  // and so does the Communion countdown once no turn change is coming.
   Hooks.on("updateWorldTime", () => {
     if (!isPrimaryGM()) return;
     sweepCooldowns().catch((err) => console.error(`${MODULE_ID} | ansu cooldown sweep`, err));
+    sweepExpiryOutsideCombat().catch((err) => console.error(`${MODULE_ID} | ansu world-time expiry sweep`, err));
   });
 
-  // A combat ending mid-Communion leaves the effect unlimited; nothing to do.
+  // A combat ending mid-Communion does NOT rewrite the effect: it keeps its rounds
+  // duration and goes on running against world time, so it expires later through
+  // pf2e's delete or the world-time sweep above. Check once here too, since the
+  // countdown may already have run out during the last turn.
   // A deleted combat with a live 1-round seizure must still return the body.
   Hooks.on("deleteCombat", (combat) => {
     if (!isPrimaryGM()) return;
@@ -338,6 +463,9 @@ export function registerCommunionHooks() {
         console.error(`${MODULE_ID} | ansu seizure return on combat end`, err),
       );
     }
+    sweepExpiryOutsideCombat().catch((err) =>
+      console.error(`${MODULE_ID} | ansu expiry sweep on combat end`, err),
+    );
   });
 
   // Sweep once on load: a cooldown that lapsed while the world was closed should

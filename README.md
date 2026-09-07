@@ -2,7 +2,7 @@
 
 GM tools for the homebrew world The Shards, run in Pathfinder Second Edition (Remaster) on Foundry VTT.
 
-> Pre-release. Izir is playtested end to end; Ansu is new in v0.4.0. Full docs and screenshots come with the stable release.
+> Pre-release. Izir is playtested end to end; Ansu is engine-complete and in playtest. Screenshots come with the stable release.
 
 ## Izir
 
@@ -35,6 +35,8 @@ A mastery track for murkhor bearers. The GM attunes an actor and grows their bon
 - Foundry VTT v14
 - Pathfinder 2e system v8.2.0+
 
+Verified on Foundry 14.367 with Pathfinder 2e 8.5.0.
+
 ## Install
 
 In Foundry: Add-on Modules, Install Module, paste the manifest URL:
@@ -43,7 +45,7 @@ In Foundry: Add-on Modules, Install Module, paste the manifest URL:
 https://github.com/Zeitcatcher/the-shards-subsystems/releases/latest/download/module.json
 ```
 
-Engine, content, and the compendium are done. Still ahead: vault documentation and the stable-release docs.
+Engine, content, and both compendia are done. Screenshots and the stable-release polish are still ahead.
 
 ## License
 

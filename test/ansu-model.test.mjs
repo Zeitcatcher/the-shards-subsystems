@@ -10,6 +10,7 @@ import {
   parryFor,
   tierDiceFor,
   climbNeeded,
+  forkAllowed,
   climbDeltaFor,
   applyClimb,
   TIERS,
@@ -160,5 +161,46 @@ describe("the Climb", () => {
   it("respects custom dials during carry", () => {
     // base 1, step 0 → every level needs 1 point: 3 points from level 1 → level 4
     expect(applyClimb(1, 0, 3, { base: 1, step: 0 })).toEqual({ level: 4, climb: 0, leveled: true, atTenth: false });
+  });
+
+  // The ceiling `setAttunement`'s demotion clamp has to respect: one point below
+  // the bar is the highest value that is NOT a level-up waiting to happen, and
+  // `needed(L) - 1 === needed(L - 1)`, so clamping inclusive on a step down left
+  // a full, glowing, inert bar. (item 10)
+  it("a bar one point short of full never levels, at any attunement", () => {
+    for (let level = 1; level <= 9; level += 1) {
+      const r = applyClimb(level, climbNeeded(level) - 1, 0);
+      expect(r).toEqual({ level, climb: climbNeeded(level) - 1, leveled: false, atTenth: false });
+    }
+  });
+
+  // What the Climb whisper has to report: at attunement 9 the bar caps, so a
+  // clean Release can move nothing at all, or less than its delta. (item 18)
+  it("is a pure no-op on a full bar at attunement 9", () => {
+    expect(applyClimb(9, 11, 1)).toEqual({ level: 9, climb: 11, leveled: false, atTenth: true });
+  });
+  it("takes only what fits when the bar is one short at attunement 9", () => {
+    expect(applyClimb(9, 10, 2)).toEqual({ level: 9, climb: 11, leveled: false, atTenth: true });
+  });
+});
+
+describe("forkAllowed", () => {
+  it("opens only on the ninth rung", () => {
+    expect(forkAllowed({ terminal: null, level: 9 })).toBe(true);
+  });
+  it("stays shut at every attunement below it", () => {
+    for (const level of [0, 1, 2, 5, 8]) {
+      expect(forkAllowed({ terminal: null, level })).toBe(false);
+    }
+  });
+  it("stays shut at a terminal, which already chose", () => {
+    expect(forkAllowed({ terminal: "subjugated", level: 10 })).toBe(false);
+    expect(forkAllowed({ terminal: "taken", level: 10 })).toBe(false);
+    expect(forkAllowed({ terminal: "taken", level: 9 })).toBe(false);
+  });
+  it("survives junk input by staying shut", () => {
+    expect(forkAllowed()).toBe(false);
+    expect(forkAllowed({})).toBe(false);
+    expect(forkAllowed({ level: "nine" })).toBe(false);
   });
 });

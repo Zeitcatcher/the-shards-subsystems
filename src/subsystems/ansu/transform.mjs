@@ -11,7 +11,7 @@ import { MODULE_ID } from "../../core/constants.mjs";
 import { readAnsu, patchAnsu, appendLog } from "./state.mjs";
 import { syncActor, readDials } from "./sync.mjs";
 import { maybeSwapForLevel } from "./art.mjs";
-import { clampLevel, applyClimb, climbNeeded, MAX_LEVEL } from "./logic/model.mjs";
+import { clampLevel, applyClimb, climbNeeded, forkAllowed, MAX_LEVEL } from "./logic/model.mjs";
 
 /**
  * Set attunement directly (stepper, token badge). Clamps to 0..9 — entering 10
@@ -23,7 +23,12 @@ export async function setAttunement(actor, next, note = "") {
   const to = clampLevel(Math.min(next, MAX_LEVEL - 1));
   if (to === st.level) return;
   const d = readDials();
-  const climb = Math.min(st.climb ?? 0, climbNeeded(to, d.climbBase, d.climbStep) || 0);
+  // Clamp BELOW the new bar, not onto it. A full bar is a level-up waiting to
+  // happen, so a step down from attunement 6 with 7 of 8 used to land on 7 of 7:
+  // full, glowing "ready", and inert, because nothing re-runs applyClimb after a
+  // demotion (and re-running it would undo the step down). (0.6.6)
+  const need = climbNeeded(to, d.climbBase, d.climbStep);
+  const climb = need > 0 ? Math.max(0, Math.min(st.climb ?? 0, need - 1)) : 0;
   await patchAnsu(actor, { level: to, climb });
   await appendLog(actor, "level", { from: st.level, to }, note);
   await syncActor(actor);
@@ -34,6 +39,11 @@ export async function setAttunement(actor, next, note = "") {
  * Move the Climb (delta or absolute set). Overflow raises attunement automatically
  * (with carry); a full bar at 9 only signals the Tenth Step. Returns the result of
  * the pure applyClimb, or null when the climb is inactive.
+ *
+ * `moved` is how much of a requested DELTA actually landed: at attunement 9 the
+ * bar caps and swallows the rest, so a clean Release on a full bar moves nothing
+ * and callers must not report movement that never happened. An absolute `set`
+ * reports the movement inside the bar, and 0 when it crossed a level. (0.6.6)
  */
 export async function applyClimbChange(actor, { delta = 0, set, source = "gm" } = {}) {
   const st = readAnsu(actor);
@@ -42,11 +52,18 @@ export async function applyClimbChange(actor, { delta = 0, set, source = "gm" } 
   const d = readDials();
   const opts = { base: d.climbBase, step: d.climbStep };
   if (set !== undefined) opts.set = set;
-  const r = applyClimb(st.level, st.climb ?? 0, delta, opts);
-  if (r.level === st.level && r.climb === (st.climb ?? 0)) return r;
+  const before = st.climb ?? 0;
+  const r = applyClimb(st.level, before, delta, opts);
+
+  // The reminder belongs to the state, not to the write: a GM pressing + on a bar
+  // that is already full still wants to be told the tenth step is waiting.
+  if (r.atTenth) {
+    ui.notifications?.warn(game.i18n.format("SHARDS.Ansu.TenthReady", { name: actor.name }));
+  }
+  if (r.level === st.level && r.climb === before) return { ...r, moved: 0 };
 
   await patchAnsu(actor, { level: r.level, climb: r.climb });
-  await appendLog(actor, "climb", { from: st.climb ?? 0, to: r.climb, level: r.level, source });
+  await appendLog(actor, "climb", { from: before, to: r.climb, level: r.level, source });
 
   if (r.leveled) {
     await appendLog(actor, "level", { from: st.level, to: r.level }, game.i18n.localize("SHARDS.Ansu.ClimbNote"));
@@ -54,10 +71,7 @@ export async function applyClimbChange(actor, { delta = 0, set, source = "gm" } 
     await maybeSwapForLevel(actor, r.level);
     ui.notifications?.info(game.i18n.format("SHARDS.Ansu.ClimbLeveled", { name: actor.name, level: r.level }));
   }
-  if (r.atTenth) {
-    ui.notifications?.warn(game.i18n.format("SHARDS.Ansu.TenthReady", { name: actor.name }));
-  }
-  return r;
+  return { ...r, moved: r.leveled ? Math.max(0, Math.trunc(Number(delta) || 0)) : r.climb - before };
 }
 
 async function openForkDialog(actor) {
@@ -126,8 +140,17 @@ async function applyTaken(actor) {
 
 /**
  * Open the fork dialog and apply the chosen fate. Returns true if a fate was chosen.
+ *
+ * The Tenth Step is the last rung, not a shortcut: the gate lives here rather
+ * than in the panel so every caller — button, ladder chip, macro — is covered.
+ * Taken at any attunement is a different door (`triggerTaken`). (0.6.6)
  */
 export async function triggerFork(actor) {
+  const st = readAnsu(actor);
+  if (!forkAllowed(st)) {
+    if (!st.terminal) ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.TenthLocked"));
+    return false;
+  }
   const choice = await openForkDialog(actor);
   if (!choice) return false;
   if (choice === "subjugated") await applySubjugation(actor);

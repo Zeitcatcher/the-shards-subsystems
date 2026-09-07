@@ -43,13 +43,22 @@ export async function patchSubsystemFlag(actor, sub, patch) {
   await actor.update(update);
 }
 
-/** Remove a subsystem's entire flag namespace from the actor. */
+/**
+ * Remove a subsystem's entire flag namespace from the actor.
+ *
+ * This used to hand the update payload `foundry.data.operators.ForcedDeletion`
+ * itself — the CLASS, not an instance. A class is a Function, not a
+ * `DataFieldOperator`, so it was dropped in serialization and the merge did
+ * nothing: Remove attunement left the whole namespace behind. `unsetFlag` picks
+ * the right deletion mechanism per Foundry version, `MODULE_ID` is a registered
+ * package id so the call is legal, and it is a no-op when the key is already
+ * gone. The `-=` payload stays as the fallback for anything without the
+ * document API. (0.6.6 — shared with Izir's unattune path.)
+ */
 export async function deleteSubsystemFlag(actor, sub) {
-  // v14 deprecates the "-=key" deletion syntax in favor of the ForcedDeletion operator.
-  const ForcedDeletion = foundry.data?.operators?.ForcedDeletion;
-  if (ForcedDeletion) {
-    await actor.update({ [`flags.${MODULE_ID}`]: { [sub]: ForcedDeletion } });
-  } else {
-    await actor.update({ [`flags.${MODULE_ID}.-=${sub}`]: null });
+  if (typeof actor?.unsetFlag === "function") {
+    await actor.unsetFlag(MODULE_ID, sub);
+    return;
   }
+  await actor?.update?.({ [`flags.${MODULE_ID}.-=${sub}`]: null });
 }

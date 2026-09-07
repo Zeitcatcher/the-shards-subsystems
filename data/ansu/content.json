@@ -16,6 +16,7 @@
       "level": 1,
       "kind": "boon",
       "form": "action",
+      "door": true,
       "name": "Invoke the Ansu",
       "description": "<p>The power is never owed; it answers strength. Attempt an Intimidation check against the Call DC ({{ansuCallDC}}), which is 20 + 2 × attunement and, unlike the Release DC, never stops growing.</p><ul><li><strong>Critical Success</strong> The Ansu answers eagerly: Communion begins and the mastery feeds the Climb (+1).</li><li><strong>Success</strong> Communion begins.</li><li><strong>Failure</strong> The Ansu does not deign. The action is spent, and you may try again next round.</li><li><strong>Critical Failure</strong> The Ansu comes <em>anyway</em>: it seizes the body for 1 round (the GM plays you), then Communion continues under your control.</li></ul><hr /><p><strong>Duration</strong> {{ansuDuration}} (1 round at Trial, 3 rounds at Discipline, 1 minute at Union). Every Communion active materializes on your sheet alongside the buff and vanishes when it ends. Ending Communion, whether early or when it expires, takes a Will save against the Release DC ({{ansuReleaseDC}}). From attunement 2, a successful Invoke includes a free Stride (Bull's Footing). At Mastery the Call is no longer rolled.</p>",
       "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
@@ -24,6 +25,13 @@
       "actionData": {
         "actionType": "action",
         "actions": 1,
+        "traits": ["concentrate"],
+        "frequency": { "max": 1, "per": "round" },
+        "alwaysAvailable": true
+      },
+      "terminalActionData": {
+        "actionType": "free",
+        "actions": null,
         "traits": ["concentrate"],
         "frequency": { "max": 1, "per": "round" },
         "alwaysAvailable": true
@@ -36,6 +44,7 @@
       "level": 1,
       "kind": "boon",
       "form": "action",
+      "door": true,
       "name": "Release the Ansu",
       "description": "<p>You loosen your grip on the borrowed strength and try to hand it back. Attempt a Will save against the Release DC ({{ansuReleaseDC}}).</p><ul><li><strong>Critical Success</strong> Clean release; the discipline feeds the Climb (+2).</li><li><strong>Success</strong> Clean release (+1 to the Climb).</li><li><strong>Failure</strong> The Ansu doesn't let go. <em>Lingering</em>: the boons stay on and the Ansu steers. Re-save at the end of each of your turns.</li><li><strong>Critical Failure</strong> <em>Seizure</em>: the Ansu takes the body for 1 round (the GM plays you), then Lingering resumes.</li></ul>",
       "img": "icons/magic/control/debuff-energy-hold-teal-blue.webp",
@@ -322,7 +331,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Roar of the Old Blood",
-      "description": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize each enemy within 30 feet. You don't take the penalty for not sharing a language, and each target treats its result as one degree of success worse. If the result becomes a critical failure, the target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened 3} and @UUID[Compendium.pf2e.conditionitems.Item.sDPxOjQ9kx2RZE8D]{Fleeing} for 1 round.</p><p><em>Once per Communion.</em></p>",
+      "description": "<p>A sound out of a dead civilization's pride. Attempt an Intimidation check to Demoralize each enemy within 30 feet. You don't take the penalty for a target that doesn't understand you, and your result against each target is one degree of success better. On a critical success the target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened 3} and @UUID[Compendium.pf2e.conditionitems.Item.sDPxOjQ9kx2RZE8D]{Fleeing} for 1 round instead of Frightened 2.</p><p><em>Once per Communion.</em></p>",
       "img": "icons/creatures/unholy/demon-fire-horned-winged-roar.webp",
       "rules": [],
       "chipTag": "1/communion",

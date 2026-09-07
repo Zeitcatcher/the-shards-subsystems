@@ -43,9 +43,18 @@ export function emptyAnsuState() {
     communion: {
       mode: "none", // "none" | "active" | "lingering" | "seized"
       rounds: null, // stamped duration at invoke (display only)
+      startAt: null, // one-shot world-time stamp for the next countdown (seizure return); consumed by the sync
     },
     pendingRelease: null, // { id, dc, reason, createdAt }
     pendingCall: null, // { id, dc, createdAt } — the Intimidation gate on Invoke
+    // The last resolved roll of each kind, and a reroll of it waiting on the GM.
+    // A hero point deletes the rolled card and posts a fresh one; the pending
+    // marker is long gone by then, so the recorded outcome is what a reroll is
+    // compared against. Nothing auto-applies. (0.6.6)
+    lastRelease: null, // { id, dc, outcome, at }
+    lastCall: null, // { id, dc, outcome, at }
+    rerollRelease: null, // { id, from, outcome, total, at }
+    rerollCall: null, // { id, from, outcome, total, at }
     seizure: null, // { snapshot, at, auto, returnAt: { combatId, round, turn } }
     cooldowns: [], // [{ id: <entryId>, until: worldTime }] — module-owned ability cooldowns (array: replaced wholesale on patch)
     art: {

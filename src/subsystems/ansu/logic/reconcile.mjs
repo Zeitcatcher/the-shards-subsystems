@@ -73,6 +73,68 @@ export function buildCtx(charLevel, level, dials = {}) {
   };
 }
 
+/**
+ * Which attunement a ladder row's numbers belong to.
+ *
+ * The panel built ONE injection context at the bearer's own level and reused it
+ * for every row, so an attunement 1 bearer's Discipline rows read "resistance 1"
+ * and "resist 2 vs one hit" for boons that only exist from 5, where the real
+ * numbers are 3 and 10. Taking the maximum previews a locked row at its unlock
+ * level while an unlocked row still shows the bearer's live numbers. (0.6.6)
+ */
+export function ladderCtxLevel({ rowLevel, level } = {}) {
+  const row = Math.max(1, Math.trunc(Number(rowLevel)) || 1);
+  const cur = Math.max(1, Math.trunc(Number(level)) || 1);
+  return Math.max(row, cur);
+}
+
+/**
+ * The action-cost glyph for an action-form entry.
+ *
+ * One helper for the ladder chip and the Communion effect's ability list: they
+ * were written twice, both knew only counts and free actions, and the two
+ * reactions (Salbarine Parry, The Ansu Refuses) therefore read as passive boons
+ * next to "Maker's Wrath ◆◆". (0.6.6)
+ */
+export function costGlyph(actionData) {
+  const n = Math.trunc(Number(actionData?.actions));
+  if (Number.isFinite(n) && n > 0 && n <= 3) return "◆".repeat(n);
+  if (actionData?.actionType === "free") return "◇";
+  if (actionData?.actionType === "reaction") return "↺";
+  return "";
+}
+
+/**
+ * The action block an entry uses in a given state.
+ *
+ * Mastery's capstone promises entering and leaving Communion as a free action,
+ * and Release was already authored that way, but the Invoke item copied its
+ * `actionData` verbatim at every state, so a subjugated master's sheet still
+ * showed the 1-action, concentrate Invoke the capstone had just replaced. Only
+ * "subjugated" reads the override: Taken drops both doors outright (doorsDead),
+ * and no other state changes an action's cost. (0.6.6)
+ */
+export function actionDataFor(entry, state) {
+  if (state?.terminal === "subjugated" && entry?.terminalActionData) return entry.terminalActionData;
+  return entry?.actionData ?? {};
+}
+
+/**
+ * The frequency tag beside an ability's name.
+ *
+ * `frequency.per` is an ISO duration for anything finer than a day ("PT10M" on
+ * The Ansu Refuses), and hand-rolling a parser for one value is not worth it:
+ * the validator already requires a `cooldownMinutes` alongside such a frequency,
+ * and minutes are what the table asks about anyway. (0.6.6)
+ */
+export function frequencyTag(actionData) {
+  if (actionData?.perCommunion) return "1/communion";
+  if (actionData?.frequency?.per === "day") return "1/day";
+  const mins = Math.trunc(Number(actionData?.cooldownMinutes));
+  if (Number.isFinite(mins) && mins > 0) return `1 / ${mins} min`;
+  return "";
+}
+
 /** Human duration text for descriptions ("1 round" / "3 rounds" / "1 minute" / "unlimited"). */
 export function durationLabel(rounds) {
   if (rounds === null) return "unlimited";
@@ -112,6 +174,69 @@ function deepInject(value, ctx) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Rebuild: the expiry that deletes and re-creates the Communion effect */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Rule elements that hand something out the moment their item is CREATED.
+ *
+ * With pf2e's `automation.removeEffects` on, an expiry is a delete followed by
+ * our own re-create, so pf2e runs every rule's `onCreate` again and the buff
+ * running out handed the bearer a second full pool of temporary Hit Points. With
+ * the automation off the same transition is an in-place update and grants
+ * nothing — one pf2e setting changed the rules.
+ *
+ * TempHP is the only create-time granting rule element in the Ansu content
+ * today: the single GrantItem is `inMemoryOnly` (it materializes nothing), and
+ * FlatModifier / Resistance / DamageDice / RollOption / Note / Strike are all
+ * data-prep synthetics. Anything added later that writes on create belongs here.
+ */
+const CREATE_TIME_GRANT_KEYS = new Set(["TempHP"]);
+
+/**
+ * Turn off the create-time grants on a rebuilt item's rules.
+ *
+ * The rules stay ON the item — pf2e's `onDelete` ignores `events` and still
+ * clears the pool when Communion finally ends, and `events` lands inside the
+ * composed hash, so the next ordinary sync flips them back with one harmless
+ * item update. What is LEFT of the live pool is carried across the delete
+ * Foundry-side (see sync.mjs). Pure.
+ */
+export function suppressCreateGrants(rules) {
+  const list = Array.isArray(rules) ? rules : [];
+  if (!list.some((r) => CREATE_TIME_GRANT_KEYS.has(r?.key))) return list;
+  return list.map((r) =>
+    CREATE_TIME_GRANT_KEYS.has(r?.key) ? { ...r, events: { onCreate: false, onTurnStart: false } } : r,
+  );
+}
+
+/**
+ * How much of the live temporary Hit Point pool a deleted item is carrying away.
+ * Only ever OUR pool: pf2e records the granting item in `hp.tempsource`, and a
+ * pool some other effect handed out must be left where it is.
+ */
+export function carriedTempFor({ temp, tempsource, itemId } = {}) {
+  if (!itemId || tempsource !== itemId) return 0;
+  const n = Number(temp);
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+}
+
+/**
+ * What to write back after a rebuild, or null for "leave the actor alone".
+ *
+ * Temporary Hit Points do not stack in PF2e — the higher grant wins — so a
+ * bigger pool that landed from anywhere else meanwhile is never overwritten, and
+ * a fully spent pool is never resurrected. This mirrors TempHP's own
+ * `value > currentTempHP` guard, which is the rule the fix must not break.
+ */
+export function tempRestoreValue({ carried, live } = {}) {
+  const c = Number(carried);
+  const l = Number(live) || 0;
+  if (!Number.isFinite(c) || c <= 0) return null;
+  return c > l ? Math.trunc(c) : null;
+}
+
+/* ------------------------------------------------------------------ */
 /* Composed effects                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -133,6 +258,18 @@ function strikeRuleFor(entry) {
     damage: { base: { damageType: s.damageType ?? "piercing", dice: s.dice ?? 1, die: s.die ?? "d8" } },
   };
 }
+
+/**
+ * Are the two door actions (Invoke, Release) dead in this state?
+ *
+ * At the Taken terminal the Ansu owns the body: `requestInvoke` returns on
+ * `terminal === "taken"` and `callRelease` on any terminal, both in silence,
+ * while pf2e still spends the 1/round frequency on the Use. The panel already
+ * hides both controls; the sheet items had no business being there either.
+ * Exported so the panel's ladder can strike the same two chips out rather than
+ * offering doors the sheet no longer has. (0.6.6)
+ */
+export const doorsDead = (mode) => mode === "taken";
 
 /** Communion display mode: how the stateful effect is currently justified. */
 export function communionMode(state) {
@@ -184,8 +321,13 @@ export function composeAttunement(state, content, opts = {}) {
     durationRounds: ctx.durationRounds,
     ctx,
   };
+  // releaseDc is hashed because the marker's DESCRIPTION quotes it: none of the
+  // other hashed fields move when a DC dial does, so the syncAllAttuned fired by
+  // the settings onChange found no drift and the sheet went on quoting the old
+  // number next to action items that had already refreshed. durationRounds needs
+  // no seat — it is a pure function of `level`, which is hashed. (0.6.6)
   composed.hash = hashString(
-    stableStringify({ level, tier, terminal, rules, inheritanceLines }),
+    stableStringify({ level, tier, terminal, rules, inheritanceLines, releaseDc: ctx.releaseDc }),
   );
   return composed;
 }
@@ -213,24 +355,29 @@ export function composeCommunion(state, content, opts = {}) {
 
   const boonLines = [];
   const abilityLines = [];
+  const dead = doorsDead(mode);
   const { live } = selectEntries(state, content, { ...opts, unlockAll });
   for (const e of live) {
     if (e.always || e.form === "feat") continue;
+    // A Taken bearer's Communion effect must not advertise doors that are gone.
+    if (dead && e.door === true) continue;
     if (e.form === "effect" || e.form === "strike") {
       rules.push(...deepInject(Array.isArray(e.rules) ? e.rules : [], ctx));
       if (e.form === "strike") rules.push(strikeRuleFor(e));
       boonLines.push({ name: e.name, description: injectNumbers(e.description ?? "", ctx) });
     } else if (e.form === "action") {
-      const a = e.actionData ?? {};
-      abilityLines.push({
-        name: e.name,
-        glyph: a.actions ? "◆".repeat(a.actions) : a.actionType === "free" ? "◇" : "",
-        tag: a.perCommunion ? "1/communion" : a.frequency?.per === "day" ? "1/day" : "",
-      });
+      // Same source block composeActions writes onto the sheet, so the effect's
+      // ability list and the item itself can't quote two different costs.
+      const a = actionDataFor(e, state);
+      abilityLines.push({ name: e.name, glyph: costGlyph(a), tag: frequencyTag(a) });
     }
   }
 
   const permanent = mode === "permanent" || mode === "taken";
+  // A rebuild is the SAME Communion continuing, not a new one: pf2e deleted the
+  // expired effect and the sync re-creates it, so a create-time grant would fire
+  // a second time at the exact moment the buff was supposed to run out. (0.6.6)
+  const composedRules = opts.rebuild === true ? suppressCreateGrants(rules) : rules;
   const composed = {
     entryId: COMMUNION_ENTRY_ID,
     kind: "composed-communion",
@@ -238,14 +385,18 @@ export function composeCommunion(state, content, opts = {}) {
     mode,
     permanent,
     durationRounds: permanent ? null : ctx.durationRounds,
-    rules,
+    rules: composedRules,
     boonLines,
     abilityLines,
     releaseDc: ctx.releaseDc,
+    // Where the next countdown must start, when the state carries a one-shot
+    // stamp (the seizure return's turn-end compensation). Deliberately OUT of the
+    // hash below: it is a clock instruction consumed by one sync, not content.
+    startAt: Number.isFinite(state.communion?.startAt) ? state.communion.startAt : null,
     ctx,
   };
   composed.hash = hashString(
-    stableStringify({ level, mode, rules, boonLines, abilityLines }),
+    stableStringify({ level, mode, rules: composedRules, boonLines, abilityLines }),
   );
   return composed;
 }
@@ -298,25 +449,31 @@ export function composeActions(state, content, opts = {}) {
 
   const ctx = buildCtx(opts.charLevel, level, opts.dials);
 
+  const dead = doorsDead(mode);
   const { live } = selectEntries(state, content, { ...opts, unlockAll });
   return live
     .filter((e) => e.form === "action")
     .filter((e) => running || e.actionData?.alwaysAvailable === true)
+    // diffAll turns the drop into a delete, so an existing sheet cleans itself.
+    .filter((e) => !(dead && e.door === true))
     .map((e) => {
       const description = injectNumbers(e.description ?? "", ctx);
-      const actionData = deepInject(e.actionData ?? {}, ctx);
+      // A subjugated master's Invoke reads from terminalActionData; everyone else
+      // from actionData. Every frequency read below uses the same block.
+      const src = actionDataFor(e, state);
+      const actionData = deepInject(src, ctx);
       // Action items carry their entry's rule elements too (Maker's Wrath /
       // Fair Battle toggle-damage), with number tokens baked like everywhere else.
       const rules = deepInject(Array.isArray(e.rules) ? e.rules : [], ctx);
-      if (Number.isInteger(e.actionData?.cooldownMinutes)) {
+      if (Number.isInteger(src.cooldownMinutes)) {
         const until = Number((state.cooldowns ?? []).find((c) => c?.id === e.id)?.until) || 0;
         const onCooldown = Number.isFinite(opts.now) && opts.now < until;
-        actionData.frequencyValue = onCooldown ? 0 : (e.actionData?.frequency?.max ?? null);
-      } else if (e.actionData?.alwaysAvailable && e.actionData?.frequency && !running) {
+        actionData.frequencyValue = onCooldown ? 0 : (src.frequency?.max ?? null);
+      } else if (src.alwaysAvailable && src.frequency && !running) {
         // The door must reopen between fights: per-round frequencies only tick
         // inside combat, so a spent Invoke would stay greyed out of combat.
         // Every dormant resync restores its uses.
-        actionData.frequencyValue = e.actionData.frequency.max ?? null;
+        actionData.frequencyValue = src.frequency.max ?? null;
       }
       const data = { entryId: e.id, family: e.family, name: e.name, img: e.img, description, actionData, rules, entry: e };
       return { ...data, hash: hashString(stableStringify({ name: e.name, img: e.img, description, actionData, rules })) };

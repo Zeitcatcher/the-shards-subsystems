@@ -177,6 +177,14 @@
 .the-shards-subsystems .ansu-dot-seized {
   color: #a11;
 }
+/* Communion running, and the wrestle after it: two bearers mid-fight used to
+   look exactly like a dormant one in the roster. (0.6.6) */
+.the-shards-subsystems .ansu-dot-active {
+  color: #c0561f;
+}
+.the-shards-subsystems .ansu-dot-lingering {
+  color: #3e8e7e;
+}
 .the-shards-subsystems .ansu-dual {
   margin-left: auto;
   font-size: 0.62rem;
@@ -344,6 +352,11 @@
   color: #8a6417;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+/* The last round the buff survives. It used to vanish here, because 0 rounds
+   left and no countdown at all rendered the same. (0.6.6) */
+.the-shards-subsystems .ansu-rounds.final {
+  color: #a11;
 }
 .the-shards-subsystems .ansu-endnosave {
   opacity: 0.7;
@@ -580,6 +593,9 @@
 .the-shards-subsystems .ansu-lrow.locked {
   opacity: 0.42;
   filter: saturate(0.4);
+  /* A dimmed row is inert, not merely faint: the mastery row's fork chips are
+     real buttons and used to stay clickable at any attunement. (0.6.6) */
+  pointer-events: none;
 }
 .the-shards-subsystems .ansu-ldisc {
   width: 25px;
@@ -639,6 +655,13 @@
 .the-shards-subsystems .ansu-chip.replaced {
   opacity: 0.45;
   border-style: dotted;
+}
+/* A door the Taken terminal closed: the sheet item is gone, so the ladder says
+   so rather than offering it. No suppress kit — there is nothing to suppress. */
+.the-shards-subsystems .ansu-chip.dead {
+  opacity: 0.4;
+  border-style: dotted;
+  text-decoration: line-through;
 }
 .the-shards-subsystems .ansu-chip.gate {
   border-style: dashed;
@@ -992,6 +1015,20 @@
 }
 
 /* ---------- the Call (pending Intimidation gate) ---------- */
+.the-shards-subsystems .ansu-reroll {
+  border: 1px solid rgba(120, 90, 170, 0.7);
+  background: rgba(120, 90, 170, 0.1);
+  border-radius: 5px;
+  padding: 0.4rem 0.6rem;
+}
+.the-shards-subsystems .ansu-reroll p {
+  margin: 0 0 0.35rem;
+  font-size: var(--font-size-12, 0.78rem);
+}
+.the-shards-subsystems .ansu-reroll small {
+  opacity: 0.7;
+}
+
 .the-shards-subsystems .ansu-pending-call {
   border-color: rgba(143, 47, 39, 0.55);
   background: rgba(143, 47, 39, 0.07);

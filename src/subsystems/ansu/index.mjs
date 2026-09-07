@@ -70,7 +70,9 @@ registerSubsystem({
         await setAttunement(actor, next, game.i18n.localize("SHARDS.Ansu.BadgeNote"));
         refreshAnsuPanel();
       },
-      (actor) => handleExpiry(actor),
+      // opts carries the expiry rebuild (suppressed create-grants + the temp HP
+      // pool pf2e zeroed when it deleted the expired effect).
+      (actor, opts) => handleExpiry(actor, opts),
     );
     registerCommunionHooks();
     registerReleaseHooks();

@@ -2,6 +2,36 @@
 
 Notable changes, newest first. Every version is also on the [Releases page](https://github.com/Zeitcatcher/the-shards-subsystems/releases); to update inside Foundry VTT, press Update on the module.
 
+## 0.6.6
+
+An audit release for Ansu. Nine bugs that changed outcomes at the table, and a long tail of panel, card, and text fixes. Izir is untouched.
+
+- The critical-failure Seizure lasts its full turn again. A bearer at the bottom of the initiative order got the body back at the end of the turn the seizure began on, because the return read the tracker's current round instead of the round the ended turn belonged to.
+- Communion handed back after a Seizure runs its full duration. The fresh countdown was stamped at a turn end while Pathfinder resolves a rounds clock at a turn start, so at attunement 1 to 3 the player never got an action with it running.
+- Communion no longer refills Ancestral Vigor when it expires. With Pathfinder's default effect automation the expired effect is deleted and rebuilt, which re-ran the temporary hit point grant. Whatever is left of the pool now carries through the transition instead.
+- A Communion started outside a fight picks up its countdown when the fight begins. It used to stay untimed for the whole encounter, with no expiry and no Release save.
+- The module reads the bearer's own encounter instead of the one on the scene the GM happens to be looking at.
+- Two attuned tokens built from one statblock no longer block each other. Sync and expiry guards were keyed on the base actor's id, so one token's expiry could swallow the other's.
+- NPC Call and Release rolls are whispered to the GM again. The visibility option was passed under a name Pathfinder no longer reads, so it was dropped and the checks went to the whole table.
+- Call and Release cards roll for the bearer, not for whatever token the clicker has selected.
+- A Call or Release rerolled with a hero point is no longer discarded. The GM is told the outcome changed and can record it, and the Climb pays only the difference.
+- The Tenth Step is available at attunement 9. The button and both ladder chips used to be clickable at any attunement, including 0.
+- The GM panel is GM-only. A player who could reach it was able to set their own attunement, drive the Climb, and press the one-way fork.
+- An expiry is resolved out of combat and when an encounter ends, not only on a turn change.
+- A Taken character no longer keeps Invoke and Release as dead buttons, and a subjugated master's Invoke is the free action the capstone promises.
+- Panel: the countdown shows the final round instead of vanishing, a typed Release DC stays with the bearer it was typed for, Mastery chips carry the suppress control, active and lingering bearers are marked on the roster, reactions show their action glyph, locked ladder rows preview their own numbers, and the Return tooltip says where the body actually lands.
+- The Attunement badge steps down to 0, and it picks up a changed Release DC.
+- Stepping attunement down leaves the Climb one point short of full instead of full and stuck, and the Climb report no longer announces movement the cap swallowed.
+- A Seizure no longer swallows a pending Call, and its whisper matches what the code does.
+- Art thresholds work for an unlinked bearer and no longer rewrite every token sharing the statblock.
+- Roar of the Old Blood reads the way Demoralize resolves: your check improves by one degree, and a critical success is what brings Frightened 3 and Fleeing.
+- The compendium copy of Ancestral Vigor (Union) grants 21 temporary hit points, matching its own text, instead of 3.
+- Remove attunement clears the actor's Ansu data. The deletion payload was malformed, so the flag namespace survived.
+- Chat cards and dialogs escape actor names.
+- Content validation rejects two entries that share a family and a rank, and the validator's own rejection rules are covered by tests.
+
+Verified on Pathfinder 2e (Foundry v14.367, pf2e 8.5.0). 412 tests green; content and pack checks clean.
+
 ## 0.6.5
 
 Ansu expiry and Release fixes, and the platform bump to Foundry 14.367 and pf2e 8.5.0.

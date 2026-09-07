@@ -8,7 +8,7 @@
   "sort": 7000,
   "system": {
     "description": {
-      "value": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu, you gain temporary Hit Points equal to three times your attunement, and you gain a +3 status bonus to melee damage rolls while Communion lasts.</p>"
+      "value": "<p>The Ansu's strength pours into muscle and bone. When you Invoke the Ansu, you gain temporary Hit Points equal to three times your attunement, and you gain a +3 status bonus to melee damage rolls while Communion lasts.</p><hr /><p><em>Numbers in this copy are fixed at attunement 7. On a tracked bearer the module sets them from current attunement.</em></p>"
     },
     "slug": "shards-ansu-ancestral-vigor-2",
     "duration": {
@@ -32,7 +32,7 @@
     "rules": [
       {
         "key": "TempHP",
-        "value": 3
+        "value": 21
       },
       {
         "key": "FlatModifier",

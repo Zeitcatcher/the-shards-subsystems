@@ -64,6 +64,10 @@ export function validateContent(raw) {
   if (!Array.isArray(entries)) return ["`entries` is missing or not an array"];
 
   const seen = new Set();
+  // selectEntries picks a family's live entry with a strict `>` on rank, so a tie
+  // silently drops whichever entry the array happens to list second, rules and
+  // all. The build's own duplicate guard compares _ids, which differ. (0.6.6)
+  const seenFamilyRank = new Set();
 
   for (const [i, e] of entries.entries()) {
     const at = `entry[${i}]${e?.id ? ` (${e.id})` : ""}`;
@@ -86,22 +90,40 @@ export function validateContent(raw) {
     if (e.form === "strike" && (e.strikeData == null || typeof e.strikeData !== "object")) {
       problems.push(`${at}: strike form needs strikeData`);
     }
-    if (e.actionData?.perCommunion != null && typeof e.actionData.perCommunion !== "boolean") {
-      problems.push(`${at}: actionData.perCommunion must be a boolean`);
+    if (e.terminalActionData != null && e.form !== "action") {
+      problems.push(`${at}: terminalActionData only applies to action form`);
     }
-    if (e.actionData?.perCommunion && !e.actionData?.frequency) {
-      problems.push(`${at}: perCommunion needs a frequency (the Use button + the counter the module resets)`);
-    }
-    if (e.actionData?.alwaysAvailable != null && typeof e.actionData.alwaysAvailable !== "boolean") {
-      problems.push(`${at}: actionData.alwaysAvailable must be a boolean`);
-    }
-    if (e.actionData?.cooldownMinutes != null && !Number.isInteger(e.actionData.cooldownMinutes)) {
-      problems.push(`${at}: actionData.cooldownMinutes must be an integer`);
-    }
-    if (Number.isInteger(e.actionData?.cooldownMinutes) && !e.actionData?.frequency) {
-      problems.push(`${at}: cooldownMinutes needs a frequency (the Use button the cooldown disables)`);
+    // Both action blocks get the same treatment: composeActions swaps in
+    // terminalActionData wholesale for a subjugated master, so a typo there
+    // reaches the sheet exactly like one in actionData would. (0.6.6)
+    for (const key of ["actionData", "terminalActionData"]) {
+      const a = e[key];
+      if (a == null) continue;
+      if (typeof a !== "object" || Array.isArray(a)) { problems.push(`${at}: ${key} must be an object`); continue; }
+      if (a.perCommunion != null && typeof a.perCommunion !== "boolean") {
+        problems.push(`${at}: ${key}.perCommunion must be a boolean`);
+      }
+      if (a.perCommunion && !a.frequency) {
+        problems.push(`${at}: ${key} perCommunion needs a frequency (the Use button + the counter the module resets)`);
+      }
+      if (a.alwaysAvailable != null && typeof a.alwaysAvailable !== "boolean") {
+        problems.push(`${at}: ${key}.alwaysAvailable must be a boolean`);
+      }
+      if (a.cooldownMinutes != null && !Number.isInteger(a.cooldownMinutes)) {
+        problems.push(`${at}: ${key}.cooldownMinutes must be an integer`);
+      }
+      if (Number.isInteger(a.cooldownMinutes) && !a.frequency) {
+        problems.push(`${at}: ${key} cooldownMinutes needs a frequency (the Use button the cooldown disables)`);
+      }
     }
     if (e.chipTag != null && typeof e.chipTag !== "string") problems.push(`${at}: chipTag must be a string`);
+    // Guarded on the already-validated types so a missing family reports once.
+    if (typeof e.family === "string" && e.family && Number.isInteger(e.rank)) {
+      const key = `${e.family}::${e.rank}`;
+      if (seenFamilyRank.has(key)) {
+        problems.push(`${at}: duplicate family/rank (${e.family} rank ${e.rank}), only one of these will ever compose`);
+      } else seenFamilyRank.add(key);
+    }
   }
 
   return problems;

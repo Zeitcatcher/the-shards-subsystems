@@ -7,9 +7,19 @@
 
 import { MODULE_ID, SETTINGS } from "../../core/constants.mjs";
 import { readAnsu, patchAnsu, appendLog } from "./state.mjs";
-import { pickThresholdForLevel } from "./logic/art.mjs";
+import { pickThresholdForLevel, currentTokenSrc } from "./logic/art.mjs";
 
 const artSwapOn = () => game.settings.get(MODULE_ID, SETTINGS.ANSU_ART_SWAP) === true;
+
+/**
+ * Write the portrait, and the prototype token only where there is one to write.
+ * A synthetic actor's `prototypeToken` belongs to the base statblock, so writing
+ * it there repainted every other copy of the same NPC. (C6)
+ */
+async function updateActorArt(actor, portrait, token) {
+  if (actor.isToken) await actor.update({ img: portrait });
+  else await actor.update({ img: portrait, "prototypeToken.texture.src": token });
+}
 
 /** Capture the current portrait + token art once (idempotent). */
 export async function captureOriginalArt(actor) {
@@ -17,7 +27,7 @@ export async function captureOriginalArt(actor) {
   if (st.art.original) return st.art.original;
   const original = {
     portrait: actor.img,
-    token: actor.prototypeToken?.texture?.src ?? actor.img,
+    token: currentTokenSrc(actor) ?? actor.img,
   };
   await patchAnsu(actor, { art: { original } });
   return original;
@@ -25,6 +35,14 @@ export async function captureOriginalArt(actor) {
 
 async function updatePlacedTokens(actor, src) {
   if (!src) return;
+  // A synthetic (unlinked token) actor's id is the DELTA's, so `t.actorId` never
+  // matches it — repaint its own token document instead. A world actor repaints
+  // every placed token, unlinked copies included: a token that inherits an
+  // attuned base actor's flag is a genuine bearer. (C6)
+  if (actor.isToken) {
+    if (actor.token) await actor.token.update({ "texture.src": src });
+    return;
+  }
   for (const scene of game.scenes ?? []) {
     const toks = scene.tokens.filter((t) => t.actorId === actor.id);
     if (toks.length) {
@@ -44,8 +62,8 @@ export async function applyThresholdArt(actor, threshold) {
 
   await captureOriginalArt(actor);
   const portrait = slot.portrait || actor.img;
-  const token = slot.token || slot.portrait || actor.prototypeToken?.texture?.src;
-  await actor.update({ img: portrait, "prototypeToken.texture.src": token });
+  const token = slot.token || slot.portrait || currentTokenSrc(actor);
+  await updateActorArt(actor, portrait, token);
   await updatePlacedTokens(actor, token);
   await patchAnsu(actor, { art: { applied: String(threshold) } });
   await appendLog(actor, "art", { threshold: String(threshold) });
@@ -57,7 +75,7 @@ export async function revertArt(actor) {
   const st = readAnsu(actor);
   const orig = st.art.original;
   if (!orig) return false;
-  await actor.update({ img: orig.portrait, "prototypeToken.texture.src": orig.token });
+  await updateActorArt(actor, orig.portrait, orig.token);
   await updatePlacedTokens(actor, orig.token);
   await patchAnsu(actor, { art: { applied: null } });
   await appendLog(actor, "art", { threshold: "revert" });

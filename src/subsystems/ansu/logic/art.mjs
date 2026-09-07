@@ -1,10 +1,21 @@
 /**
- * Pure art-threshold selection (Ansu horn stages: broken → regrowing at 4 →
- * whole at 7 → Salbarium at 10). Given a level and the configured threshold
- * slots, pick the highest threshold whose art is set. No Foundry — unit-tested.
+ * Pure art helpers (Ansu horn stages: broken → regrowing at 4 → whole at 7 →
+ * Salbarium at 10): which threshold a level unlocks, and where an actor's token
+ * art actually lives. No Foundry — unit-tested.
  */
 
 const THRESHOLDS = [10, 7, 4];
+
+/**
+ * The token art an actor is wearing right now.
+ *
+ * A synthetic (unlinked token) actor has no meaningful prototype token — its art
+ * lives on the placed token document — so reading `prototypeToken` there
+ * captured the base statblock's art and a revert put the wrong picture back. (C6)
+ */
+export function currentTokenSrc(actor) {
+  return actor?.isToken ? actor.token?.texture?.src : actor?.prototypeToken?.texture?.src;
+}
 
 /** Does a threshold slot have any art configured? */
 function hasArt(slot) {

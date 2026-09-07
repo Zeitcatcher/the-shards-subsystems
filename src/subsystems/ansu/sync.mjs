@@ -7,7 +7,7 @@
  */
 
 import { MODULE_ID, ANSU, SETTINGS } from "../../core/constants.mjs";
-import { isPrimaryGM } from "../../core/platform.mjs";
+import { isPrimaryGM, actorKey } from "../../core/platform.mjs";
 import { readAnsu, isAttuned, listAttunedActors } from "./state.mjs";
 import {
   composeAttunement,
@@ -16,11 +16,13 @@ import {
   composeFeats,
   diffAll,
   durationLabel,
+  carriedTempFor,
+  tempRestoreValue,
   ATTUNEMENT_ENTRY_ID,
   COMMUNION_ENTRY_ID,
 } from "./logic/reconcile.mjs";
 import { clampLevel, tierForLevel, MAX_LEVEL } from "./logic/model.mjs";
-import { classifyCommunionDelete } from "./logic/timing.mjs";
+import { classifyCommunionDelete, durationUpdateFor } from "./logic/timing.mjs";
 import { loadContent } from "./content.mjs";
 
 const PUBLICATION = { title: "The Shards", authors: "Zeitcatcher", license: "ORC", remaster: true };
@@ -108,7 +110,13 @@ export function buildAttunementSource(composed) {
       unidentified: false,
       level: { value: 1 },
       tokenIcon: { show: tokenIconsOn() },
-      badge: { type: "counter", value: composed.badge.value, min: 1, max: composed.badge.max },
+      // min 0, not 1: pf2e DELETES a counter effect decremented below its
+      // minimum, so right-clicking the marker at attunement 1 destroyed it and
+      // the self-heal put it straight back at 1 — the badge flickered and the
+      // level never moved. pf2e's own `badge.min ?? 1` keeps an explicit 0, the
+      // updateItem handler maps badge 0 to setAttunement(actor, 0), and the next
+      // sync removes the marker deliberately, inside the syncing guard. (0.6.6)
+      badge: { type: "counter", value: composed.badge.value, min: 0, max: composed.badge.max },
       traits: { value: [], rarity: "common" },
       rules: composed.rules,
       start: { value: 0, initiative: null },
@@ -246,44 +254,64 @@ export function projectTagged(actor) {
   return out;
 }
 
-/** Is this actor in the active, started combat? */
-export function inActiveCombat(actor) {
-  const combat = game.combat;
-  if (!combat?.started) return false;
-  return combat.combatants.some((c) => c.actor === actor || c.actor?.uuid === actor.uuid);
+/**
+ * The started encounter this actor is actually in, on ANY scene.
+ *
+ * `game.combat` is the encounter of the scene the client happens to be viewing,
+ * and the sync runs on the primary GM's client: a GM who flips the canvas away
+ * mid-fight would otherwise compose a Communion with no countdown at all.
+ * `game.combats.active` is scene-filtered too and is not a substitute.
+ */
+export function encounterOf(actor) {
+  if (!actor) return null;
+  for (const combat of game.combats?.contents ?? []) {
+    if (!combat.started) continue;
+    // Keep the identity leg: a synthetic token actor is === its combatant's actor.
+    if (combat.combatants.some((c) => c.actor === actor || c.actor?.uuid === actor.uuid)) return combat;
+  }
+  return null;
 }
 
-/** This actor's combatant initiative in the active combat, or null. */
+/** Is this actor in a started encounter? */
+export const inActiveCombat = (actor) => Boolean(encounterOf(actor));
+
+/** This actor's combatant initiative in its own encounter, or null. */
 function combatantInitiative(actor) {
-  const combat = game.combat;
-  if (!combat?.started) return null;
-  const c = combat.combatants.find((x) => x.actor === actor || x.actor?.uuid === actor.uuid);
+  const combat = encounterOf(actor);
+  const c = combat?.combatants.find((x) => x.actor === actor || x.actor?.uuid === actor.uuid);
   return c?.initiative ?? null;
 }
 
-// Guard so our own writes don't re-trigger the watchers.
+// Guard so our own writes don't re-trigger the watchers. Keyed by uuid, not
+// actor.id: two unlinked tokens of one statblock share the base actor's id. (0.6.6)
 const syncing = new Set();
-export const isSyncing = (actorId) => syncing.has(actorId);
 
 // Per-actor promise chain so overlapping syncs serialize (see syncActor).
 const syncChain = new Map();
 
-/** Converge one actor's items to the composed model. Idempotent; GM-side. */
-export async function syncActor(actor) {
+/**
+ * Converge one actor's items to the composed model. Idempotent; GM-side.
+ *
+ * `runOpts` carries the expiry rebuild — `{ rebuild: true, carriedTemp }` — set
+ * only by the deleteItem hook, where pf2e has just removed the expired Communion
+ * effect and this sync is about to CREATE it again.
+ */
+export async function syncActor(actor, runOpts = {}) {
   if (!actor) return;
   // Serialize per actor: two overlapping runs must not each project "no marker
   // yet" and both create the composed effect before either write lands. (C1)
-  const prev = syncChain.get(actor.id) ?? Promise.resolve();
-  const run = prev.catch(() => {}).then(() => syncActorInner(actor));
-  syncChain.set(actor.id, run);
+  const key = actorKey(actor);
+  const prev = syncChain.get(key) ?? Promise.resolve();
+  const run = prev.catch(() => {}).then(() => syncActorInner(actor, runOpts));
+  syncChain.set(key, run);
   try {
     await run;
   } finally {
-    if (syncChain.get(actor.id) === run) syncChain.delete(actor.id);
+    if (syncChain.get(key) === run) syncChain.delete(key);
   }
 }
 
-async function syncActorInner(actor) {
+async function syncActorInner(actor, runOpts = {}) {
   let content;
   try {
     content = await loadContent();
@@ -292,12 +320,19 @@ async function syncActorInner(actor) {
     return;
   }
 
+  // What was LEFT of the Ansu's temp HP pool when pf2e deleted the expired
+  // effect. Only ever set on a rebuild; put back after the re-create below.
+  const carriedTemp = Math.max(0, Math.trunc(Number(runOpts.carriedTemp)) || 0);
+
   const state = readAnsu(actor);
   const opts = {
     charLevel: charLevelOf(actor),
     dials: readDials(),
     marker: game.settings.get(MODULE_ID, SETTINGS.ANSU_MARKER) !== false,
     now: game.time?.worldTime ?? 0,
+    // Rebuilding after an expiry delete: compose the Communion with its
+    // create-time grants switched off, or pf2e re-grants the whole pool. (0.6.6)
+    rebuild: runOpts.rebuild === true,
   };
   const attuned = isAttuned(actor);
   const attunement = attuned ? composeAttunement(state, content, opts) : null;
@@ -340,9 +375,26 @@ async function syncActorInner(actor) {
     }
   }
 
+  // A Communion invoked out of combat is written unlimited on purpose. Nothing
+  // re-stamps it when the bearer rolls initiative two seconds later: combat state
+  // isn't in the composed hash, so the empty-diff guard below would return first
+  // and the buff would run the whole fight with no expiry and no Release. Catch
+  // the one transition that is currently impossible — a live unlimited effect
+  // that now wants a rounds countdown. (0.6.6)
+  const inCombat = inActiveCombat(actor);
+  if (communion) {
+    const t = tagged.find((x) => x.entryId === COMMUNION_ENTRY_ID);
+    if (t && !updateIds.has(t.itemId)) {
+      const liveUnit = actor.items.get(t.itemId)?.system?.duration?.unit;
+      if (liveUnit === "unlimited" && communionDuration(communion, inCombat).unit === "rounds") {
+        toUpdate.push({ itemId: t.itemId, desired: communion });
+        updateIds.add(t.itemId);
+      }
+    }
+  }
+
   if (!toCreate.length && !toUpdate.length && !toDeleteIds.length) return;
 
-  const inCombat = inActiveCombat(actor);
   const build = (d) => {
     if (d.entryId === ATTUNEMENT_ENTRY_ID) return buildAttunementSource(d);
     if (d.entryId === COMMUNION_ENTRY_ID) return buildCommunionSource(d, { inCombat });
@@ -350,7 +402,8 @@ async function syncActorInner(actor) {
     return buildActionSource(d);
   };
 
-  syncing.add(actor.id);
+  const key = actorKey(actor);
+  syncing.add(key);
   try {
     if (toDeleteIds.length) await actor.deleteEmbeddedDocuments("Item", [...new Set(toDeleteIds)]);
     if (toCreate.length) await actor.createEmbeddedDocuments("Item", toCreate.map(build));
@@ -361,17 +414,27 @@ async function syncActorInner(actor) {
         // The Communion effect carries a live countdown. pf2e stamps `start` only
         // on create and never re-stamps it on update, so an update that carried our
         // source's start:0 would read as expired far in the past and silently
-        // ignore every boon. Never send start on a same-mode content update
-        // (preserve the running clock and its duration); stamp a fresh start only
-        // when a new in-combat rounds countdown begins on a mode change. (A1)
+        // ignore every boon. durationUpdateFor decides: never re-send a running
+        // clock (A1), but do stamp one when a countdown genuinely begins here.
         if (d.entryId === COMMUNION_ENTRY_ID) {
-          const prevMode = actor.items.get(itemId)?.getFlag?.(MODULE_ID, ANSU)?.mode;
-          if (prevMode === d.mode) {
-            delete update.system.duration;
+          const live = actor.items.get(itemId);
+          const verdict = durationUpdateFor({
+            prevMode: live?.getFlag?.(MODULE_ID, ANSU)?.mode,
+            mode: d.mode,
+            liveUnit: live?.system?.duration?.unit,
+            desiredUnit: update.system.duration?.unit,
+          });
+          if (verdict === "stamp") {
+            // `startAt` is the seizure return's one-shot compensation: a clock
+            // handed back at a turn end has to begin at the next round boundary.
+            update.system.start = {
+              value: Number.isFinite(d.startAt) ? d.startAt : (game.time?.worldTime ?? 0),
+              initiative: combatantInitiative(actor),
+            };
+          } else if (verdict === "keep") {
             delete update.system.start;
-          } else if (update.system.duration?.unit === "rounds") {
-            update.system.start = { value: game.time?.worldTime ?? 0, initiative: combatantInitiative(actor) };
           } else {
+            delete update.system.duration;
             delete update.system.start;
           }
         }
@@ -380,9 +443,37 @@ async function syncActorInner(actor) {
       await actor.updateEmbeddedDocuments("Item", updates);
     }
   } finally {
-    syncing.delete(actor.id);
+    syncing.delete(key);
   }
+  if (carriedTemp > 0) await restoreCarriedTemp(actor, carriedTemp);
   warnDroppedRules(actor, attunement, communion);
+}
+
+/**
+ * Put back what the bearer had LEFT of the Ansu's temporary Hit Points after an
+ * expiry rebuild.
+ *
+ * pf2e's `TempHP.onDelete` zeroed the pool as the expired effect went away, and
+ * the rebuilt effect's create-time grant is suppressed — so without this a
+ * half-spent pool would vanish at the transition (and before the fix it came
+ * back FULL). `tempRestoreValue` never raises the pool: temp HP does not stack,
+ * the higher grant wins. The new item id goes into `tempsource` so pf2e's own
+ * onDelete still clears the pool when Communion finally ends. A failure here
+ * must not take the expiry chain with it — the Release card matters more.
+ */
+async function restoreCarriedTemp(actor, carriedTemp) {
+  try {
+    const rebuilt = actor.items.find((i) => i.getFlag?.(MODULE_ID, ANSU)?.entryId === COMMUNION_ENTRY_ID);
+    if (!rebuilt) return;
+    const value = tempRestoreValue({ carried: carriedTemp, live: actor.system?.attributes?.hp?.temp });
+    if (value === null) return;
+    await actor.update({
+      "system.attributes.hp.temp": value,
+      "system.attributes.hp.tempsource": rebuilt.id,
+    });
+  } catch (err) {
+    console.error(`${MODULE_ID} | ansu temp HP carry-over`, err);
+  }
 }
 
 /**
@@ -425,16 +516,42 @@ export async function syncAllAttuned() {
 /* ------------------------------------------------------------------ */
 
 const timers = new Map();
-function scheduleResync(actor) {
+const pendingRunOpts = new Map();
+function scheduleResync(actor, runOpts = {}) {
   const id = actor.uuid;
+  // Merge across the debounce window: a plain self-heal landing 200ms after an
+  // expiry rebuild must not drop the temp HP pool the rebuild is carrying.
+  const prev = pendingRunOpts.get(id) ?? {};
+  const merged = {
+    rebuild: prev.rebuild === true || runOpts.rebuild === true,
+    carriedTemp: Math.max(Number(prev.carriedTemp) || 0, Number(runOpts.carriedTemp) || 0),
+  };
+  pendingRunOpts.set(id, merged);
   clearTimeout(timers.get(id));
   timers.set(
     id,
     setTimeout(() => {
       timers.delete(id);
-      syncActor(actor).catch((err) => console.error(`${MODULE_ID} | ansu resync`, err));
+      pendingRunOpts.delete(id);
+      syncActor(actor, merged).catch((err) => console.error(`${MODULE_ID} | ansu resync`, err));
     }, 250),
   );
+}
+
+/**
+ * The temporary Hit Point pool a Communion effect is about to take with it.
+ * pf2e's TempHP rule writes and reads `_source` (`system.attributes.hp.temp` /
+ * `.tempsource`), so read that first and fall back to prepared data. Zero unless
+ * the pool was ours — another effect's grant is none of our business.
+ */
+function carriedTempOnDelete(actor, item) {
+  const src = actor?._source?.system?.attributes?.hp ?? {};
+  const live = actor?.system?.attributes?.hp ?? {};
+  return carriedTempFor({
+    temp: src.temp ?? live.temp,
+    tempsource: src.tempsource ?? live.tempsource,
+    itemId: item?.id,
+  });
 }
 
 /** Badge edits, manual deletions, and character level-ups all feed back into sync. */
@@ -446,8 +563,10 @@ async function endCommunionAfterDelete(actor) {
   const { endCommunion } = await import("./mechanics/communion.mjs");
   await endCommunion(actor, { via: "deleted" });
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+  // The actor name is player-editable text landing in a template literal.
+  const text = foundry.utils.escapeHTML(game.i18n.format("SHARDS.Ansu.CommunionDeleted", { name: actor.name }));
   await ChatMessage.create({
-    content: `<div class="ansu-card"><p>${game.i18n.format("SHARDS.Ansu.CommunionDeleted", { name: actor.name })}</p></div>`,
+    content: `<div class="ansu-card"><p>${text}</p></div>`,
     whisper: gmIds,
     speaker: ChatMessage.getSpeaker({ actor }),
   });
@@ -458,7 +577,7 @@ export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
   Hooks.on("deleteItem", (item) => {
     if (!isPrimaryGM()) return;
     const actor = item.parent;
-    if (!actor || syncing.has(actor.id)) return;
+    if (!actor || syncing.has(actorKey(actor))) return;
     const tag = item.getFlag?.(MODULE_ID, ANSU);
     if (!tag?.entryId || !isAttuned(actor)) return;
     // A Communion effect that pf2e auto-removed on expiry (or a player dismissed)
@@ -470,8 +589,15 @@ export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
       const st = readAnsu(actor);
       const wasExpired = item.isExpired === true || item.system?.expired === true;
       const verdict = classifyCommunionDelete({ terminal: st.terminal, mode: st.communion.mode, wasExpired });
+      // Both surviving verdicts below RE-CREATE the effect, and pf2e runs every
+      // rule's onCreate on a create — which handed out a whole fresh pool of
+      // temporary Hit Points at the moment the buff was running out. Flag the
+      // rebuild, and read the live pool NOW: EffectPF2e._onDelete fires this hook
+      // through super._onDelete and only THEN applies TempHP.onDelete's actor
+      // update, so this read still sees whatever the bearer had left. (0.6.6)
+      const rebuildOpts = { rebuild: true, carriedTemp: carriedTempOnDelete(actor, item) };
       if (verdict === "expiry") {
-        Promise.resolve(onCommunionExpired?.(actor)).catch((err) =>
+        Promise.resolve(onCommunionExpired?.(actor, rebuildOpts)).catch((err) =>
           console.error(`${MODULE_ID} | ansu communion expiry on delete`, err),
         );
         return;
@@ -479,7 +605,7 @@ export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
       // Already lingering: the sweep resolved this expiry, pf2e is only clearing
       // the spent item. Put the lingering effect back; never end the state.
       if (verdict === "resync") {
-        scheduleResync(actor);
+        scheduleResync(actor, rebuildOpts);
         return;
       }
       // A NON-expired delete of a running Communion is a deliberate end (a GM
@@ -501,7 +627,7 @@ export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
   Hooks.on("updateItem", (item, changes, _options, userId) => {
     if (!isPrimaryGM()) return;
     const actor = item.parent;
-    if (!actor || syncing.has(actor.id)) return;
+    if (!actor || syncing.has(actorKey(actor))) return;
     const tag = item.getFlag?.(MODULE_ID, ANSU);
     if (tag?.entryId !== ATTUNEMENT_ENTRY_ID || !isAttuned(actor)) return;
     const badge = changes?.system?.badge?.value;
@@ -527,7 +653,7 @@ export function registerSyncHooks(onLevelFromBadge, onCommunionExpired) {
   // Character level-up: baked DC/temp-HP numbers must be recomputed.
   Hooks.on("updateActor", (actor, changes) => {
     if (!isPrimaryGM()) return;
-    if (syncing.has(actor.id) || !isAttuned(actor)) return;
+    if (syncing.has(actorKey(actor)) || !isAttuned(actor)) return;
     if (changes?.system?.details?.level?.value === undefined) return;
     scheduleResync(actor);
   });
