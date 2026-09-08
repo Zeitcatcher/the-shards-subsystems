@@ -7,22 +7,26 @@
  */
 
 import { MODULE_ID } from "../../core/constants.mjs";
-import { readIzir, patchIzir, appendLog } from "./state.mjs";
+import { readIzir, patchIzir, appendLog, withActorLock } from "./state.mjs";
 import { loadContent } from "./content.mjs";
 import { syncActor } from "./sync.mjs";
 import { maybeSwapForLevel } from "./art.mjs";
-import { clampLevel, applySlide, slideNeeded, MAX_LEVEL } from "./logic/model.mjs";
+import { clampLevel, applySlide, clampSlideForLevel, MAX_LEVEL } from "./logic/model.mjs";
 
 /**
  * Set immersion directly (stepper, token badge). Clamps to 0..9 — entering 10 goes
  * through the fork only. Slide points are clamped to the new bar.
  */
 export async function setImmersion(actor, next, note = "") {
+  return withActorLock(actor, () => setImmersionInner(actor, next, note));
+}
+
+async function setImmersionInner(actor, next, note) {
   const st = readIzir(actor);
   if (st.terminal) return;
   const to = clampLevel(Math.min(next, MAX_LEVEL - 1));
   if (to === st.level) return;
-  const slide = Math.min(st.slide ?? 0, slideNeeded(to) || 0);
+  const slide = clampSlideForLevel(st.slide ?? 0, to);
   await patchIzir(actor, { level: to, slide });
   await appendLog(actor, "level", { from: st.level, to }, note);
   await syncActor(actor);
@@ -34,7 +38,15 @@ export async function setImmersion(actor, next, note = "") {
  * (with carry); a full bar at 9 only signals the Tenth Step. Returns the result of
  * the pure applySlide, or null when the slide is inactive.
  */
-export async function applySlideChange(actor, { delta = 0, set, source = "gm", cause = null } = {}) {
+export async function applySlideChange(actor, opts = {}) {
+  return withActorLock(actor, () => applySlideChangeInner(actor, opts));
+}
+
+/**
+ * The body of applySlideChange, without the lock. Only for callers that already
+ * hold it — taking it twice on one chain would wedge the queue.
+ */
+export async function applySlideChangeInner(actor, { delta = 0, set, source = "gm", cause = null } = {}) {
   const st = readIzir(actor);
   if (st.terminal || st.level < 1 || st.level >= MAX_LEVEL) return null;
 
@@ -116,33 +128,36 @@ async function openForkDialog(actor, level) {
 async function postGuidance(actor, path) {
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   const key = path === "subjugated" ? "SHARDS.Izir.GuidanceSubjugated" : "SHARDS.Izir.GuidanceNineveh";
-  await ChatMessage.create({
-    content: `<div class="izir-temptation-card"><p class="izir-card-title"><i class="fa-solid fa-eye"></i> ${game.i18n.localize("SHARDS.Izir.ForkTitle")}</p><p>${game.i18n.localize(key)}</p></div>`,
-    whisper: gmIds,
-    speaker: ChatMessage.getSpeaker({ actor }),
-  });
+  await ChatMessage.create(
+    {
+      content: `<div class="izir-temptation-card"><p class="izir-card-title"><i class="fa-solid fa-eye"></i> ${game.i18n.localize("SHARDS.Izir.ForkTitle")}</p><p>${game.i18n.localize(key)}</p></div>`,
+      whisper: gmIds,
+      speaker: ChatMessage.getSpeaker({ actor }),
+    },
+    { chatBubble: false }, // not speech (F36)
+  );
 }
 
 async function applyNineveh(actor) {
-  await patchIzir(actor, { level: 10, terminal: "nineveh", slide: 0 });
+  // A pending temptation dies with the character; the panel hides the clear
+  // button for a consumed actor, so an uncleared one left an hourglass dot on
+  // the roster forever. (F20)
+  await patchIzir(actor, { level: 10, terminal: "nineveh", slide: 0, pendingTemptation: null });
   await appendLog(actor, "transform", { path: "nineveh" });
   await syncActor(actor);
   await maybeSwapForLevel(actor, 10);
   await postGuidance(actor, "nineveh");
 }
 
-async function applySubjugation(actor) {
-  const content = await loadContent().catch(() => null);
+async function applySubjugation(actor, content) {
   const st = readIzir(actor);
-  const baneFamilies = content
-    ? [...new Set(content.entries.filter((e) => e.kind === "bane").map((e) => e.family))]
-    : [];
+  const baneFamilies = [...new Set(content.entries.filter((e) => e.kind === "bane").map((e) => e.family))];
   const existing = new Set(st.suppressed.map((s) => s.id));
   const suppressed = [...st.suppressed];
   for (const fam of baneFamilies) {
     if (!existing.has(fam)) suppressed.push({ id: fam, reason: "subjugation", at: Date.now() });
   }
-  await patchIzir(actor, { level: 10, terminal: "subjugated", suppressed, slide: 0 });
+  await patchIzir(actor, { level: 10, terminal: "subjugated", suppressed, slide: 0, pendingTemptation: null });
   await appendLog(actor, "transform", { path: "subjugated" });
   await syncActor(actor);
   await maybeSwapForLevel(actor, 10);
@@ -159,6 +174,17 @@ const FORK_PATHS = new Set(["nineveh", "subjugated"]);
 export async function triggerFork(actor, preselect = null) {
   const st = readIzir(actor);
   if (st.terminal) return false;
+
+  // Load the content BEFORE asking. Subjugation suppresses every price, and with a
+  // broken data file it used to commit the terminal with an empty suppression list
+  // while the whisper claimed otherwise — then compose every bane live on a
+  // "Mastered" character once the file was repaired. (F30)
+  const content = await loadContent().catch(() => null);
+  if (!content) {
+    ui.notifications?.error(game.i18n.localize("SHARDS.Izir.ContentError"));
+    return false;
+  }
+
   const level = clampLevel(st.level);
 
   let choice = null;
@@ -174,7 +200,10 @@ export async function triggerFork(actor, preselect = null) {
   }
 
   if (!choice) return false;
-  if (choice === "nineveh") await applyNineveh(actor);
-  else await applySubjugation(actor);
-  return true;
+  return withActorLock(actor, async () => {
+    if (readIzir(actor).terminal) return false; // decided while the dialog was open
+    if (choice === "nineveh") await applyNineveh(actor);
+    else await applySubjugation(actor, content);
+    return true;
+  });
 }

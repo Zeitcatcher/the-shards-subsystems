@@ -1,37 +1,11 @@
 /**
- * Register homebrew pf2e creature traits so they appear in the actor trait selector
- * (alongside humanoid, dragon, electricity, …) and can be tagged on any token.
- * Done at `setup`, after pf2e has populated CONFIG.PF2E and before any sheet renders.
+ * The pf2e creature-trait slug this module marks the Nameless with.
+ *
+ * The trait itself is declared in module.json under
+ * `flags.<id>.pf2e-homebrew.creatureTraits`, which is what pf2e actually reads at
+ * setup: label and description both come from there. A runtime registrar used to
+ * live here too, writing the same slug into CONFIG.PF2E — it changed nothing a
+ * GM could see, and its description had already drifted from the manifest's. The
+ * manifest is the single source now; this file only names the slug. (F40)
  */
-
-/** The pf2e creature-trait slug this module registers and auto-applies on marking. */
 export const NAMELESS_TRAIT = "nameless";
-
-const TRAITS = [
-  {
-    slug: NAMELESS_TRAIT,
-    label: "Nameless",
-    description:
-      "A being whose First Name has been severed and who now carries Izir. Registered by The Shards — Campaign Subsystems.",
-  },
-];
-
-function addTo(pf2e, dictName, key, value) {
-  const dict = pf2e[dictName];
-  if (!dict || key in dict) return;
-  try {
-    dict[key] = value;
-  } catch {
-    // Some CONFIG dictionaries may be frozen — replace the whole object instead.
-    pf2e[dictName] = { ...dict, [key]: value };
-  }
-}
-
-export function registerIzirTraits() {
-  const pf2e = CONFIG?.PF2E;
-  if (!pf2e?.creatureTraits) return;
-  for (const t of TRAITS) {
-    addTo(pf2e, "creatureTraits", t.slug, t.label);
-    if (pf2e.traitsDescriptions) addTo(pf2e, "traitsDescriptions", t.slug, t.description);
-  }
-}

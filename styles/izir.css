@@ -308,19 +308,25 @@
   font-size: 0.7rem;
 }
 
-/* chip hover controls — space is RESERVED (visibility, not display) so revealing
-   the kit can never reflow the chips and yank the hover target away. */
+/* chip hover controls — space is RESERVED (opacity, not display) so revealing the
+   kit can never reflow the chips and yank the hover target away.
+   `visibility: hidden` also took the buttons out of the accessibility tree and
+   made them unreachable by keyboard: the suppress, reveal and reason controls
+   were mouse-only. Fading keeps them focusable, and focus inside the chip reveals
+   the kit the same way hovering does. (F38) */
 .the-shards-subsystems .izir-chip .kit {
   display: inline-flex;
-  visibility: hidden;
+  opacity: 0;
   gap: 2px;
   align-items: center;
   margin-left: 2px;
   border-left: 1px solid var(--color-border-light-tertiary, #c9c7b8);
   padding-left: 5px;
+  transition: opacity 120ms ease;
 }
-.the-shards-subsystems .izir-lrow:not(.locked) .izir-chip:hover .kit {
-  visibility: visible;
+.the-shards-subsystems .izir-lrow:not(.locked) .izir-chip:hover .kit,
+.the-shards-subsystems .izir-lrow:not(.locked) .izir-chip:focus-within .kit {
+  opacity: 1;
 }
 .the-shards-subsystems .izir-lrow.locked .izir-chip .kit {
   display: none; /* locked rows have no controls and don't need the width */
@@ -333,8 +339,15 @@
   padding: 0 2px;
   line-height: 1;
 }
-.the-shards-subsystems .izir-chip .kit button:hover {
+.the-shards-subsystems .izir-chip .kit button:hover,
+.the-shards-subsystems .izir-chip .kit button:focus-visible {
   opacity: 1;
+}
+/* `all: unset` above drops the focus ring with everything else; put it back. (F38) */
+.the-shards-subsystems .izir-chip .kit button:focus-visible {
+  outline: 2px solid var(--color-shadow-primary, #b5892a);
+  outline-offset: 1px;
+  border-radius: 2px;
 }
 
 /* fork row */
@@ -634,4 +647,16 @@ button.izir-recharging {
   margin-right: 4px;
   white-space: nowrap;
   align-self: center;
+}
+
+
+/* The stepper's black wash flattens on the dark theme, like the core fills. (F38) */
+:is(.theme-dark, .dark) .the-shards-subsystems .izir-stepper {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Content failure banner: the panel says why the ladder is missing. (F30) */
+.the-shards-subsystems .izir-content-error {
+  background: rgba(150, 40, 30, 0.12);
+  border-color: rgba(150, 40, 30, 0.5);
 }

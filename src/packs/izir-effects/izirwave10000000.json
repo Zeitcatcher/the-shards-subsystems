@@ -8,7 +8,7 @@
   "sort": 3250,
   "system": {
     "description": {
-      "value": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:15] Each creature in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[reflex|dc:|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>"
+      "value": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:15] Each creature in the area takes @Damage[(max(1,floor(@actor.level/2)))d6[void]|options:area-damage] damage (@Check[reflex|dc:|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>"
     },
     "slug": "shards-izir-izir-wave-1",
     "actionType": {

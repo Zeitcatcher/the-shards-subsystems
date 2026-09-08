@@ -4,6 +4,7 @@
  * the GM can paste the page into session notes.
  */
 
+import { MODULE_ID } from "../../core/constants.mjs";
 import { readIzir, patchIzir } from "./state.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
@@ -31,6 +32,8 @@ export function describeEntry(entry) {
       return game.i18n.format("SHARDS.Izir.Log.transform", {
         path: game.i18n.localize(d.path === "subjugated" ? "SHARDS.Izir.Tier.subjugated" : "SHARDS.Izir.Tier.nineveh"),
       });
+    case "reason":
+      return game.i18n.format("SHARDS.Izir.Log.reason", { id: d.id ?? "?" });
     case "art":
       return game.i18n.localize("SHARDS.Izir.Log.art");
     default:
@@ -58,28 +61,47 @@ ${rows || `<tr><td colspan="2"><em>—</em></td></tr>`}
 </table>`;
 }
 
-function pageData(html) {
+function pageData(html, actor) {
   return {
     name: game.i18n.localize("SHARDS.Izir.JournalPageName"),
     type: "text",
     text: { content: html, format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML },
+    flags: ownerFlags(actor),
   };
 }
 
-/** Create or update the actor's history journal and open it. */
+/** The uuid stamped on an entry/page so it can be recognised as this actor's. */
+const ownerOf = (doc) => doc?.getFlag?.(MODULE_ID, "izirActor") ?? null;
+const ownerFlags = (actor) => ({ [MODULE_ID]: { izirActor: actor.uuid } });
+
+/**
+ * Create or update the actor's history journal and open it.
+ *
+ * The journal id lives in the actor flag, so duplicating a marked actor — or
+ * dropping an unlinked token of one that had already exported — handed the copy
+ * the original's journal. The copy then overwrote the original's page under the
+ * original's name, and the two could never hold separate journals. The entry and
+ * its page carry the owning actor's uuid now; anything else belongs to someone
+ * else and a fresh entry is made instead. (F26)
+ */
 export async function exportLog(actor) {
   const st = readIzir(actor);
   const html = renderLogHtml(actor, st);
 
   let entry = st.journalId ? game.journal.get(st.journalId) : null;
+  if (entry && ownerOf(entry) && ownerOf(entry) !== actor.uuid) entry = null;
+
   if (entry) {
-    const page = entry.pages.contents[0];
-    if (page) await page.update({ "text.content": html });
-    else await entry.createEmbeddedDocuments("JournalEntryPage", [pageData(html)]);
+    const page = entry.pages.find((p) => ownerOf(p) === actor.uuid) ?? entry.pages.contents[0];
+    if (page) await page.update({ "text.content": html, ...(ownerOf(page) ? {} : { flags: ownerFlags(actor) }) });
+    else await entry.createEmbeddedDocuments("JournalEntryPage", [pageData(html, actor)]);
+    // An entry made before this rule gets stamped so it is never taken from us.
+    if (!ownerOf(entry)) await entry.update({ flags: ownerFlags(actor) });
   } else {
     entry = await JournalEntry.create({
       name: game.i18n.format("SHARDS.Izir.JournalName", { name: actor.name }),
-      pages: [pageData(html)],
+      pages: [pageData(html, actor)],
+      flags: ownerFlags(actor),
     });
     await patchIzir(actor, { journalId: entry.id });
   }

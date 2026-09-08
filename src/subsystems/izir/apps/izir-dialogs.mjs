@@ -27,7 +27,9 @@ async function onArtBrowse(_event, target) {
     type: "imagevideo",
     current,
     callback: async (path) => {
-      await patchIzir(actor, { art: { thresholds: { [threshold]: { [field]: path } } } });
+      // Editing a threshold row is an instruction about art, so it lifts the hold
+      // a manual revert put on automatic swaps. (F25)
+      await patchIzir(actor, { art: { thresholds: { [threshold]: { [field]: path } }, hold: false } });
       this.render();
     },
   }).render(true);
@@ -36,7 +38,13 @@ async function onArtBrowse(_event, target) {
 async function onArtClear(_event, target) {
   const actor = resolveActor(this.actorUuid);
   if (!actor) return;
-  await patchIzir(actor, { art: { thresholds: { [target.dataset.threshold]: { portrait: "", token: "" } } } });
+  const threshold = target.dataset.threshold;
+  // Clearing the row that is currently applied used to leave the actor wearing the
+  // art the row no longer holds, the row still labelled Applied with Apply
+  // disabled, and re-filling it later doing nothing because `applied` already
+  // matched. Take the art off first. (F25)
+  if (readIzir(actor).art.applied === String(threshold)) await revertArt(actor);
+  await patchIzir(actor, { art: { thresholds: { [threshold]: { portrait: "", token: "" } } } });
   this.render();
 }
 
@@ -51,18 +59,23 @@ async function onArtApply(_event, target) {
 async function onArtRevert() {
   const actor = resolveActor(this.actorUuid);
   if (!actor) return;
-  await revertArt(actor);
+  // A revert asked for by hand holds until art is applied by hand or a threshold
+  // row is edited — the next failed save must not stamp the horror art back on. (F25)
+  await revertArt(actor, { hold: true });
   this.render();
 }
 
 export class IzirArtDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(actorUuid, options = {}) {
-    super(options);
+    super({ ...options, uniqueId: actorUuid });
     this.actorUuid = actorUuid;
   }
 
   static DEFAULT_OPTIONS = {
-    id: `${MODULE_ID}-izir-art`,
+    // Per-actor id: a single fixed id meant the open Art window kept editing the
+    // actor it was opened for while the panel selection moved on, and re-clicking
+    // the footer button replaced the window and orphaned the old instance. (F39)
+    id: `${MODULE_ID}-izir-art-{id}`,
     classes: [MODULE_ID, "izir-satellite"],
     tag: "div",
     window: { title: "SHARDS.Izir.ArtTitle", icon: "fa-solid fa-image", resizable: true },
@@ -102,12 +115,12 @@ async function onExport() {
 
 export class IzirHistoryDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(actorUuid, options = {}) {
-    super(options);
+    super({ ...options, uniqueId: actorUuid });
     this.actorUuid = actorUuid;
   }
 
   static DEFAULT_OPTIONS = {
-    id: `${MODULE_ID}-izir-history`,
+    id: `${MODULE_ID}-izir-history-{id}`,
     classes: [MODULE_ID, "izir-satellite"],
     tag: "div",
     window: { title: "SHARDS.Izir.HistoryTitle", icon: "fa-solid fa-book", resizable: true },
@@ -134,9 +147,25 @@ export class IzirHistoryDialog extends HandlebarsApplicationMixin(ApplicationV2)
   }
 }
 
+// One live instance per actor, so re-opening focuses the window that is already
+// there instead of orphaning it in foundry.applications.instances. (F39)
+const openDialogs = new Map();
+
+function openSatellite(Cls, actorUuid) {
+  if (!actorUuid) return;
+  const key = `${Cls.name}:${actorUuid}`;
+  let app = openDialogs.get(key);
+  if (!app || app.rendered === false) {
+    app = new Cls(actorUuid);
+    openDialogs.set(key, app);
+  }
+  app.render({ force: true });
+  return app;
+}
+
 export function openArtDialog(actorUuid) {
-  new IzirArtDialog(actorUuid).render({ force: true });
+  return openSatellite(IzirArtDialog, actorUuid);
 }
 export function openHistoryDialog(actorUuid) {
-  new IzirHistoryDialog(actorUuid).render({ force: true });
+  return openSatellite(IzirHistoryDialog, actorUuid);
 }

@@ -8,7 +8,7 @@
   "sort": 2500,
   "system": {
     "description": {
-      "value": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen your eyes change.</p>"
+      "value": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen your eyes change. The penalty is on the sheet at all times; the GM waives it where nobody has seen.</p>"
     },
     "slug": "shards-izir-mark-spreads",
     "duration": {

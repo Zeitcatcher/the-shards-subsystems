@@ -8,7 +8,7 @@
   "sort": 9250,
   "system": {
     "description": {
-      "value": "<p>For one minute, you are what the Nineveh only dream of being, and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed (minimum 20 feet), your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet. When the minute ends, you are drained 1.</p>"
+      "value": "<p>For one minute, you are what the Nineveh only dream of being, and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed (minimum 20 feet), your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet (both adjudicated by the GM: the die size and the radius are not applied automatically). When the minute ends, you are drained 1.</p>"
     },
     "slug": "shards-izir-herald-of-ruin",
     "actionType": {

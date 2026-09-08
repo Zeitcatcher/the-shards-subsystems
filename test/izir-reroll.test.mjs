@@ -179,6 +179,27 @@ describe("a rerolled temptation replaces its first result", () => {
     expect(whispers.join(" ")).toContain("SHARDS.Izir.RerollTooLate");
   });
 
+  it("records a failure that the slide refused as +0, and says why", async () => {
+    // At immersion 0 there is no slide. The history and the exported journal used
+    // to read "CF +2" while nothing had moved, and no whisper explained it. (F19)
+    const actor = nameless({ level: 0, slide: 0, pendingTemptation: { id: "t6", dc: 20, reason: "" } });
+    await fire(saveMessage(actor, "t6", "criticalFailure"));
+
+    const entry = actor.flag.log.find((e) => e.type === "temptation");
+    expect(entry.data.slideDelta).toBe(0);
+    expect(entry.data.applied).toBe(false);
+    expect(whispers.join(" ")).toContain("SHARDS.Izir.SlideInertLevel0");
+  });
+
+  it("says nothing moved when the bar is already full at immersion 9", async () => {
+    const actor = nameless({ level: 9, slide: 27, pendingTemptation: { id: "t7", dc: 44, reason: "" } });
+    await fire(saveMessage(actor, "t7", "failure"));
+
+    expect(actor.flag.slide).toBe(27);
+    expect(actor.flag.log.find((e) => e.type === "temptation").data.applied).toBe(false);
+    expect(whispers.join(" ")).toContain("SHARDS.Izir.SlideCapped");
+  });
+
   it("ignores a reroll of a save it never recorded", async () => {
     const actor = nameless({ level: 3, slide: 4 });
     await fire(saveMessage(actor, "unknown", "criticalFailure", { reroll: true }));

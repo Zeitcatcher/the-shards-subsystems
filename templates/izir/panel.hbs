@@ -66,7 +66,8 @@
       <span class="izir-step-note">{{localize "SHARDS.Izir.BadgeHint"}}</span>
       <span class="izir-spacer"></span>
       {{#unless detail.terminal}}
-      <button type="button" class="izir-tenth {{#if slide.full}}ready{{/if}}" data-action="fork">
+      <button type="button" class="izir-tenth {{#if slide.full}}ready{{/if}}" data-action="fork"
+        {{#if contentError}}disabled data-tooltip="{{localize 'SHARDS.Izir.ContentBanner'}}"{{/if}}>
         <i class="fa-solid fa-skull"></i> {{localize "SHARDS.Izir.ForkTitle"}}…
       </button>
       {{/unless}}
@@ -97,6 +98,12 @@
     </div>
     {{/if}}
 
+    {{#if contentError}}
+    <div class="izir-terminal-banner izir-content-error">
+      <i class="fa-solid fa-triangle-exclamation"></i> {{localize "SHARDS.Izir.ContentBanner"}}
+    </div>
+    {{/if}}
+
     {{#if ladder}}
     <div class="izir-ladder">
       {{#each ladder.groups}}
@@ -124,7 +131,7 @@
                 data-tooltip="{{localize 'SHARDS.Izir.ReasonEdit'}}"><i class="fa-solid fa-pen"></i></button>
               {{/if}}
               <button type="button" data-action="toggleSuppress" data-family="{{this.family}}"
-                data-tooltip="{{#if this.suppressed}}{{localize 'SHARDS.Izir.Unsuppress'}}{{else}}{{localize 'SHARDS.Izir.Suppress'}}{{/if}}">
+                data-tooltip="{{#if this.suppressTip}}{{this.suppressTip}}{{else}}{{#if this.suppressed}}{{localize 'SHARDS.Izir.Unsuppress'}}{{else}}{{localize 'SHARDS.Izir.Suppress'}}{{/if}}{{/if}}">
                 <i class="fa-solid {{#if this.suppressed}}fa-rotate-left{{else}}fa-ban{{/if}}"></i>
               </button>
             </span>
@@ -151,10 +158,38 @@
           <button type="button" class="izir-fork-chip sub" data-action="fork" data-path="subjugated"
             {{#unless detail.atNinth}}disabled data-tooltip="{{localize 'SHARDS.Izir.ForkLocked'}}"{{/unless}}>♛ {{localize "SHARDS.Izir.ForkSubjugated"}}</button>
           {{/if}}
+          {{!-- A capstone is a locked label until subjugation, and a full chip with
+                cost, tag and controls afterwards. (F21) --}}
           {{#each ladder.gateChips}}
-          <span class="izir-chip {{#if this.isBane}}price{{else}}passive{{/if}} gate {{#if this.suppressed}}suppressed{{/if}}">
-            {{this.name}} <span class="tag">{{localize "SHARDS.Izir.UnlockSubjugation"}}</span>
+          {{#if this.gateLocked}}
+          <span class="izir-chip {{#if this.isBane}}price{{else}}passive{{/if}} gate">
+            {{this.name}} <span class="tag">{{this.tag}}</span>
           </span>
+          {{else}}
+          <span class="izir-chip {{#if this.isBane}}price{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}}">
+            {{#if this.isBane}}<i class="fa-solid fa-skull-crossbones sk"></i>{{/if}}
+            {{this.name}}
+            {{#if this.actionsGlyph}}<span class="cost">{{this.actionsGlyph}}</span>{{/if}}
+            {{#if this.tag}}<span class="tag">{{this.tag}}</span>{{/if}}
+            {{#if this.reason}}<i class="fa-solid fa-comment-dots why" data-tooltip="{{this.reason}}"></i>{{/if}}
+            <span class="kit">
+              {{#if this.showEye}}
+              <button type="button" data-action="toggleReveal" data-family="{{this.family}}"
+                data-tooltip="{{#if this.revealed}}{{localize 'SHARDS.Izir.Hide'}}{{else}}{{localize 'SHARDS.Izir.Reveal'}}{{/if}}">
+                <i class="fa-solid {{#if this.revealed}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>
+              </button>
+              {{/if}}
+              {{#if this.suppressed}}
+              <button type="button" data-action="editReason" data-family="{{this.family}}"
+                data-tooltip="{{localize 'SHARDS.Izir.ReasonEdit'}}"><i class="fa-solid fa-pen"></i></button>
+              {{/if}}
+              <button type="button" data-action="toggleSuppress" data-family="{{this.family}}"
+                data-tooltip="{{#if this.suppressTip}}{{this.suppressTip}}{{else}}{{#if this.suppressed}}{{localize 'SHARDS.Izir.Unsuppress'}}{{else}}{{localize 'SHARDS.Izir.Suppress'}}{{/if}}{{/if}}">
+                <i class="fa-solid {{#if this.suppressed}}fa-rotate-left{{else}}fa-ban{{/if}}"></i>
+              </button>
+            </span>
+          </span>
+          {{/if}}
           {{/each}}
         </div>
       </div>

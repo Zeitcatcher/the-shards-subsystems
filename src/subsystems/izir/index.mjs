@@ -13,7 +13,6 @@ import { registerTemptationHooks } from "./mechanics/temptation.mjs";
 import { registerRechargeHooks, rechargeSheetShim } from "./mechanics/recharge.mjs";
 import { registerTerrorHooks } from "./mechanics/terror.mjs";
 import { setImmersion } from "./transform.mjs";
-import { registerIzirTraits } from "./traits.mjs";
 
 const IZIR_SETTINGS = [
   {
@@ -52,22 +51,35 @@ registerSubsystem({
   openPanel: (actorUuid, opts) => openIzirPanel(actorUuid, opts),
   refresh: () => refreshIzirPanel(),
   sheetButton: rechargeSheetShim,
-  onSetup: () => registerIzirTraits(),
   onReady: async () => {
+    // Hooks FIRST, content second. Registration used to sit behind the content
+    // fetch, and a Use or a save landing in that window was missed for good. (F29)
+    registerSyncHooks(
+      // Token-badge edits are level changes; refresh the panel afterwards.
+      async (actor, _from, next) => {
+        await setImmersion(actor, next, game.i18n.localize("SHARDS.Izir.BadgeNote"));
+        refreshIzirPanel();
+      },
+      () => refreshIzirPanel(),
+    );
+    registerTemptationHooks();
+    registerRechargeHooks();
+    registerTerrorHooks();
+
+    // The roster is built from placed tokens, so it has to follow them. Without
+    // this, deleting the selected unlinked token left a dashboard whose buttons
+    // did nothing, and a newly dropped marked token did not appear at all. (F28)
+    for (const hook of ["createToken", "deleteToken", "deleteActor"]) {
+      Hooks.on(hook, () => refreshIzirPanel());
+    }
+
     try {
       await loadContent();
     } catch (err) {
       console.error(`${MODULE_ID} | Izir content failed to load`, err);
       ui.notifications?.error(game.i18n.localize("SHARDS.Izir.ContentError"));
     }
-    // Token-badge edits are level changes; refresh the panel afterwards.
-    registerSyncHooks(async (actor, _from, next) => {
-      await setImmersion(actor, next, game.i18n.localize("SHARDS.Izir.BadgeNote"));
-      refreshIzirPanel();
-    });
-    registerTemptationHooks();
-    registerRechargeHooks();
-    registerTerrorHooks();
+    refreshIzirPanel();
   },
   onMigrate: async (from, to) => {
     // 0.7.0 moved every selfEffect and aura uuid into the new izir-internal pack.

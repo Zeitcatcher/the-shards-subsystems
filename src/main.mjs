@@ -34,14 +34,31 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("setup", async () => {
-  await foundry.applications.handlebars.loadTemplates(Object.values(TEMPLATES));
-  for (const sub of getSubsystems()) sub.onSetup?.();
+  // Subsystem setup runs first and unconditionally. Template pre-loading is a
+  // warm-up, not a dependency — HandlebarsApplicationMixin loads a PART on demand
+  // — so a failed fetch must not take the subsystems down with it. (F29)
+  for (const sub of getSubsystems()) {
+    try {
+      sub.onSetup?.();
+    } catch (err) {
+      console.error(`${MODULE_ID} | ${sub.id} onSetup`, err);
+    }
+  }
+  foundry.applications.handlebars
+    .loadTemplates(Object.values(TEMPLATES))
+    .catch((err) => console.error(`${MODULE_ID} | template preload`, err));
 });
 
 Hooks.once("ready", async () => {
   // Only the primary GM creates world documents (macros), so a second GM logging in
   // doesn't duplicate them.
-  if (isPrimaryGM()) await ensureLauncherMacros();
+  // A rejected macro write — the GM role losing script-macro permission, a
+  // transient database error — used to abort this callback before a single
+  // subsystem started: no badge sync, no capture, no recharge for the session,
+  // with nothing but an unhandled rejection in the console. (F29)
+  if (isPrimaryGM()) {
+    await ensureLauncherMacros().catch((err) => console.error(`${MODULE_ID} | launcher macros`, err));
+  }
   // Awaited — concurrently, so no subsystem waits on another — because the
   // migrations below need fully-started subsystems, and because an onReady that
   // threw used to disappear as an unhandled rejection.

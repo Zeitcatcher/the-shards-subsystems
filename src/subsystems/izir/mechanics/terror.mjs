@@ -11,8 +11,12 @@ import { isPrimaryGM } from "../../../core/platform.mjs";
 import { readIzir, isMarked } from "../state.mjs";
 import { suggestedDC } from "./temptation.mjs";
 import { encounterOf } from "./recharge.mjs";
+import { packSlug } from "../logic/reconcile.mjs";
 
-const MARKER_SLUG = "shards-izir-pack-izirterroraura00";
+/** The packEffect this aura drops on whoever enters (data/izir/content.json). */
+const TERROR_AURA_ID = "izirterroraura00";
+
+const MARKER_SLUG = packSlug(TERROR_AURA_ID);
 const ROLL_OPTION = "shards-izir-terror";
 const ID_PREFIX = "shards-izir-terror-id:";
 const IMMUNITY_SLUG = "shards-izir-terror-immune";
@@ -64,8 +68,11 @@ async function promptTerrorSave(markerItem) {
     .map((u) => u.id);
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
 
-  await ChatMessage.create({
-    content: `<div class="izir-temptation-card">
+  // chatBubble: false — a roll-less message defaults to floating over the token
+  // since 14.366, and this card is a GM prompt, not speech. (F36)
+  await ChatMessage.create(
+    {
+      content: `<div class="izir-temptation-card">
       <p class="izir-card-title"><i class="fa-solid fa-skull"></i> ${game.i18n.localize("SHARDS.Izir.TerrorTitle")}</p>
       <p>${game.i18n.format("SHARDS.Izir.TerrorPrompt", {
         target: foundry.utils.escapeHTML(target.name),
@@ -73,9 +80,11 @@ async function promptTerrorSave(markerItem) {
       })}</p>
       <p>${check}</p>
     </div>`,
-    whisper: [...new Set([...owners, ...gmIds])],
-    speaker: ChatMessage.getSpeaker({ actor: target }),
-  });
+      whisper: [...new Set([...owners, ...gmIds])],
+      speaker: ChatMessage.getSpeaker({ actor: target }),
+    },
+    { chatBubble: false },
+  );
 
   await grantTerrorImmunity(target, bearer);
 }

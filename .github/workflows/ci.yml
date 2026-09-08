@@ -29,4 +29,32 @@ jobs:
       - name: Pack sources up to date
         run: |
           npm run build:pack-sources
-          git diff --exit-code src/packs || (echo "src/packs is stale — run npm run build:pack-sources and commit." && exit 1)
+          # `git diff` cannot see an UNTRACKED new file, so adding a content entry
+          # without regenerating used to pass CI and ship a pack short of a
+          # document. Porcelain sees added, deleted and modified alike. (F41)
+          if [ -n "$(git status --porcelain src/packs)" ]; then
+            echo "src/packs is stale — run npm run build:pack-sources and commit:"
+            git status --porcelain src/packs
+            exit 1
+          fi
+
+      - name: Compile the compendium packs
+        run: npm run build:packs
+
+      - name: Versions agree
+        run: |
+          node -e '
+            const fs = require("fs");
+            const mod = JSON.parse(fs.readFileSync("module.json", "utf8"));
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const problems = [];
+            if (mod.version !== pkg.version) {
+              problems.push(`module.json ${mod.version} != package.json ${pkg.version}`);
+            }
+            if (!String(mod.download ?? "").includes(`/v${mod.version}/`)) {
+              problems.push(`download URL does not name v${mod.version}: ${mod.download}`);
+            }
+            if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
+            console.log(`versions agree: ${mod.version}`);
+          '
+

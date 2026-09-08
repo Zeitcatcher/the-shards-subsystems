@@ -8,7 +8,7 @@
   "sort": 3500,
   "system": {
     "description": {
-      "value": "<p>The void in you recoils from light and the sacred. You gain weakness 2 (4 at immersion 6, 6 at 8) to holy damage (the weakness deepens as you sink: 4 at immersion 6, 6 at immersion 8), and sudden bright light dazzles you for 1 round.</p>"
+      "value": "<p>The void in you recoils from light and the sacred. You gain weakness 2 to holy damage (the weakness deepens as you sink: 4 at immersion 6, 6 at immersion 8), and sudden bright light dazzles you for 1 round.</p>"
     },
     "slug": "shards-izir-anathema-to-the-holy",
     "duration": {

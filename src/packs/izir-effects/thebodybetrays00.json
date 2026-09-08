@@ -8,7 +8,7 @@
   "sort": 8500,
   "system": {
     "description": {
-      "value": "<p>The void reshapes your flesh into something visibly wrong. Only magic can disguise it; you take a -2 circumstance penalty to Diplomacy and Deception against those who are not Nameless, and wards against Izir always detect you.</p>"
+      "value": "<p>The void reshapes your flesh into something visibly wrong. Only magic can disguise it; you take a -3 circumstance penalty to Diplomacy and Deception against those who are not Nameless, and wards against Izir always detect you. The penalty is on the sheet at all times; the GM waives it among the Nameless.</p>"
     },
     "slug": "shards-izir-the-body-betrays",
     "duration": {
@@ -37,7 +37,7 @@
           "deception"
         ],
         "type": "circumstance",
-        "value": -2,
+        "value": -3,
         "label": "SHARDS.Izir.MaskedLabel"
       },
       {

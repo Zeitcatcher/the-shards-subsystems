@@ -9,9 +9,9 @@
 
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
-import { readIzir, patchIzir, isMarked } from "../state.mjs";
+import { readIzir, patchIzir, appendLog, isMarked, withActorLock } from "../state.mjs";
 import { dcFor, slideDeltaFor, slideNeeded, rerollCorrection } from "../logic/model.mjs";
-import { applySlideChange, rewindLevelSlide } from "../transform.mjs";
+import { applySlideChangeInner, rewindLevelSlide } from "../transform.mjs";
 import { refreshIzirPanel } from "../apps/izir-panel.mjs";
 
 const dcBase = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_BASE)) || 20;
@@ -39,9 +39,15 @@ export async function callTemptation(actor, dc, reason = "") {
   const id = foundry.utils.randomID();
   await patchIzir(actor, { pendingTemptation: { id, dc, reason, createdAt: Date.now() } });
 
+  // The marker is written first because the NPC capture fires from inside
+  // will.roll and needs to find it. If the dispatch then fails — no Will
+  // statistic, a dismissed check dialog, a rejected chat write — the marker has to
+  // go, or the panel sits on a pending roll that will never arrive. (F20)
   const owners = playerOwners(actor);
-  if (owners.length) await postTemptationCard(actor, id, dc, reason, owners);
-  else await rollNpcTemptation(actor, id, dc);
+  const sent = owners.length
+    ? await postTemptationCard(actor, id, dc, reason, owners)
+    : await rollNpcTemptation(actor, id, dc);
+  if (!sent) await patchIzir(actor, { pendingTemptation: null });
   refreshIzirPanel();
 }
 
@@ -58,7 +64,16 @@ async function postTemptationCard(actor, id, dc, reason, ownerIds) {
     ${body}
     <p>${check}</p>
   </div>`;
-  await ChatMessage.create({ content, whisper, speaker: ChatMessage.getSpeaker({ actor }) });
+  try {
+    await ChatMessage.create(
+      { content, whisper, speaker: ChatMessage.getSpeaker({ actor }) },
+      { chatBubble: false },
+    );
+    return true;
+  } catch (err) {
+    console.error(`${MODULE_ID} | temptation card`, err);
+    return false;
+  }
 }
 
 /** NPC path: GM rolls the save directly; same tag → same capture. */
@@ -66,9 +81,9 @@ async function rollNpcTemptation(actor, id, dc) {
   const will = actor.getStatistic?.("will") ?? actor.saves?.will;
   if (!will?.roll) {
     ui.notifications?.warn(game.i18n.localize("SHARDS.Izir.NoWill"));
-    return;
+    return false;
   }
-  await will.roll({
+  const roll = await will.roll({
     dc: { value: dc },
     label: game.i18n.localize("SHARDS.Izir.TemptationTitle"),
     extraRollOptions: ["shards-izir-temptation", `shards-izir-temptation-id:${id}`],
@@ -76,6 +91,8 @@ async function rollNpcTemptation(actor, id, dc) {
     // was inert, so the GM's NPC temptation roll went out in the open. (F3)
     messageMode: "gm",
   });
+  // A dismissed check dialog resolves null: nothing was rolled.
+  return Boolean(roll);
 }
 
 function resolveActor(message) {
@@ -143,8 +160,7 @@ async function captureFromMessage(message) {
 const recording = new Set();
 
 export async function recordTemptationOutcome(actor, outcome, total = null) {
-  const st = readIzir(actor);
-  const pending = st.pendingTemptation;
+  const pending = readIzir(actor).pendingTemptation;
   if (!pending) return; // already recorded (auto-capture cleared it) — nothing to do
   // Guard a double-apply when auto-capture and the manual recorder fire for the
   // same pending at once. The check-and-add is synchronous (before any await), so
@@ -153,29 +169,45 @@ export async function recordTemptationOutcome(actor, outcome, total = null) {
   if (recording.has(key)) return;
   recording.add(key);
   try {
-    const delta = slideDeltaFor(outcome);
-    // `prev` is the track as it stood before this save moved it. A reroll rewinds
-    // to it rather than trying to subtract the old result back out. (F2)
-    const prev = { level: st.level, slide: st.slide ?? 0 };
-    const log = [
-      ...st.log,
-      {
-        t: Date.now(),
-        type: "temptation",
-        data: { id: pending.id, dc: pending.dc ?? null, outcome, total, slideDelta: delta, prev },
-        note: pending.reason ?? "",
-      },
-    ];
-    await patchIzir(actor, { log, pendingTemptation: null });
-
-    if (delta > 0) {
-      const r = await applySlideChange(actor, { delta, source: "temptation", cause: pending.id });
-      if (r) await whisperSlideReport(actor, delta, r);
-    }
+    await withActorLock(actor, () => recordInner(actor, pending, outcome, total));
     refreshIzirPanel();
   } finally {
     recording.delete(key);
   }
+}
+
+async function recordInner(actor, pending, outcome, total) {
+  const st = readIzir(actor);
+  if (st.terminal === "nineveh") {
+    // The character is gone. A late click on an old card should not write into
+    // their log as though the track were still running. (F20)
+    await patchIzir(actor, { pendingTemptation: null });
+    return;
+  }
+
+  const delta = slideDeltaFor(outcome);
+  // `prev` is the track as it stood before this save moved it. A reroll rewinds
+  // to it rather than trying to subtract the old result back out. (F2)
+  const prev = { level: st.level, slide: st.slide ?? 0 };
+
+  // Clear the marker first (the C5 guard keys on it), then move the slide, then
+  // log what ACTUALLY happened. Logging the intended delta first was a lie
+  // whenever the slide refused it: a level-0 or capped bearer got a "+2" in the
+  // history and the exported journal while nothing moved. (F19)
+  await patchIzir(actor, { pendingTemptation: null });
+
+  let r = null;
+  if (delta > 0) r = await applySlideChangeInner(actor, { delta, source: "temptation", cause: pending.id });
+  const moved = Boolean(r) && (r.level !== prev.level || r.slide !== prev.slide);
+
+  await appendLog(
+    actor,
+    "temptation",
+    { id: pending.id, dc: pending.dc ?? null, outcome, total, slideDelta: moved ? delta : 0, applied: moved, prev },
+    pending.reason ?? "",
+  );
+
+  if (delta > 0) await whisperSlideReport(actor, delta, r, moved, prev);
 }
 
 /**
@@ -193,50 +225,60 @@ async function reconcileReroll(actor, id, outcome, total) {
   if (recording.has(key)) return;
   recording.add(key);
   try {
-    const st = readIzir(actor);
-    const idx = st.log.findIndex((e) => e.type === "temptation" && e.data?.id === id);
-    if (idx < 0) return;
-
-    const entry = st.log[idx];
-    const prev = entry.data?.prev;
-    if (!prev) return whisperReroll(actor, "SHARDS.Izir.RerollNoSnapshot");
-    if (st.terminal) return whisperReroll(actor, "SHARDS.Izir.RerollTerminal");
-    if (st.log.slice(idx + 1).some((e) => e.type === "temptation")) {
-      return whisperReroll(actor, "SHARDS.Izir.RerollTooLate");
-    }
-
-    const oldDelta = Number(entry.data?.slideDelta) || 0;
-    const corr = rerollCorrection(prev, oldDelta, outcome);
-
-    const log = st.log
-      .filter((e, i) => i <= idx || !(e.data?.cause === id && (e.type === "slide" || e.type === "level")))
-      .map((e, i) =>
-        i === idx ? { ...e, data: { ...e.data, outcome, total, slideDelta: corr.newDelta, rerolled: true } } : e,
-      );
-    await patchIzir(actor, { log });
-
-    await rewindLevelSlide(actor, prev);
-    let r = null;
-    if (corr.newDelta > 0) {
-      r = await applySlideChange(actor, { delta: corr.newDelta, source: "temptation", cause: id });
-    }
-
-    const outcomeLabel = outcome ? game.i18n.localize(`SHARDS.Izir.Outcome.${outcome}`) : "—";
-    const level = r?.level ?? prev.level;
-    const name = esc(actor.name);
-    let text = game.i18n.format("SHARDS.Izir.RerollApplied", {
-      name,
-      outcome: outcomeLabel,
-      value: r?.slide ?? prev.slide,
-      needed: slideNeeded(level),
-    });
-    if (r?.leveled) text += ` ${game.i18n.format("SHARDS.Izir.SlideLeveled", { name, level: r.level })}`;
-    if (r?.atTenth) text += ` ${game.i18n.format("SHARDS.Izir.TenthReady", { name })}`;
-    await whisperGM(actor, text);
-    refreshIzirPanel();
+    await withActorLock(actor, () => reconcileRerollInner(actor, id, outcome, total));
   } finally {
     recording.delete(key);
   }
+}
+
+async function reconcileRerollInner(actor, id, outcome, total) {
+  const st = readIzir(actor);
+  const idx = st.log.findIndex((e) => e.type === "temptation" && e.data?.id === id);
+  if (idx < 0) return;
+
+  const entry = st.log[idx];
+  const prev = entry.data?.prev;
+  if (!prev) return whisperReroll(actor, "SHARDS.Izir.RerollNoSnapshot");
+  if (st.terminal) return whisperReroll(actor, "SHARDS.Izir.RerollTerminal");
+  if (st.log.slice(idx + 1).some((e) => e.type === "temptation")) {
+    return whisperReroll(actor, "SHARDS.Izir.RerollTooLate");
+  }
+
+  const oldDelta = Number(entry.data?.slideDelta) || 0;
+  const corr = rerollCorrection(prev, oldDelta, outcome);
+
+  // Retract this roll's own consequences wherever they sit — the slide is applied
+  // before the temptation row is written, so they come BEFORE it — and rewrite the
+  // row itself. Matching on the cause stamp rather than on position is what makes
+  // that safe.
+  const log = st.log
+    .filter((e) => !(e.data?.cause === id && (e.type === "slide" || e.type === "level")))
+    .map((e) =>
+      e.type === "temptation" && e.data?.id === id
+        ? { ...e, data: { ...e.data, outcome, total, slideDelta: corr.newDelta, rerolled: true } }
+        : e,
+    );
+  await patchIzir(actor, { log });
+
+  await rewindLevelSlide(actor, prev);
+  let r = null;
+  if (corr.newDelta > 0) {
+    r = await applySlideChangeInner(actor, { delta: corr.newDelta, source: "temptation", cause: id });
+  }
+
+  const outcomeLabel = outcome ? game.i18n.localize(`SHARDS.Izir.Outcome.${outcome}`) : "—";
+  const level = r?.level ?? prev.level;
+  const name = esc(actor.name);
+  let text = game.i18n.format("SHARDS.Izir.RerollApplied", {
+    name,
+    outcome: outcomeLabel,
+    value: r?.slide ?? prev.slide,
+    needed: slideNeeded(level),
+  });
+  if (r?.leveled) text += ` ${game.i18n.format("SHARDS.Izir.SlideLeveled", { name, level: r.level })}`;
+  if (r?.atTenth) text += ` ${game.i18n.format("SHARDS.Izir.TenthReady", { name })}`;
+  await whisperGM(actor, text);
+  refreshIzirPanel();
 }
 
 /** GM-only note that a reroll could not be reconciled, and why. */
@@ -245,20 +287,38 @@ async function whisperReroll(actor, key) {
 }
 
 async function whisperGM(actor, text) {
-  await ChatMessage.create({
-    content: `<div class="izir-temptation-card"><p>${text}</p></div>`,
-    whisper: ChatMessage.getWhisperRecipients("GM").map((u) => u.id),
-    speaker: ChatMessage.getSpeaker({ actor }),
-  });
+  // chatBubble: false — since 14.366 a roll-less message defaults to floating over
+  // the speaker's token, and none of these cards are speech. (F36)
+  await ChatMessage.create(
+    {
+      content: `<div class="izir-temptation-card"><p>${text}</p></div>`,
+      whisper: ChatMessage.getWhisperRecipients("GM").map((u) => u.id),
+      speaker: ChatMessage.getSpeaker({ actor }),
+    },
+    { chatBubble: false },
+  );
 }
 
-/** GM-only confirmation of the slide movement after a captured outcome. */
-async function whisperSlideReport(actor, delta, r) {
-  const needed = slideNeeded(r.level);
+/**
+ * GM-only report of what the failed save did to the track — including when it did
+ * nothing. Silence on a refused slide, and "the slide moves +2: now 27 / 27" on a
+ * bar that was already full, were both worse than saying so. (F19)
+ */
+async function whisperSlideReport(actor, delta, r, moved, prev) {
   // The actor name goes into chat HTML; a token named with a stray angle bracket
   // should not get to write markup there. (F12)
   const name = esc(actor.name);
-  let text = game.i18n.format("SHARDS.Izir.SlideMoved", { delta, value: r.slide, needed });
+
+  if (!r) {
+    const key = prev.level < 1 ? "SHARDS.Izir.SlideInertLevel0" : "SHARDS.Izir.SlideInertTerminal";
+    await whisperGM(actor, game.i18n.format(key, { name, delta }));
+    return;
+  }
+
+  const needed = slideNeeded(r.level);
+  let text = moved
+    ? game.i18n.format("SHARDS.Izir.SlideMoved", { delta, value: r.slide, needed })
+    : game.i18n.format("SHARDS.Izir.SlideCapped", { name, delta, value: r.slide, needed });
   if (r.leveled) text += ` ${game.i18n.format("SHARDS.Izir.SlideLeveled", { name, level: r.level })}`;
   if (r.atTenth) text += ` ${game.i18n.format("SHARDS.Izir.TenthReady", { name })}`;
   await whisperGM(actor, text);
@@ -275,11 +335,14 @@ export async function postSurge(actor) {
   const owners = playerOwners(actor);
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   const whisper = [...new Set([...owners, ...gmIds])];
-  await ChatMessage.create({
-    content: `<div class="izir-temptation-card"><p class="izir-card-title"><i class="fa-solid fa-skull"></i> ${game.i18n.localize("SHARDS.Izir.SurgeTitle")}</p><p><em>${game.i18n.localize("SHARDS.Izir.SurgeText")}</em></p></div>`,
-    whisper,
-    speaker: ChatMessage.getSpeaker({ actor }),
-  });
+  await ChatMessage.create(
+    {
+      content: `<div class="izir-temptation-card"><p class="izir-card-title"><i class="fa-solid fa-skull"></i> ${game.i18n.localize("SHARDS.Izir.SurgeTitle")}</p><p><em>${game.i18n.localize("SHARDS.Izir.SurgeText")}</em></p></div>`,
+      whisper,
+      speaker: ChatMessage.getSpeaker({ actor }),
+    },
+    { chatBubble: false },
+  );
 }
 
 /** Chip action: a quiet reminder of the price to the player. */
@@ -287,9 +350,12 @@ export async function postReminder(actor) {
   const owners = playerOwners(actor);
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   const whisper = [...new Set([...owners, ...gmIds])];
-  await ChatMessage.create({
-    content: `<div class="izir-temptation-card"><p><em>${game.i18n.localize("SHARDS.Izir.RemindText")}</em></p></div>`,
-    whisper,
-    speaker: ChatMessage.getSpeaker({ actor }),
-  });
+  await ChatMessage.create(
+    {
+      content: `<div class="izir-temptation-card"><p><em>${game.i18n.localize("SHARDS.Izir.RemindText")}</em></p></div>`,
+      whisper,
+      speaker: ChatMessage.getSpeaker({ actor }),
+    },
+    { chatBubble: false },
+  );
 }

@@ -2,40 +2,6 @@
   "version": 1,
   "_note": "Single source of truth for Izir boons and prices. Names and descriptions are authored in English (GM directive). Price rule elements use the neutral label key SHARDS.Izir.MaskedLabel so hidden prices don't leak their names through roll breakdowns.",
   "_activesNote": "All actives are real content: strikes and actions with Izir-DC checks, dragon-pattern Recharge 1d6, and 1/day capstones. Recharge actives carry no frequency; their Use button comes from a selfEffect pointing at a generated Recharge pack effect, and the module rolls the die and sets the effect duration when the ability is used in combat.",
-  "tiers": [
-    {
-      "id": "whisper",
-      "levels": [
-        1,
-        3
-      ],
-      "labelKey": "SHARDS.Izir.Tier.whisper"
-    },
-    {
-      "id": "grip",
-      "levels": [
-        4,
-        6
-      ],
-      "labelKey": "SHARDS.Izir.Tier.grip"
-    },
-    {
-      "id": "call",
-      "levels": [
-        7,
-        9
-      ],
-      "labelKey": "SHARDS.Izir.Tier.call"
-    },
-    {
-      "id": "nineveh",
-      "levels": [
-        10,
-        10
-      ],
-      "labelKey": "SHARDS.Izir.Tier.nineveh"
-    }
-  ],
   "entries": [
     {
       "id": "voidsight",
@@ -104,7 +70,7 @@
       "kind": "boon",
       "form": "effect",
       "name": "Strength of the Void",
-      "description": "<p>Unnatural power floods your limbs. You gain a +1 status bonus to Athletics and a +5-foot status bonus to your Speed.</p>",
+      "description": "<p>Unnatural power floods your limbs. You gain a +1 status bonus to Athletics and a +5-foot status bonus to your Speeds.</p>",
       "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
       "rules": [
         {
@@ -150,7 +116,7 @@
       "kind": "bane",
       "form": "effect",
       "name": "The Mark Spreads",
-      "description": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen your eyes change.</p>",
+      "description": "<p>Under stress the black wells up and floods your eyes. You take a -1 circumstance penalty to Diplomacy and Deception against anyone who has seen your eyes change. The penalty is on the sheet at all times; the GM waives it where nobody has seen.</p>",
       "img": "icons/magic/unholy/hand-marked-pink.webp",
       "rules": [
         {
@@ -191,7 +157,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Izir Wave I",
-      "description": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:15] Each creature in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>",
+      "description": "<p>You sweep a cone of devouring void from your open hand.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:15] Each creature in the area takes @Damage[(max(1,floor(@actor.level/2)))d6[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>",
       "img": "icons/magic/unholy/beam-impact-purple.webp",
       "rules": [],
       "actionData": {
@@ -314,7 +280,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Izir Wave II",
-      "description": "<p>The wave widens into a torrent of annihilation.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:30] Each creature in the area takes @Damage[(floor(@actor.level/2))d8[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>",
+      "description": "<p>The wave widens into a torrent of annihilation.</p><hr /><p><strong>Effect</strong> @Template[cone|distance:30] Each creature in the area takes @Damage[(max(1,floor(@actor.level/2)))d8[void]|options:area-damage] damage (@Check[reflex|dc:{{izirDC}}|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>",
       "img": "icons/magic/unholy/beam-impact-purple.webp",
       "rules": [],
       "actionData": {
@@ -335,7 +301,7 @@
       "kind": "bane",
       "form": "effect",
       "name": "The Face Fades",
-      "description": "<p>Your features blur toward something wrong. You take a -2 circumstance penalty to Diplomacy and Deception against strangers, and concealing your nature at close range now requires magic.</p>",
+      "description": "<p>Your features blur toward something wrong. You take a -2 circumstance penalty to Diplomacy and Deception against strangers, and concealing your nature at close range now requires magic. The penalty is on the sheet at all times; the GM waives it with those who already know.</p>",
       "img": "icons/magic/unholy/hand-marked-pink.webp",
       "rules": [
         {
@@ -481,7 +447,7 @@
       "kind": "bane",
       "form": "effect",
       "name": "Slipping Control",
-      "description": "<p>The first time you are reduced below half your maximum Hit Points each combat, attempt a Will save against your temptation DC or be compelled to Strike the nearest creature (allies included) for 1 round. While below half your maximum Hit Points, you are doomed 1.</p>",
+      "description": "<p>The first time you are reduced below half your maximum Hit Points each combat, attempt a Will save against your temptation DC or be compelled to Strike the nearest creature (allies included) for 1 round. While below half your maximum Hit Points, the GM applies doomed 1.</p>",
       "img": "icons/magic/unholy/hand-claw-glow-orange.webp",
       "rules": []
     },
@@ -505,7 +471,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Devour Light",
-      "description": "<p>The void in you drinks the light from the world.</p><hr /><p><strong>Effect</strong> @Template[emanation|distance:20] Nonmagical light sources in the emanation are extinguished and magical light is suppressed for 1 minute. Each enemy in the area takes @Damage[(floor(@actor.level/2))d6[void]|options:area-damage] damage (@Check[fortitude|dc:{{izirDC}}|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>",
+      "description": "<p>The void in you drinks the light from the world.</p><hr /><p><strong>Effect</strong> @Template[emanation|distance:20] Nonmagical light sources in the emanation are extinguished and magical light is suppressed for 1 minute. Each enemy in the area takes @Damage[(max(1,floor(@actor.level/2)))d6[void]|options:area-damage] damage (@Check[fortitude|dc:{{izirDC}}|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>",
       "img": "icons/magic/unholy/orb-glowing-purple.webp",
       "rules": [],
       "actionData": {
@@ -527,7 +493,7 @@
       "kind": "bane",
       "form": "effect",
       "name": "The Body Betrays",
-      "description": "<p>The void reshapes your flesh into something visibly wrong. Only magic can disguise it; you take a -2 circumstance penalty to Diplomacy and Deception against those who are not Nameless, and wards against Izir always detect you.</p>",
+      "description": "<p>The void reshapes your flesh into something visibly wrong. Only magic can disguise it; you take a -3 circumstance penalty to Diplomacy and Deception against those who are not Nameless, and wards against Izir always detect you. The penalty is on the sheet at all times; the GM waives it among the Nameless.</p>",
       "img": "icons/magic/unholy/strike-body-explode-disintegrate.webp",
       "rules": [
         {
@@ -537,7 +503,7 @@
             "deception"
           ],
           "type": "circumstance",
-          "value": -2,
+          "value": -3,
           "label": "SHARDS.Izir.MaskedLabel"
         },
         {
@@ -575,7 +541,7 @@
       "kind": "boon",
       "form": "action",
       "name": "Herald of Ruin",
-      "description": "<p>For one minute, you are what the Nineveh only dream of being, and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed (minimum 20 feet), your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet. When the minute ends, you are drained 1.</p>",
+      "description": "<p>For one minute, you are what the Nineveh only dream of being, and still yourself.</p><hr /><p><strong>Frequency</strong> once per day</p><p><strong>Effect</strong> For 1 minute you gain a fly Speed equal to your Speed (minimum 20 feet), your Izir void damage dice become d8s, and Terror's Mantle's radius doubles to 20 feet (both adjudicated by the GM: the die size and the radius are not applied automatically). When the minute ends, you are drained 1.</p>",
       "img": "icons/magic/control/buff-flight-wings-runes-purple.webp",
       "rules": [],
       "actionData": {
@@ -602,7 +568,32 @@
       "name": "The Voice of Izir",
       "description": "<p>It speaks now, and part of you always listens. While immersed at this depth, you are stupefied 1 and doomed 1. This is the last step before the fall.</p>",
       "img": "icons/magic/unholy/silhouette-robe-evil-power.webp",
-      "rules": []
+      "rules": [
+        {
+          "key": "GrantItem",
+          "uuid": "Compendium.pf2e.conditionitems.Item.e1XGnhKNSQIm5IXg",
+          "inMemoryOnly": true,
+          "alterations": [
+            {
+              "mode": "override",
+              "property": "badge-value",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "key": "GrantItem",
+          "uuid": "Compendium.pf2e.conditionitems.Item.3uh1r86TzbQvosxv",
+          "inMemoryOnly": true,
+          "alterations": [
+            {
+              "mode": "override",
+              "property": "badge-value",
+              "value": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "perfect-stillness",
