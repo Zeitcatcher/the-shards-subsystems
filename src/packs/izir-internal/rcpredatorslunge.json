@@ -4,7 +4,7 @@
   "name": "Recharge: Predator's Lunge",
   "type": "effect",
   "img": "icons/magic/time/hourglass-tilted-glowing-gold.webp",
-  "folder": "izirfolderintern",
+  "folder": null,
   "sort": 200,
   "system": {
     "description": {

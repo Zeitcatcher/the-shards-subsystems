@@ -16,6 +16,7 @@ import { compilePack } from "@foundryvtt/foundryvtt-cli";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKS = [
   { src: "src/packs/izir-effects", dest: "packs/izir-effects" },
+  { src: "src/packs/izir-internal", dest: "packs/izir-internal" },
   { src: "src/packs/ansu-effects", dest: "packs/ansu-effects" },
 ];
 

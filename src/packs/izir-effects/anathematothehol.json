@@ -34,13 +34,6 @@
         "key": "Weakness",
         "type": "holy",
         "value": 2
-      },
-      {
-        "key": "Note",
-        "selector": "all",
-        "title": "Anathema to the Holy",
-        "text": "Sudden bright light dazzles you for 1 round.",
-        "visibility": "gm"
       }
     ],
     "start": {

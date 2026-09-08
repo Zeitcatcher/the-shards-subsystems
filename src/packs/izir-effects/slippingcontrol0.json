@@ -29,15 +29,7 @@
       "value": [],
       "rarity": "common"
     },
-    "rules": [
-      {
-        "key": "Note",
-        "selector": "all",
-        "title": "Slipping Control",
-        "text": "First time reduced below half HP each combat: Will vs temptation DC or compelled to Strike the nearest creature (allies included) for 1 round. Doomed 1 while below half HP.",
-        "visibility": "gm"
-      }
-    ],
+    "rules": [],
     "start": {
       "value": 0,
       "initiative": null

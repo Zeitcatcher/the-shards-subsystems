@@ -7,9 +7,9 @@
  */
 
 import { MODULE_ID, IZIR, SETTINGS } from "../../core/constants.mjs";
-import { isPrimaryGM } from "../../core/platform.mjs";
+import { isPrimaryGM, actorKey } from "../../core/platform.mjs";
 import { readIzir, patchIzir, appendLog, isMarked, listMarkedActors } from "./state.mjs";
-import { composeEffect, composeActions, diffAll, EFFECT_ENTRY_ID } from "./logic/reconcile.mjs";
+import { composeEffect, composeActions, diffAll, packUuid, EFFECT_ENTRY_ID } from "./logic/reconcile.mjs";
 import { clampLevel, tierForLevel, MAX_LEVEL } from "./logic/model.mjs";
 import { loadContent } from "./content.mjs";
 
@@ -33,7 +33,7 @@ const makeId = (s) => s.replace(/[^A-Za-z0-9]/g, "").padEnd(16, "0").slice(0, 16
 
 /** The pack UUID of an entry's generated "Recharge: <name>" effect. */
 export function rechargeEffectUuid(entryId) {
-  return `Compendium.${MODULE_ID}.izir-effects.Item.${makeId(`rc-${entryId}`)}`;
+  return packUuid(makeId(`rc-${entryId}`));
 }
 
 /* ------------------------------------------------------------------ */
@@ -91,7 +91,7 @@ export function buildEffectSource(composed) {
       duration: { value: -1, unit: "unlimited", sustained: false, expiry: null },
       unidentified: false,
       level: { value: 1 },
-      tokenIcon: { show: tokenIconsOn() },
+      tokenIcon: { show: composed.tokenIcons !== false },
       badge: { type: "counter", value: composed.badge.value, min: 1, max: composed.badge.max },
       traits: { value: [], rarity: "common" },
       rules: composed.rules,
@@ -117,11 +117,10 @@ export function buildActionSource(desired) {
     publication: PUBLICATION,
   };
   // Rage-pattern self-applied effect (e.g. Herald of Ruin's flight minute).
+  // `selfEffect` is always written, null included: leaving the key out of an
+  // update payload leaves a stale uuid behind when an ability stops using one. (F9)
   if (a.selfEffectId) {
-    system.selfEffect = {
-      uuid: `Compendium.${MODULE_ID}.izir-effects.Item.${a.selfEffectId}`,
-      name: desired.name,
-    };
+    system.selfEffect = { uuid: packUuid(a.selfEffectId), name: desired.name };
   } else if (a.recharge) {
     // Recharge actives get their Use button from a selfEffect pointing at the
     // generated Recharge effect (pf2e: usable = selfEffect || frequency).
@@ -129,6 +128,8 @@ export function buildActionSource(desired) {
       uuid: rechargeEffectUuid(desired.entryId),
       name: game.i18n.format("SHARDS.Izir.RechargeEffect", { name: desired.name }),
     };
+  } else {
+    system.selfEffect = null;
   }
   return {
     name: desired.name,
@@ -154,46 +155,73 @@ export function projectTagged(actor) {
   return out;
 }
 
-// Guard so our own writes don't re-trigger the watchers.
+// Guard so our own writes don't re-trigger the watchers. Keyed by uuid, not
+// actor.id: a synthetic (unlinked token) actor carries the BASE actor's id, so
+// two tokens of one statblock shared a key and one token's guard swallowed the
+// other's work. pf2e guards against the same confusion at actor/base.ts:171. (H2)
 const syncing = new Set();
-export const isSyncing = (actorId) => syncing.has(actorId);
+export const isSyncing = (actor) => syncing.has(actorKey(actor));
 
 // Per-actor promise chain so overlapping syncs serialize (see syncActor).
 const syncChain = new Map();
 
-/** Converge one actor's items to the composed model. Idempotent; GM-side. */
-export async function syncActor(actor) {
-  if (!actor) return;
+/**
+ * Converge one actor's items to the composed model. Idempotent; GM-side.
+ * Returns the number of item operations performed, so a caller can say honestly
+ * whether anything moved.
+ *
+ * `{ force: true }` rewrites every tagged item even when the hash matches. The
+ * hash only covers what we compose, so a change on the pf2e side — a pack uuid
+ * moving, a schema field we now emit — leaves stale items looking up to date. (F9)
+ */
+export async function syncActor(actor, opts = {}) {
+  if (!actor) return 0;
   // Serialize per actor: two overlapping runs must not each project "no effect
   // yet" and both create the composed effect before either write lands. (C1)
-  const prev = syncChain.get(actor.id) ?? Promise.resolve();
-  const run = prev.catch(() => {}).then(() => syncActorInner(actor));
-  syncChain.set(actor.id, run);
+  const key = actorKey(actor);
+  const prev = syncChain.get(key) ?? Promise.resolve();
+  const run = prev.catch(() => {}).then(() => syncActorInner(actor, opts));
+  syncChain.set(key, run);
   try {
-    await run;
+    return await run;
   } finally {
-    if (syncChain.get(actor.id) === run) syncChain.delete(actor.id);
+    if (syncChain.get(key) === run) syncChain.delete(key);
   }
 }
 
-async function syncActorInner(actor) {
+async function syncActorInner(actor, { force = false } = {}) {
   let content;
   try {
     content = await loadContent();
   } catch (err) {
     console.error(`${MODULE_ID} | content unavailable, skipping sync`, err);
-    return;
+    return 0;
   }
 
   const state = readIzir(actor);
   // actorType decides how the Izir strike gets its attack bonus: pf2e honours a
   // Strike RE's flat attackModifier on NPCs only. (F1)
-  const opts = { transparency: transparencyOn(), charLevel: charLevelOf(actor), actorType: actor.type };
+  const opts = {
+    transparency: transparencyOn(),
+    charLevel: charLevelOf(actor),
+    actorType: actor.type,
+    tokenIcons: tokenIconsOn(),
+  };
   const marked = isMarked(actor);
   const effect = marked ? composeEffect(state, content, opts) : null;
   const actions = marked ? composeActions(state, content, opts) : [];
   const tagged = projectTagged(actor);
   const { toCreate, toUpdate, toDeleteIds } = diffAll(effect, actions, tagged);
+
+  // A forced run rewrites every tagged item that is still wanted, hash or no hash.
+  if (force) {
+    const desiredById = new Map([...(effect ? [effect] : []), ...actions].map((d) => [d.entryId, d]));
+    for (const t of tagged) {
+      const d = desiredById.get(t.entryId);
+      if (!d || toDeleteIds.includes(t.itemId) || toUpdate.some((u) => u.itemId === t.itemId)) continue;
+      toUpdate.push({ itemId: t.itemId, desired: d });
+    }
+  }
 
   // Force-refresh the composed effect when its live badge was nudged out of sync.
   // The badge value isn't part of the composed hash, so a terminal's fixed badge
@@ -206,9 +234,10 @@ async function syncActorInner(actor) {
     }
   }
 
-  if (!toCreate.length && !toUpdate.length && !toDeleteIds.length) return;
+  if (!toCreate.length && !toUpdate.length && !toDeleteIds.length) return 0;
 
-  syncing.add(actor.id);
+  const key = actorKey(actor);
+  syncing.add(key);
   try {
     if (toDeleteIds.length) await actor.deleteEmbeddedDocuments("Item", [...new Set(toDeleteIds)]);
     if (toCreate.length) {
@@ -223,9 +252,10 @@ async function syncActorInner(actor) {
       await actor.updateEmbeddedDocuments("Item", updates);
     }
   } finally {
-    syncing.delete(actor.id);
+    syncing.delete(key);
   }
   warnDroppedRules(actor, effect);
+  return toCreate.length + toUpdate.length + toDeleteIds.length;
 }
 
 /**
@@ -254,11 +284,16 @@ function warnDroppedRules(actor, composed) {
 }
 
 /** Sync every marked actor (e.g. after a transparency change). Primary GM only. */
-export async function syncAllMarked() {
-  if (!isPrimaryGM()) return;
+export async function syncAllMarked(opts = {}) {
+  if (!isPrimaryGM()) return 0;
+  let changed = 0;
   for (const actor of listMarkedActors()) {
-    await syncActor(actor).catch((err) => console.error(`${MODULE_ID} | syncAllMarked`, err));
+    changed += (await syncActor(actor, opts).catch((err) => {
+      console.error(`${MODULE_ID} | syncAllMarked`, err);
+      return 0;
+    })) ?? 0;
   }
+  return changed;
 }
 
 /* ------------------------------------------------------------------ */
@@ -284,7 +319,7 @@ export function registerSyncHooks(onLevelFromBadge) {
   Hooks.on("deleteItem", (item) => {
     if (!isPrimaryGM()) return;
     const actor = item.parent;
-    if (!actor || syncing.has(actor.id)) return;
+    if (!actor || syncing.has(actorKey(actor))) return;
     const tag = item.getFlag?.(MODULE_ID, IZIR);
     if (!tag?.entryId || !isMarked(actor)) return;
     scheduleResync(actor);
@@ -294,7 +329,7 @@ export function registerSyncHooks(onLevelFromBadge) {
   Hooks.on("updateItem", (item, changes, _options, userId) => {
     if (!isPrimaryGM()) return;
     const actor = item.parent;
-    if (!actor || syncing.has(actor.id)) return;
+    if (!actor || syncing.has(actorKey(actor))) return;
     const tag = item.getFlag?.(MODULE_ID, IZIR);
     if (tag?.entryId !== EFFECT_ENTRY_ID || !isMarked(actor)) return;
     const badge = changes?.system?.badge?.value;
@@ -320,7 +355,7 @@ export function registerSyncHooks(onLevelFromBadge) {
   // Character level-up: baked attack/DC numbers must be recomputed.
   Hooks.on("updateActor", (actor, changes) => {
     if (!isPrimaryGM()) return;
-    if (syncing.has(actor.id) || !isMarked(actor)) return;
+    if (syncing.has(actorKey(actor)) || !isMarked(actor)) return;
     if (changes?.system?.details?.level?.value === undefined) return;
     scheduleResync(actor);
   });

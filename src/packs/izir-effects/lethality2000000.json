@@ -36,13 +36,6 @@
         "diceNumber": 2,
         "dieSize": "d6",
         "damageType": "void"
-      },
-      {
-        "key": "Note",
-        "selector": "all",
-        "title": "Lethality II",
-        "text": "When you drop a foe, adjacent enemies are frightened 1.",
-        "visibility": "owner"
       }
     ],
     "start": {

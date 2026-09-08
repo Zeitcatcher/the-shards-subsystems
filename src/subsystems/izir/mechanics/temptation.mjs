@@ -8,7 +8,7 @@
  */
 
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
-import { isPrimaryGM } from "../../../core/platform.mjs";
+import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
 import { readIzir, patchIzir, isMarked } from "../state.mjs";
 import { dcFor, slideDeltaFor, slideNeeded, rerollCorrection } from "../logic/model.mjs";
 import { applySlideChange, rewindLevelSlide } from "../transform.mjs";
@@ -72,7 +72,9 @@ async function rollNpcTemptation(actor, id, dc) {
     dc: { value: dc },
     label: game.i18n.localize("SHARDS.Izir.TemptationTitle"),
     extraRollOptions: ["shards-izir-temptation", `shards-izir-temptation-id:${id}`],
-    rollMode: "gmroll",
+    // pf2e's Statistic#roll reads `messageMode`, never `rollMode` — the old key
+    // was inert, so the GM's NPC temptation roll went out in the open. (F3)
+    messageMode: "gm",
   });
 }
 
@@ -147,7 +149,7 @@ export async function recordTemptationOutcome(actor, outcome, total = null) {
   // Guard a double-apply when auto-capture and the manual recorder fire for the
   // same pending at once. The check-and-add is synchronous (before any await), so
   // only the first caller proceeds; the slide can't move twice for one save. (C5)
-  const key = `${actor.id}:${pending.id}`;
+  const key = `${actorKey(actor)}:${pending.id}`;
   if (recording.has(key)) return;
   recording.add(key);
   try {
@@ -187,7 +189,7 @@ export async function recordTemptationOutcome(actor, outcome, total = null) {
  * table has already played past.
  */
 async function reconcileReroll(actor, id, outcome, total) {
-  const key = `${actor.id}:${id}:reroll`;
+  const key = `${actorKey(actor)}:${id}:reroll`;
   if (recording.has(key)) return;
   recording.add(key);
   try {
@@ -252,16 +254,14 @@ async function whisperGM(actor, text) {
 
 /** GM-only confirmation of the slide movement after a captured outcome. */
 async function whisperSlideReport(actor, delta, r) {
-  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   const needed = slideNeeded(r.level);
+  // The actor name goes into chat HTML; a token named with a stray angle bracket
+  // should not get to write markup there. (F12)
+  const name = esc(actor.name);
   let text = game.i18n.format("SHARDS.Izir.SlideMoved", { delta, value: r.slide, needed });
-  if (r.leveled) text += ` ${game.i18n.format("SHARDS.Izir.SlideLeveled", { name: actor.name, level: r.level })}`;
-  if (r.atTenth) text += ` ${game.i18n.format("SHARDS.Izir.TenthReady", { name: actor.name })}`;
-  await ChatMessage.create({
-    content: `<div class="izir-temptation-card"><p>${text}</p></div>`,
-    whisper: gmIds,
-    speaker: ChatMessage.getSpeaker({ actor }),
-  });
+  if (r.leveled) text += ` ${game.i18n.format("SHARDS.Izir.SlideLeveled", { name, level: r.level })}`;
+  if (r.atTenth) text += ` ${game.i18n.format("SHARDS.Izir.TenthReady", { name })}`;
+  await whisperGM(actor, text);
 }
 
 /** Discard a pending temptation without recording an outcome. */

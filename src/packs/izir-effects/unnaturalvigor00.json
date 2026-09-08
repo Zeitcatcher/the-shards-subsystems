@@ -29,15 +29,7 @@
       "value": [],
       "rarity": "common"
     },
-    "rules": [
-      {
-        "key": "Note",
-        "selector": "initiative",
-        "title": "Unnatural Vigor",
-        "text": "1/hour, on rolling initiative: gain temporary HP equal to your level.",
-        "visibility": "owner"
-      }
-    ],
+    "rules": [],
     "start": {
       "value": 0,
       "initiative": null

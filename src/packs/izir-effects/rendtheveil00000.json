@@ -8,7 +8,7 @@
   "sort": 7250,
   "system": {
     "description": {
-      "value": "<p>You tear the skin of the world and let the void pour through.</p><hr /><p><strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each creature in the area takes @Damage[(@actor.level)d6[void]|options:area-damage] damage (@Check[reflex|dc:|basic]).</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+      "value": "<p>You tear the skin of the world and let the void pour through.</p><hr /><p><strong>Range</strong> 60 feet</p><p><strong>Effect</strong> @Template[burst|distance:20] Each creature in the area takes @Damage[(@actor.level)d6[void]|options:area-damage] damage (@Check[reflex|dc:|basic]).</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>"
     },
     "slug": "shards-izir-rend-the-veil",
     "actionType": {

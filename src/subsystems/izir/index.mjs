@@ -69,4 +69,12 @@ registerSubsystem({
     registerRechargeHooks();
     registerTerrorHooks();
   },
+  onMigrate: async (from, to) => {
+    // 0.7.0 moved every selfEffect and aura uuid into the new izir-internal pack.
+    // The composed content hash cannot see a uuid change on an item that is already
+    // built, so a plain sync would leave every tracked actor pointing at documents
+    // that no longer exist. Force the rebuild once, on version change. (F10)
+    const n = await syncAllMarked({ force: true });
+    console.log(`${MODULE_ID} | Izir: rebuilt ${n} item(s) upgrading ${from} -> ${to}`);
+  },
 });

@@ -20,7 +20,10 @@ async function setNamelessTrait(actor, on) {
   // into character source. Only NPC-type actors keep a written creature trait; a
   // PC that needs the tag gets it from the registered homebrew trait selector. (C4)
   if (actor?.type === "character") return;
-  const traits = actor.system?.traits?.value;
+  // Read from _source, not the prepared data. `actor.system.traits.value` on an NPC
+  // also holds traits that rule elements added this data-prep pass, and writing that
+  // array back bakes them into source permanently. (F15)
+  const traits = actor?._source?.system?.traits?.value ?? actor?.system?.traits?.value;
   if (!Array.isArray(traits)) return;
   const has = traits.includes(NAMELESS_TRAIT);
   if (on && !has) {
@@ -33,7 +36,6 @@ async function setNamelessTrait(actor, on) {
 /** A fresh, fully-defaulted state object (level 0, marked, nothing suppressed). */
 export function emptyIzirState() {
   return {
-    v: 2,
     enabled: true,
     level: 0,
     slide: 0, // progress toward the next level (needs 3 × level to rise)

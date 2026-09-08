@@ -29,15 +29,7 @@
       "value": [],
       "rarity": "common"
     },
-    "rules": [
-      {
-        "key": "Note",
-        "selector": "all",
-        "title": "Izir Does Not Let Go",
-        "text": "1/day: when reduced to 0 HP, stay at 1 HP instead.",
-        "visibility": "owner"
-      }
-    ],
+    "rules": [],
     "start": {
       "value": 0,
       "initiative": null
