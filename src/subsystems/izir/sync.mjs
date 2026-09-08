@@ -186,7 +186,9 @@ async function syncActorInner(actor) {
   }
 
   const state = readIzir(actor);
-  const opts = { transparency: transparencyOn(), charLevel: charLevelOf(actor) };
+  // actorType decides how the Izir strike gets its attack bonus: pf2e honours a
+  // Strike RE's flat attackModifier on NPCs only. (F1)
+  const opts = { transparency: transparencyOn(), charLevel: charLevelOf(actor), actorType: actor.type };
   const marked = isMarked(actor);
   const effect = marked ? composeEffect(state, content, opts) : null;
   const actions = marked ? composeActions(state, content, opts) : [];

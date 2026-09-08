@@ -9,6 +9,7 @@ import {
   slideNeeded,
   slideDeltaFor,
   applySlide,
+  rerollCorrection,
   TIERS,
   MAX_LEVEL,
 } from "../src/subsystems/izir/logic/model.mjs";
@@ -117,5 +118,32 @@ describe("the slide", () => {
   it("floors at 0 and is inert at level 0", () => {
     expect(applySlide(2, 1, -5)).toEqual({ level: 2, slide: 0, leveled: false, atTenth: false });
     expect(applySlide(0, 0, 3)).toEqual({ level: 0, slide: 0, leveled: false, atTenth: false });
+  });
+});
+
+describe("rerollCorrection", () => {
+  it("rewinds to the snapshot and applies the new outcome from there", () => {
+    // Failure had moved 1→2; the reroll succeeds, so the track goes back to 1.
+    expect(rerollCorrection({ level: 3, slide: 1 }, 1, "success")).toEqual({
+      level: 3, slide: 1, leveled: false, atTenth: false, newDelta: 0, oldDelta: 1, changed: true,
+    });
+  });
+  it("deepens when the reroll is worse", () => {
+    expect(rerollCorrection({ level: 3, slide: 0 }, 1, "criticalFailure")).toEqual({
+      level: 3, slide: 2, leveled: false, atTenth: false, newDelta: 2, oldDelta: 1, changed: true,
+    });
+  });
+  it("reports no change when the degree of success is unmoved", () => {
+    expect(rerollCorrection({ level: 2, slide: 3 }, 1, "failure").changed).toBe(false);
+  });
+  it("levels again from the snapshot rather than from the already-levelled state", () => {
+    // Level 3 needs 9. From 8, a critical failure tips into level 4 with 1 carried.
+    expect(rerollCorrection({ level: 3, slide: 8 }, 2, "criticalFailure")).toMatchObject({
+      level: 4, slide: 1, leveled: true,
+    });
+  });
+  it("survives a missing or malformed snapshot", () => {
+    expect(rerollCorrection(null, 1, "failure")).toMatchObject({ level: 0, slide: 0 });
+    expect(rerollCorrection({ level: "x", slide: -4 }, 0, "success")).toMatchObject({ level: 0, slide: 0 });
   });
 });

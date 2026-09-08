@@ -110,27 +110,72 @@ function rulesFor(entry, revealed, ctx) {
   });
 }
 
+/** Attribute an Izir strike keys on unless the entry names another. */
+const DEFAULT_STRIKE_ABILITY = "dex";
+
 /**
- * The Strike rule element for a strike-form active, matching the official shape
- * (dragonet jaws / grab-debris: plain attackModifier, no category field — pf2e
- * silently drops rule elements that fail schema validation).
+ * Rule elements for a strike-form active: the Strike itself, plus — on a character
+ * — the FlatModifier that anchors its attack bonus to the Izir number.
+ *
+ * pf2e reads a Strike's `attackModifier` ONLY for NPC actors (`strike.ts`: both
+ * `flags.pf2e.fixedAttack` and `system.bonus.value` are gated on `actorIsNPC`).
+ * On a PC it is silently ignored and the strike falls back to the character's own
+ * unarmed attack, which is not the number the panel advertises. So for a character
+ * we let pf2e build the strike normally and correct the total with an untyped
+ * modifier on the strike's own attack domain: Izir attack, minus the unarmed
+ * proficiency bonus, minus the attribute modifier pf2e will add back.
+ *
+ * The two injected paths are populated before the modifier resolves: pf2e fills
+ * `proficiencies.attacks.*.value` in `prepareMartialProficiencies()` and builds
+ * strikes afterwards, and the FlatModifier's value is deferred until the strike's
+ * statistic is assembled. `.value` (not `.rank`) is deliberate — it already
+ * accounts for level and for the Proficiency Without Level variant.
+ *
+ * Known limit: pf2e takes the HIGHEST of the category, group, base-weapon and
+ * synthetic proficiencies for a strike, so a character whose brawling-group
+ * proficiency outranks their unarmed proficiency (a Martial Artist, say) lands a
+ * few points above the advertised number. Their own mastery bleeding through is
+ * the acceptable failure here; the alternative is a battle-form-style takeover of
+ * the character's modifiers, which is far more invasive.
  */
-function strikeRuleFor(entry, ctx) {
+function strikeRulesFor(entry, ctx, actorType) {
   const s = entry.strikeData ?? {};
   const diceNumber = Math.max(1, Math.ceil(ctx.charLevel / 2));
-  return {
+  const slug = `shards-izir-${entry.id}`;
+  const ability = s.ability ?? DEFAULT_STRIKE_ABILITY;
+  const strike = {
     key: "Strike",
-    slug: `shards-izir-${entry.id}`,
+    slug,
     label: entry.name,
     img: entry.img,
+    // `category` is a required field with an "unarmed" initial value — an earlier
+    // comment here claimed pf2e rejects it, which was wrong. State it plainly so
+    // the proficiency the strike keys on is visible in the data, not inferred.
+    category: s.category ?? "unarmed",
     group: s.group ?? "brawling",
     traits: s.traits ?? ["magical", "unarmed", "void"],
     // pf2e's Strike RE range is a {increment, max} object, not a bare number —
     // a number is cast to {} and the true range is lost. Coerce defensively. (B3)
     range: typeof s.range === "number" ? { increment: s.range } : (s.range ?? null),
-    attackModifier: ctx.attack,
+    // Pinned rather than left to `defaultAttribute`, so the modifier below knows
+    // exactly which attribute it has to cancel out.
+    ability,
     damage: { base: { damageType: s.damageType ?? "void", dice: diceNumber, die: s.die ?? "d4" } },
   };
+
+  if (actorType === "npc") return [{ ...strike, attackModifier: ctx.attack }];
+
+  return [
+    strike,
+    {
+      key: "FlatModifier",
+      selector: `${slug}-attack`,
+      slug: `${slug}-anchor`,
+      label: entry.name,
+      type: "untyped",
+      value: `${ctx.attack} - @actor.system.proficiencies.attacks.unarmed.value - @actor.abilities.${ability}.mod`,
+    },
+  ];
 }
 
 /**
@@ -164,7 +209,7 @@ export function composeEffect(state, content, opts = {}) {
       const revealed = isRevealed(e, state, opts);
       if (e.form === "effect" || e.form === "strike") {
         rules.push(...rulesFor(e, revealed, ctx));
-        if (e.form === "strike") rules.push(strikeRuleFor(e, ctx));
+        if (e.form === "strike") rules.push(...strikeRulesFor(e, ctx, opts.actorType));
       }
       if (e.kind === "boon" && e.form === "action") {
         // Actions live as sheet items, but the card lists them so upgrades are visible.

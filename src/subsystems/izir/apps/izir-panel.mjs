@@ -8,6 +8,7 @@
 
 import { MODULE_ID, IZIR, SETTINGS, TEMPLATES } from "../../../core/constants.mjs";
 import { renderSubsystemSwitcher, applyHandoffPosition } from "../../../core/switcher.mjs";
+import { isGM, refuseNonGM, gmGuarded } from "../../../core/gm.mjs";
 import {
   readIzir,
   patchIzir,
@@ -31,6 +32,7 @@ import {
   postReminder,
 } from "../mechanics/temptation.mjs";
 import { exportLog } from "../journal.mjs";
+import { revertArt } from "../art.mjs";
 import { triggerFork, setImmersion, applySlideChange } from "../transform.mjs";
 import { openArtDialog, openHistoryDialog } from "./izir-dialogs.mjs";
 
@@ -98,6 +100,11 @@ async function onUnmark(_event, target) {
     content: `<p>${game.i18n.format("SHARDS.Izir.UnmarkConfirm", { name: actor.name })}</p>`,
   }).catch(() => false);
   if (!ok) return;
+  // Put the original portrait and token back BEFORE the flag goes. The captured
+  // originals live inside that flag namespace, and unmark really deletes it now,
+  // so a swapped-art actor left un-reverted here keeps the corrupted portrait
+  // with no record of what it used to be.
+  await revertArt(actor);
   await patchIzir(actor, { enabled: false });
   await syncActor(actor);
   await unmarkActor(actor);
@@ -400,6 +407,31 @@ function buildTemptation(st, dcPreview) {
 /* The application                                                     */
 /* ------------------------------------------------------------------ */
 
+const GM_ONLY = "SHARDS.Izir.GmOnly";
+
+const PANEL_ACTIONS = {
+  selectActor: onSelectActor,
+  markSelected: onMarkSelected,
+  unmark: onUnmark,
+  levelUp: onLevelUp,
+  levelDown: onLevelDown,
+  fork: onFork,
+  slidePlus: onSlidePlus,
+  slideMinus: onSlideMinus,
+  slideSet: onSlideSet,
+  toggleSuppress: onToggleSuppress,
+  editReason: onEditReason,
+  toggleReveal: onToggleReveal,
+  tempt: onTempt,
+  recordOutcome: onRecordOutcome,
+  clearPending: onClearPending,
+  chip: onChip,
+  exportJournal: onExportJournal,
+  resync: onResync,
+  openArt: onOpenArt,
+  openHistory: onOpenHistory,
+};
+
 export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   _actorUuid = null;
   _dcDraft = null;
@@ -411,33 +443,17 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     tag: "div",
     window: { title: "SHARDS.Izir.PanelTitle", icon: "fa-solid fa-eye", resizable: true },
     position: { width: 960, height: 760 },
-    actions: {
-      selectActor: onSelectActor,
-      markSelected: onMarkSelected,
-      unmark: onUnmark,
-      levelUp: onLevelUp,
-      levelDown: onLevelDown,
-      fork: onFork,
-      slidePlus: onSlidePlus,
-      slideMinus: onSlideMinus,
-      slideSet: onSlideSet,
-      toggleSuppress: onToggleSuppress,
-      editReason: onEditReason,
-      toggleReveal: onToggleReveal,
-      tempt: onTempt,
-      recordOutcome: onRecordOutcome,
-      clearPending: onClearPending,
-      chip: onChip,
-      exportJournal: onExportJournal,
-      resync: onResync,
-      openArt: onOpenArt,
-      openHistory: onOpenHistory,
-    },
+    actions: gmGuarded(PANEL_ACTIONS, GM_ONLY),
   };
 
   static PARTS = {
     main: { template: TEMPLATES.IZIR_PANEL },
   };
+
+  /** Nothing renders this dashboard for a player, whatever opened it. */
+  _canRender() {
+    return isGM();
+  }
 
   _onRender(context, options) {
     super._onRender?.(context, options);
@@ -526,6 +542,12 @@ let instance;
 
 /** Open (or focus) the Izir panel, optionally on an actor and at a handed-off position. */
 export function openIzirPanel(actorUuid, opts = {}) {
+  // The module API reaches every client, so this is a real entry point for a
+  // player, not just the GM's toolbar button.
+  if (!isGM()) {
+    refuseNonGM(GM_ONLY);
+    return;
+  }
   instance ??= new IzirPanel();
   if (actorUuid) instance._actorUuid = actorUuid;
   instance.render({ force: true });

@@ -137,9 +137,10 @@ function actionItem(entry) {
 function entryItem(entry) {
   if (entry.form === "action") return actionItem(entry);
   if (entry.form === "strike") {
-    // Reusable copy grants the Strike via rule element; without the tracker there is
-    // no Izir attack modifier, so the strike falls back to the actor's own math.
-    // Official Strike RE shape (dragonet jaws): no category field.
+    // Reusable copy grants the Strike via rule element. This one carries no Izir
+    // number at all — dropped on any actor it uses that actor's own unarmed math,
+    // which is the point of a browsable reference copy. The tracked version built
+    // in reconcile.mjs is the one that anchors the attack bonus.
     const s = entry.strikeData ?? {};
     const doc = effectItem(entry);
     doc.system.rules = [
@@ -149,10 +150,15 @@ function entryItem(entry) {
         slug: `shards-izir-${entry.id}`,
         label: entry.name,
         img: entry.img,
+        // Required field, "unarmed" initial. Stated so the proficiency this keys
+        // on is visible in the shipped data. (An older comment here claimed pf2e
+        // rejects the field; it does not.)
+        category: s.category ?? "unarmed",
         group: s.group ?? "brawling",
         traits: s.traits ?? ["magical", "unarmed", "void"],
         // Strike RE range must be a {increment, max} object, not a bare number. (B3)
         range: typeof s.range === "number" ? { increment: s.range } : (s.range ?? null),
+        ability: s.ability ?? "dex",
         damage: { base: { damageType: s.damageType ?? "void", dice: 1, die: s.die ?? "d4" } },
       },
     ];

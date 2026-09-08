@@ -34,7 +34,7 @@ export async function setImmersion(actor, next, note = "") {
  * (with carry); a full bar at 9 only signals the Tenth Step. Returns the result of
  * the pure applySlide, or null when the slide is inactive.
  */
-export async function applySlideChange(actor, { delta = 0, set, source = "gm" } = {}) {
+export async function applySlideChange(actor, { delta = 0, set, source = "gm", cause = null } = {}) {
   const st = readIzir(actor);
   if (st.terminal || st.level < 1 || st.level >= MAX_LEVEL) return null;
 
@@ -42,10 +42,12 @@ export async function applySlideChange(actor, { delta = 0, set, source = "gm" } 
   if (r.level === st.level && r.slide === (st.slide ?? 0)) return r;
 
   await patchIzir(actor, { level: r.level, slide: r.slide });
-  await appendLog(actor, "slide", { from: st.slide ?? 0, to: r.slide, level: r.level, source });
+  // `cause` ties these entries back to the roll that produced them, so a reroll can
+  // find and retract exactly its own consequences instead of guessing by position.
+  await appendLog(actor, "slide", { from: st.slide ?? 0, to: r.slide, level: r.level, source, cause });
 
   if (r.leveled) {
-    await appendLog(actor, "level", { from: st.level, to: r.level }, game.i18n.localize("SHARDS.Izir.SlideNote"));
+    await appendLog(actor, "level", { from: st.level, to: r.level, cause }, game.i18n.localize("SHARDS.Izir.SlideNote"));
     await syncActor(actor);
     await maybeSwapForLevel(actor, r.level);
     ui.notifications?.info(game.i18n.format("SHARDS.Izir.SlideLeveled", { name: actor.name, level: r.level }));
@@ -54,6 +56,21 @@ export async function applySlideChange(actor, { delta = 0, set, source = "gm" } 
     ui.notifications?.warn(game.i18n.format("SHARDS.Izir.TenthReady", { name: actor.name }));
   }
   return r;
+}
+
+/**
+ * Put level and slide back to a snapshot, then bring items and art in line. No
+ * "level" log entry: this is history being corrected, not a new step on the track.
+ * Only the reroll reconciliation uses it.
+ */
+export async function rewindLevelSlide(actor, snapshot) {
+  const st = readIzir(actor);
+  const to = clampLevel(snapshot?.level ?? 0);
+  const slide = Math.max(0, Math.trunc(Number(snapshot?.slide)) || 0);
+  if (st.level === to && (st.slide ?? 0) === slide) return;
+  await patchIzir(actor, { level: to, slide });
+  await syncActor(actor);
+  await maybeSwapForLevel(actor, to);
 }
 
 async function openForkDialog(actor) {

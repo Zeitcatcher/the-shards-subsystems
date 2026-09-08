@@ -13,8 +13,26 @@ import { suggestedDC } from "./temptation.mjs";
 
 const MARKER_SLUG = "shards-izir-pack-izirterroraura00";
 const ROLL_OPTION = "shards-izir-terror";
+const ID_PREFIX = "shards-izir-terror-id:";
 const IMMUNITY_SLUG = "shards-izir-terror-immune";
 const IMMUNITY_MINUTES = 1;
+
+/**
+ * What each prompted save actually applied, keyed by `<target>:<save id>`. pf2e's
+ * reroll re-posts the same context, so the second result has to REPLACE the first
+ * rather than only raise frightened further — a critical failure rerolled into a
+ * success must take the condition back off. Held in memory on the GM client that
+ * prompted: a reload between the roll and its reroll loses the record, and the
+ * reroll then behaves as it did before (raise-only). (F2)
+ */
+const applied = new Map();
+const APPLIED_CAP = 200;
+
+/** Remember what a save applied, oldest-out so a long session can't grow the map. */
+function rememberApplied(key, value) {
+  applied.set(key, value);
+  while (applied.size > APPLIED_CAP) applied.delete(applied.keys().next().value);
+}
 
 /** Resolve the aura's origin (the Nameless bearer) from the marker effect. */
 function bearerOf(markerItem) {
@@ -37,7 +55,8 @@ async function promptTerrorSave(markerItem) {
   if (hasTerrorImmunity(target, bearer)) return;
 
   const dc = suggestedDC(readIzir(bearer));
-  const check = `@Check[will|dc:${dc}|traits:emotion,fear,mental|name:Izir's Terror|showDC:gm|options:${ROLL_OPTION}]`;
+  const saveId = foundry.utils.randomID();
+  const check = `@Check[will|dc:${dc}|traits:emotion,fear,mental|name:Izir's Terror|showDC:gm|options:${ROLL_OPTION},${ID_PREFIX}${saveId}]`;
   const owners = (game.users?.contents ?? [])
     .filter((u) => !u.isGM && target.testUserPermission?.(u, "OWNER"))
     .map((u) => u.id);
@@ -107,18 +126,46 @@ async function applyFrightened(actor, value) {
   }
 }
 
+/** Take back `steps` of frightened this aura had applied, leaving other sources be. */
+async function reduceFrightened(actor, steps) {
+  for (let i = 0; i < steps; i += 1) {
+    if ((actor.getCondition?.("frightened")?.value ?? 0) <= 0) break;
+    await actor.decreaseCondition("frightened");
+  }
+}
+
+/** Frightened value an outcome calls for (official Frightful Presence degrees). */
+const frightenedFor = (outcome) =>
+  outcome === "criticalFailure" ? 2 : outcome === "failure" ? 1 : 0;
+
 async function captureFromMessage(message) {
   const ctx = message.flags?.pf2e?.context;
   if (!ctx || ctx.type !== "saving-throw") return;
-  if (!ctx.options?.includes(ROLL_OPTION)) return;
+  const options = ctx.options ?? [];
+  if (!options.includes(ROLL_OPTION)) return;
 
   // Token-aware resolution: the aura's victims are usually unlinked enemy tokens,
   // which flags.pf2e.context.actor (a bare world-actor id) cannot resolve. (B1)
   const actor = resolveActor(message);
   if (!actor) return;
 
-  if (ctx.outcome === "failure") await applyFrightened(actor, 1);
-  else if (ctx.outcome === "criticalFailure") await applyFrightened(actor, 2);
+  const want = frightenedFor(ctx.outcome);
+  const saveId = options.find((o) => o.startsWith(ID_PREFIX))?.slice(ID_PREFIX.length);
+  const key = saveId ? `${actor.uuid}:${saveId}` : null;
+  const isReroll = ctx.isReroll === true || options.includes("check:reroll");
+
+  if (isReroll && key && applied.has(key)) {
+    // Second result for a save we already resolved: move frightened by the
+    // difference, in either direction, instead of stacking another increase.
+    const had = applied.get(key);
+    if (want > had) await applyFrightened(actor, want);
+    else if (want < had) await reduceFrightened(actor, had - want);
+    rememberApplied(key, want);
+    return;
+  }
+
+  if (want > 0) await applyFrightened(actor, want);
+  if (key) rememberApplied(key, want);
 }
 
 /** Resolve the saving actor, scene/token aware (works for unlinked tokens). */

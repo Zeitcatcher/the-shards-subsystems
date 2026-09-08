@@ -35,6 +35,7 @@
         "slug": "shards-izir-void-lash",
         "label": "Void Lash",
         "img": "icons/magic/unholy/projectile-helix-blood-red.webp",
+        "category": "unarmed",
         "group": "brawling",
         "traits": [
           "magical",
@@ -44,6 +45,7 @@
         "range": {
           "increment": 30
         },
+        "ability": "dex",
         "damage": {
           "base": {
             "damageType": "void",
