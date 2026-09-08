@@ -101,15 +101,17 @@ describe("composeEffect", () => {
   });
 
   it("masks hidden bane labels and unmasks revealed ones", () => {
+    // The strike's own attack anchor is a FlatModifier too, so pick the bane's by
+    // its selector rather than taking the first one in the list.
+    const baneMod = (c) => c.rules.find((r) => r.key === "FlatModifier" && r.selector === "diplomacy");
+
     const hidden = composeEffect(at({ level: 2 }), CONTENT, { charLevel: 5 });
-    const fm1 = hidden.rules.find((r) => r.key === "FlatModifier");
-    expect(fm1.label).toBe("SHARDS.Izir.MaskedLabel");
+    expect(baneMod(hidden).label).toBe("SHARDS.Izir.MaskedLabel");
     expect(hidden.priceLines).toHaveLength(0);
     expect(hidden.hiddenPrices).toBe(1);
 
     const shown = composeEffect(at({ level: 2, revealed: ["mark"] }), CONTENT, { charLevel: 5 });
-    const fm2 = shown.rules.find((r) => r.key === "FlatModifier");
-    expect(fm2.label).toBe("The Mark");
+    expect(baneMod(shown).label).toBe("The Mark");
     expect(shown.priceLines.map((p) => p.name)).toContain("The Mark");
   });
 
@@ -119,15 +121,33 @@ describe("composeEffect", () => {
     expect(c.priceLines).toHaveLength(1);
   });
 
-  it("builds the strike with the fixed Izir attack modifier and level-scaled dice", () => {
-    const c = composeEffect(at({ level: 5 }), CONTENT, { charLevel: 5 });
+  it("gives an NPC strike the flat Izir attack modifier and level-scaled dice", () => {
+    const c = composeEffect(at({ level: 5 }), CONTENT, { charLevel: 5, actorType: "npc" });
     const strike = c.rules.find((r) => r.key === "Strike");
     expect(strike.attackModifier).toBe(izirAttack(5, 5));
     expect(strike.damage.base.dice).toBe(Math.ceil(5 / 2));
     // pf2e Strike RE range is a {increment, max} object, not a bare number (B3).
     expect(strike.range).toEqual({ increment: 30 });
-    // official Strike shape: no category field (pf2e drops invalid REs silently)
-    expect("category" in strike).toBe(false);
+    // `category` is a required Strike field; we state it rather than leaning on
+    // pf2e's initial value.
+    expect(strike.category).toBe("unarmed");
+    expect(strike.ability).toBe("dex");
+    // No anchor modifier for an NPC — attackModifier already does the job.
+    expect(c.rules.some((r) => r.key === "FlatModifier" && r.selector?.endsWith("-attack"))).toBe(false);
+  });
+
+  it("anchors a character strike with a FlatModifier instead, since pf2e ignores attackModifier on PCs", () => {
+    const c = composeEffect(at({ level: 5 }), CONTENT, { charLevel: 5, actorType: "character" });
+    const strike = c.rules.find((r) => r.key === "Strike");
+    expect("attackModifier" in strike).toBe(false);
+    expect(strike.slug).toBe("shards-izir-void-lash");
+
+    const anchor = c.rules.find((r) => r.key === "FlatModifier" && r.selector === "shards-izir-void-lash-attack");
+    expect(anchor).toBeTruthy();
+    expect(anchor.type).toBe("untyped");
+    expect(anchor.value).toBe(
+      `${izirAttack(5, 5)} - @actor.system.proficiencies.attacks.unarmed.value - @actor.abilities.dex.mod`,
+    );
   });
 
   it("lists unlocked actives in abilityLines so the card shows upgrades", () => {

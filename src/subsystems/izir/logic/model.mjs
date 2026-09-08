@@ -95,6 +95,29 @@ export function slideDeltaFor(outcome) {
 }
 
 /**
+ * Recompute a temptation's slide effect after the save was rerolled.
+ *
+ * pf2e's reroll deletes the original chat message and posts a replacement carrying
+ * the same context, so the second result must REPLACE the first rather than stack
+ * on top of it. Rewind to the snapshot taken before the original outcome landed,
+ * then apply the new outcome from there.
+ *
+ * @param {{level:number, slide:number}} prev  state captured before the first apply
+ * @param {number} oldDelta                    slide points the first outcome moved
+ * @param {string} newOutcome                  degree of success from the reroll
+ * @returns {{level:number, slide:number, leveled:boolean, atTenth:boolean,
+ *           newDelta:number, oldDelta:number, changed:boolean}}
+ */
+export function rerollCorrection(prev, oldDelta, newOutcome) {
+  const level = clampLevel(prev?.level ?? 0);
+  const slide = Math.max(0, Math.trunc(Number(prev?.slide)) || 0);
+  const old = Math.trunc(Number(oldDelta)) || 0;
+  const newDelta = slideDeltaFor(newOutcome);
+  const r = applySlide(level, slide, newDelta);
+  return { ...r, newDelta, oldDelta: old, changed: newDelta !== old };
+}
+
+/**
  * Apply a slide delta (or an absolute set via `{ set }`): overflow carries the
  * level upward; a full bar at immersion 9 does NOT enter 10 — it caps and raises
  * `atTenth` so the GM chooses the fork. Level 0 has no slide.

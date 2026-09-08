@@ -10,8 +10,8 @@
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM } from "../../../core/platform.mjs";
 import { readIzir, patchIzir, isMarked } from "../state.mjs";
-import { dcFor, slideDeltaFor, slideNeeded } from "../logic/model.mjs";
-import { applySlideChange } from "../transform.mjs";
+import { dcFor, slideDeltaFor, slideNeeded, rerollCorrection } from "../logic/model.mjs";
+import { applySlideChange, rewindLevelSlide } from "../transform.mjs";
 import { refreshIzirPanel } from "../apps/izir-panel.mjs";
 
 const dcBase = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_BASE)) || 20;
@@ -97,15 +97,13 @@ export function registerTemptationHooks() {
   });
 }
 
+const ID_PREFIX = "shards-izir-temptation-id:";
+
 async function captureFromMessage(message) {
   const ctx = message.flags?.pf2e?.context;
   if (!ctx || ctx.type !== "saving-throw") return;
   const actor = resolveActor(message);
   if (!actor || !isMarked(actor)) return;
-
-  const st = readIzir(actor);
-  const pending = st.pendingTemptation;
-  if (!pending) return;
 
   // Match only on the injected roll-option id: an unambiguous channel present on
   // both the player's card click and the GM's NPC roll. Off-card rolls go through
@@ -113,12 +111,26 @@ async function captureFromMessage(message) {
   // capture an unrelated saving throw at the same DC. (B2)
   const options = ctx.options ?? [];
   if (!options.includes("shards-izir-temptation")) return;
-  const idOpt = options.find((o) => o.startsWith("shards-izir-temptation-id:"));
-  if (idOpt?.slice("shards-izir-temptation-id:".length) !== pending.id) return;
+  const idOpt = options.find((o) => o.startsWith(ID_PREFIX));
+  const id = idOpt?.slice(ID_PREFIX.length);
+  if (!id) return;
 
   const outcome = ctx.outcome ?? null;
   const total = message.rolls?.[0]?.total ?? null;
-  await recordTemptationOutcome(actor, outcome, total);
+
+  if (readIzir(actor).pendingTemptation?.id === id) {
+    await recordTemptationOutcome(actor, outcome, total);
+    return;
+  }
+
+  // No pending marker for this id, so the first result is already recorded. pf2e's
+  // reroll deletes the original message and posts a replacement carrying the same
+  // context — including our id — with `isReroll` set and a `check:reroll` option.
+  // Without this branch the second result was simply dropped and the track kept a
+  // result the table had already thrown away. (F2)
+  if (ctx.isReroll === true || options.includes("check:reroll")) {
+    await reconcileReroll(actor, id, outcome, total);
+  }
 }
 
 /**
@@ -140,25 +152,102 @@ export async function recordTemptationOutcome(actor, outcome, total = null) {
   recording.add(key);
   try {
     const delta = slideDeltaFor(outcome);
+    // `prev` is the track as it stood before this save moved it. A reroll rewinds
+    // to it rather than trying to subtract the old result back out. (F2)
+    const prev = { level: st.level, slide: st.slide ?? 0 };
     const log = [
       ...st.log,
       {
         t: Date.now(),
         type: "temptation",
-        data: { id: pending.id, dc: pending.dc ?? null, outcome, total, slideDelta: delta },
+        data: { id: pending.id, dc: pending.dc ?? null, outcome, total, slideDelta: delta, prev },
         note: pending.reason ?? "",
       },
     ];
     await patchIzir(actor, { log, pendingTemptation: null });
 
     if (delta > 0) {
-      const r = await applySlideChange(actor, { delta, source: "temptation" });
+      const r = await applySlideChange(actor, { delta, source: "temptation", cause: pending.id });
       if (r) await whisperSlideReport(actor, delta, r);
     }
     refreshIzirPanel();
   } finally {
     recording.delete(key);
   }
+}
+
+/**
+ * Replay a temptation whose save was rerolled: rewind the track to the snapshot
+ * taken before the first result, drop the slide and level entries that result
+ * caused, rewrite the temptation entry, then apply the new outcome.
+ *
+ * Refused — with a whisper, never silently — when there is no snapshot to rewind
+ * to, when the character has since gone terminal, or when another temptation has
+ * already landed on top. Replaying under a later result would rewrite history the
+ * table has already played past.
+ */
+async function reconcileReroll(actor, id, outcome, total) {
+  const key = `${actor.id}:${id}:reroll`;
+  if (recording.has(key)) return;
+  recording.add(key);
+  try {
+    const st = readIzir(actor);
+    const idx = st.log.findIndex((e) => e.type === "temptation" && e.data?.id === id);
+    if (idx < 0) return;
+
+    const entry = st.log[idx];
+    const prev = entry.data?.prev;
+    if (!prev) return whisperReroll(actor, "SHARDS.Izir.RerollNoSnapshot");
+    if (st.terminal) return whisperReroll(actor, "SHARDS.Izir.RerollTerminal");
+    if (st.log.slice(idx + 1).some((e) => e.type === "temptation")) {
+      return whisperReroll(actor, "SHARDS.Izir.RerollTooLate");
+    }
+
+    const oldDelta = Number(entry.data?.slideDelta) || 0;
+    const corr = rerollCorrection(prev, oldDelta, outcome);
+
+    const log = st.log
+      .filter((e, i) => i <= idx || !(e.data?.cause === id && (e.type === "slide" || e.type === "level")))
+      .map((e, i) =>
+        i === idx ? { ...e, data: { ...e.data, outcome, total, slideDelta: corr.newDelta, rerolled: true } } : e,
+      );
+    await patchIzir(actor, { log });
+
+    await rewindLevelSlide(actor, prev);
+    let r = null;
+    if (corr.newDelta > 0) {
+      r = await applySlideChange(actor, { delta: corr.newDelta, source: "temptation", cause: id });
+    }
+
+    const outcomeLabel = outcome ? game.i18n.localize(`SHARDS.Izir.Outcome.${outcome}`) : "—";
+    const level = r?.level ?? prev.level;
+    const name = esc(actor.name);
+    let text = game.i18n.format("SHARDS.Izir.RerollApplied", {
+      name,
+      outcome: outcomeLabel,
+      value: r?.slide ?? prev.slide,
+      needed: slideNeeded(level),
+    });
+    if (r?.leveled) text += ` ${game.i18n.format("SHARDS.Izir.SlideLeveled", { name, level: r.level })}`;
+    if (r?.atTenth) text += ` ${game.i18n.format("SHARDS.Izir.TenthReady", { name })}`;
+    await whisperGM(actor, text);
+    refreshIzirPanel();
+  } finally {
+    recording.delete(key);
+  }
+}
+
+/** GM-only note that a reroll could not be reconciled, and why. */
+async function whisperReroll(actor, key) {
+  await whisperGM(actor, game.i18n.format(key, { name: esc(actor.name) }));
+}
+
+async function whisperGM(actor, text) {
+  await ChatMessage.create({
+    content: `<div class="izir-temptation-card"><p>${text}</p></div>`,
+    whisper: ChatMessage.getWhisperRecipients("GM").map((u) => u.id),
+    speaker: ChatMessage.getSpeaker({ actor }),
+  });
 }
 
 /** GM-only confirmation of the slide movement after a captured outcome. */
