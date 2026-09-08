@@ -8,7 +8,7 @@
   "sort": 2000,
   "system": {
     "description": {
-      "value": "<p>Unnatural power floods your limbs. You gain a +1 status bonus to Athletics and a +5-foot status bonus to your Speed.</p>"
+      "value": "<p>Unnatural power floods your limbs. You gain a +1 status bonus to Athletics and a +5-foot status bonus to your Speeds.</p>"
     },
     "slug": "shards-izir-strength-of-void",
     "duration": {

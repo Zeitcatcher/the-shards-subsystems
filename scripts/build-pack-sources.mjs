@@ -21,7 +21,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ansuRuleTokenValues, ansuRulesCarryTokens, ansuScrubbedValue } from "./pack-checks.mjs";
-import { injectPackUuids } from "../src/subsystems/izir/logic/reconcile.mjs";
+import { injectPackUuids, packSlug } from "../src/subsystems/izir/logic/reconcile.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULE_ID = "the-shards-subsystems";
@@ -51,36 +51,56 @@ function tierKeyFor(entry) {
   return "nineveh";
 }
 
-/** Pack copies are static: replace the runtime number tokens with readable text. */
-function scrub(text) {
-  return injectPackUuids(String(text ?? ""))
-    // Inside an inline @Check the DC must be numeric/resolvable/empty, never prose.
-    // Static pack copies can't compute it, so emit an empty dc (the official
-    // glossary pattern) so the save stays clickable and the GM reads the DC. (T1)
-    .replaceAll("dc:{{izirDC}}", "dc:")
-    .replaceAll("{{izirDC}}", "your Izir DC")
-    .replaceAll("{{izirAttack}}", "your Izir attack modifier")
-    .replaceAll("{{izirLevel}}", "your immersion level")
-    .replaceAll("{{izirHolyWeak}}", "2 (4 at immersion 6, 6 at 8)");
+/**
+ * One substitution table for every static pack copy.
+ *
+ * `{{izirHolyWeak}}` maps to the bare number: the description it sits in already
+ * spells the scaling out, so the old long form printed the clause twice — the
+ * shipped Anathema card read "weakness 2 (4 at immersion 6, 6 at 8) to holy damage
+ * (the weakness deepens as you sink: 4 at immersion 6, 6 at immersion 8)". (F35)
+ */
+const SCRUB = [
+  // Inside an inline @Check the DC must be numeric/resolvable/empty, never prose.
+  // Static pack copies can't compute it, so emit an empty dc (the official
+  // glossary pattern) so the save stays clickable and the GM reads the DC. (T1)
+  ["dc:{{izirDC}}", "dc:"],
+  ["{{izirDC}}", "your Izir DC"],
+  ["{{izirAttack}}", "your Izir attack modifier"],
+  ["{{izirLevel}}", "your immersion level"],
+  ["{{izirHolyWeak}}", "2"],
+];
+
+function scrubText(text) {
+  let out = injectPackUuids(String(text ?? ""));
+  for (const [from, to] of SCRUB) out = out.replaceAll(from, to);
+  return out;
 }
 
-/** Pack-copy rules with number tokens neutralized (static docs can't compute). */
+/** Pack copies are static: replace the runtime number tokens with readable text. */
+function scrub(text) {
+  return scrubText(text);
+}
+
+/**
+ * Pack-copy rules with the same table applied to every string, at any depth.
+ *
+ * The old version tested each top-level field for one token and replaced the WHOLE
+ * field with the number 2 — so a rule text mentioning the weakness shipped as
+ * `2`, and any other token nested inside a rule was not scrubbed at all. A fully
+ * numeric result becomes a Number, matching what the runtime's deepInject does so
+ * schema-typed fields stay valid. (F35)
+ */
 function scrubRules(rules) {
-  // Pack uuids are expanded, not neutralized: a static copy of Terror's Mantle
-  // still has to point its Aura at a real document. (F7)
   const walk = (v) => {
-    if (typeof v === "string") return injectPackUuids(v);
+    if (typeof v === "string") {
+      const out = scrubText(v);
+      return out !== v && /^-?\d+$/.test(out) ? Number(out) : out;
+    }
     if (Array.isArray(v)) return v.map(walk);
     if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
     return v;
   };
-  return (Array.isArray(rules) ? rules : []).map((r) => {
-    const out = walk({ ...r });
-    for (const [k, v] of Object.entries(out)) {
-      if (typeof v === "string" && v.includes("{{izirHolyWeak}}")) out[k] = 2;
-    }
-    return out;
-  });
+  return (Array.isArray(rules) ? rules : []).map((r) => walk({ ...r }));
 }
 
 function folderDoc(f, index) {
@@ -193,7 +213,7 @@ function packEffectItem(pe) {
     sort: 100,
     system: {
       description: { value: pe.description ?? "" },
-      slug: `shards-izir-pack-${pe._id}`,
+      slug: packSlug(pe._id),
       duration,
       unidentified: false,
       level: { value: 1 },

@@ -17,6 +17,7 @@ import {
   isMarked,
   markActor,
   unmarkActor,
+  withActorLock,
 } from "../state.mjs";
 import { tierForLevel, izirAttack, izirDC, slideNeeded, MAX_LEVEL } from "../logic/model.mjs";
 import { selectEntries, buildCtx, injectNumbers } from "../logic/reconcile.mjs";
@@ -45,6 +46,21 @@ const TIER_GROUPS = [
 ];
 
 const resolveActor = (uuid) => (uuid ? fromUuidSync(uuid) : null);
+
+/**
+ * Resolve the selected actor, or tell the GM why nothing happened. Deleting the
+ * selected unlinked token left a dashboard whose every button failed in silence
+ * until the GM happened to click another roster row. (F28)
+ */
+function requireActor(app) {
+  const actor = resolveActor(app._actorUuid);
+  if (!actor) {
+    ui.notifications?.warn(game.i18n.localize("SHARDS.Izir.SelectionGone"));
+    app._actorUuid = null;
+    app.render();
+  }
+  return actor;
+}
 
 function tierIdFor(st) {
   if (st.terminal === "subjugated") return "subjugated";
@@ -113,7 +129,7 @@ async function onUnmark(_event, target) {
 }
 
 async function onLevelUp() {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   const st = readIzir(actor);
   if (st.terminal) return;
@@ -126,7 +142,7 @@ async function onLevelUp() {
 }
 
 async function onLevelDown() {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   const st = readIzir(actor);
   if (st.terminal) return;
@@ -135,7 +151,7 @@ async function onLevelDown() {
 }
 
 async function onFork(_event, target) {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   const st = readIzir(actor);
   if (st.terminal) return;
@@ -167,50 +183,62 @@ async function onSlideSet(_event, target) {
 }
 
 async function onToggleSuppress(_event, target) {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   const family = target.dataset.family;
-  const st = readIzir(actor);
-  const has = st.suppressed.some((s) => s.id === family);
-  const suppressed = has
-    ? st.suppressed.filter((s) => s.id !== family)
-    : [...st.suppressed, { id: family, reason: "", at: Date.now() }];
-  await patchIzir(actor, { suppressed });
-  await appendLog(actor, "suppress", { id: family, on: !has });
+  // Locked: two toggles on different families inside one round trip used to
+  // clobber each other's array and leave an ability live that the GM believed
+  // suppressed. (F18)
+  await withActorLock(actor, async () => {
+    const st = readIzir(actor);
+    const has = st.suppressed.some((x) => x.id === family);
+    const suppressed = has
+      ? st.suppressed.filter((x) => x.id !== family)
+      : [...st.suppressed, { id: family, reason: "", at: Date.now() }];
+    await patchIzir(actor, { suppressed });
+    await appendLog(actor, "suppress", { id: family, on: !has });
+  });
   await syncActor(actor);
   this.render();
 }
 
 async function onEditReason(_event, target) {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   const family = target.dataset.family;
-  const st = readIzir(actor);
-  const rec = st.suppressed.find((s) => s.id === family);
+  const rec = readIzir(actor).suppressed.find((x) => x.id === family);
   if (!rec) return;
   const reason = await promptText(rec.reason ?? "", "SHARDS.Izir.ReasonPrompt");
   if (reason === null) return;
-  const suppressed = st.suppressed.map((s) => (s.id === family ? { ...s, reason } : s));
-  await patchIzir(actor, { suppressed });
-  await appendLog(actor, "suppress", { id: family, reason }, reason);
+  await withActorLock(actor, async () => {
+    const st = readIzir(actor);
+    const suppressed = st.suppressed.map((x) => (x.id === family ? { ...x, reason } : x));
+    await patchIzir(actor, { suppressed });
+    // Its own entry type. Rewording a reason used to write another "Suppressed X"
+    // line, so a history with three of them and no restore between read as three
+    // separate suppressions. (F22)
+    await appendLog(actor, "reason", { id: family }, reason);
+  });
   this.render();
 }
 
 async function onToggleReveal(_event, target) {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   const family = target.dataset.family;
-  const st = readIzir(actor);
-  const has = st.revealed.includes(family);
-  const revealed = has ? st.revealed.filter((f) => f !== family) : [...st.revealed, family];
-  await patchIzir(actor, { revealed });
-  await appendLog(actor, "reveal", { id: family, on: !has });
+  await withActorLock(actor, async () => {
+    const st = readIzir(actor);
+    const has = st.revealed.includes(family);
+    const revealed = has ? st.revealed.filter((f) => f !== family) : [...st.revealed, family];
+    await patchIzir(actor, { revealed });
+    await appendLog(actor, "reveal", { id: family, on: !has });
+  });
   await syncActor(actor);
   this.render();
 }
 
 async function onTempt() {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   const dcInput = this.element.querySelector('input[name="temptDc"]');
   const reasonInput = this.element.querySelector('input[name="temptReason"]');
@@ -227,7 +255,7 @@ async function onTempt() {
 }
 
 async function onRecordOutcome(_event, target) {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   await recordTemptationOutcome(actor, target.dataset.outcome, null);
   this.render();
@@ -240,7 +268,7 @@ async function onClearPending() {
 }
 
 async function onChip(_event, target) {
-  const actor = resolveActor(this._actorUuid);
+  const actor = requireActor(this);
   if (!actor) return;
   switch (target.dataset.chip) {
     case "suggestSuppress":
@@ -275,9 +303,15 @@ async function onResync(event) {
   // claiming success. (F9)
   if (event?.shiftKey) {
     const n = await syncAllMarked({ force: true });
-    ui.notifications?.info(
-      n ? game.i18n.format("SHARDS.Izir.ResyncAllDone", { n }) : game.i18n.localize("SHARDS.Izir.ResyncNoChange"),
-    );
+    if (n === null) {
+      // Only the active GM writes to every marked actor; this used to report
+      // success after bailing on that check. (F27)
+      ui.notifications?.warn(game.i18n.localize("SHARDS.Izir.ResyncNotPrimary"));
+    } else {
+      ui.notifications?.info(
+        n ? game.i18n.format("SHARDS.Izir.ResyncAllDone", { n }) : game.i18n.localize("SHARDS.Izir.ResyncNoChange"),
+      );
+    }
   } else {
     const actor = resolveActor(this._actorUuid);
     if (!actor) return;
@@ -318,17 +352,26 @@ async function promptText(initial, titleKey) {
 /* View-model builders                                                 */
 /* ------------------------------------------------------------------ */
 
-function chipFor(entry, st, replacedIds, transparency, ctx) {
+function chipFor(entry, st, replacedIds, transparency, ctx, familyNames) {
   const suppressedRec = st.suppressed.find((s) => s.id === entry.family);
   const isBane = entry.kind === "bane";
   const isActive = entry.form === "action" || entry.form === "strike";
+  const replaced = replacedIds.includes(entry.id);
+  // A capstone is locked only until subjugation actually happens. Afterwards it is
+  // a live ability like any other and gets its cost, its tag and its controls --
+  // they were the only entries on the ladder the GM could not suppress. (F21)
+  const gateLocked = entry.gate === "subjugated" && st.terminal !== "subjugated";
+
   let tag = null;
-  if (entry.chipTag) tag = injectNumbers(entry.chipTag, ctx);
+  if (gateLocked) tag = game.i18n.localize("SHARDS.Izir.UnlockSubjugation");
+  else if (entry.chipTag) tag = injectNumbers(entry.chipTag, ctx);
   else if (entry.form === "strike") tag = game.i18n.localize("SHARDS.Izir.TagStrike");
   else if (entry.actionData?.recharge) tag = `R ${entry.actionData.recharge}`;
   else if (entry.actionData?.frequency?.per === "day") tag = "1/day";
-  if (replacedIds.includes(entry.id)) tag = game.i18n.format("SHARDS.Izir.TagReplaced", { rank: "" }).trim();
+  if (replaced) tag = game.i18n.format("SHARDS.Izir.TagReplaced", { rank: "" }).trim();
+
   const nActions = entry.actionData?.actions ?? 0;
+  const siblings = familyNames?.get(entry.family) ?? [entry.name];
   return {
     family: entry.family,
     name: entry.name,
@@ -337,7 +380,14 @@ function chipFor(entry, st, replacedIds, transparency, ctx) {
     isPassive: !isBane && !isActive,
     actionsGlyph: isActive && nActions ? "◆".repeat(nActions) : "",
     tag,
-    replaced: replacedIds.includes(entry.id),
+    replaced,
+    // Suppression works on the family, so the ban button on a greyed "replaced"
+    // rank silently takes the LIVE rank off the sheet too. Say so on the button. (F21)
+    suppressTip:
+      siblings.length > 1
+        ? game.i18n.format("SHARDS.Izir.SuppressFamily", { names: siblings.join(", ") })
+        : null,
+    gateLocked,
     suppressed: Boolean(suppressedRec),
     reason: suppressedRec?.reason ?? "",
     revealed: !isBane || transparency || st.revealed.includes(entry.family),
@@ -348,6 +398,15 @@ function chipFor(entry, st, replacedIds, transparency, ctx) {
 function buildLadder(st, content, transparency, charLevel) {
   const { replacedIds } = selectEntries({ ...st, suppressed: [] }, content);
   const ctx = buildCtx(charLevel, Math.max(1, st.level));
+
+  // Every rank in a family, so a chip can name what suppressing it would take.
+  const familyNames = new Map();
+  for (const e of content.entries) {
+    if (!familyNames.has(e.family)) familyNames.set(e.family, []);
+    familyNames.get(e.family).push(e.name);
+  }
+  const chip = (e) => chipFor(e, st, replacedIds, transparency, ctx, familyNames);
+
   const groups = TIER_GROUPS.map((g) => ({
     tierId: g.id,
     label: game.i18n.localize(`SHARDS.Izir.Tier.${g.id}`),
@@ -359,13 +418,11 @@ function buildLadder(st, content, transparency, charLevel) {
       chips: content.entries
         .filter((e) => e.level === lvl && !e.gate)
         .sort((a, b) => Number(a.kind === "bane") - Number(b.kind === "bane") || a.id.localeCompare(b.id))
-        .map((e) => chipFor(e, st, replacedIds, transparency, ctx)),
+        .map(chip),
     })),
   }));
 
-  const gateChips = content.entries
-    .filter((e) => e.gate === "subjugated")
-    .map((e) => chipFor(e, st, replacedIds, transparency, ctx));
+  const gateChips = content.entries.filter((e) => e.gate === "subjugated").map(chip);
 
   return { groups, gateChips };
 }
@@ -524,6 +581,7 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     let ladder = null;
     let slide = null;
     let temptation = null;
+    let contentError = false;
     if (selected) {
       const st = readIzir(selected);
       const charLevel = Math.max(1, Number(selected.system?.details?.level?.value ?? selected.level ?? 1) || 1);
@@ -548,7 +606,14 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       detail.temptDc = this._dcDrafts.get(selected.uuid) ?? dcPreview;
       const content = await loadContent().catch(() => null);
       const transparency = game.settings.get(MODULE_ID, SETTINGS.IZIR_TRANSPARENCY) === true;
-      if (content) ladder = buildLadder(st, content, transparency, charLevel);
+      // A consumed character has no kit left. Ten unlocked rows of live ban and
+      // eye buttons over abilities that no longer exist was worse than nothing;
+      // the terminal banner already says what happened. (F21)
+      if (content && st.terminal !== "nineveh") ladder = buildLadder(st, content, transparency, charLevel);
+      // With a broken data file the panel used to look like a working screen --
+      // no ladder, but a live fork button that would commit a terminal the module
+      // could not finish. Say it plainly. (F30)
+      contentError = !content;
       slide = buildSlide(st);
       temptation = buildTemptation(st, dcPreview);
     }
@@ -561,6 +626,7 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       ladder,
       slide,
       temptation,
+      contentError,
       densityClass: density === "compact" ? "compact" : "full",
     };
   }

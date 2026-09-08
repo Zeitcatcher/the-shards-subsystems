@@ -8,7 +8,7 @@
   "sort": 5500,
   "system": {
     "description": {
-      "value": "<p>Your features blur toward something wrong. You take a -2 circumstance penalty to Diplomacy and Deception against strangers, and concealing your nature at close range now requires magic.</p>"
+      "value": "<p>Your features blur toward something wrong. You take a -2 circumstance penalty to Diplomacy and Deception against strangers, and concealing your nature at close range now requires magic. The penalty is on the sheet at all times; the GM waives it with those who already know.</p>"
     },
     "slug": "shards-izir-the-face-fades",
     "duration": {

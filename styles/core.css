@@ -133,6 +133,13 @@
 }
 .the-shards-subsystems .izir-roster-item.selected {
   background: rgba(0, 0, 0, 0.09);
+  /* 9% black over an already dark row is invisible under Foundry's dark theme,
+     and the roster then shows no selection at all. A rail and a bolder name read
+     on either ground. (F38) */
+  box-shadow: inset 3px 0 0 currentColor;
+}
+.the-shards-subsystems .izir-roster-item.selected .izir-roster-name {
+  font-weight: 700;
 }
 .the-shards-subsystems .izir-roster-item img {
   width: 34px;
@@ -295,4 +302,27 @@
 }
 .the-shards-subsystems .shards-subswitch-tab i {
   font-size: 0.8em;
+}
+
+
+/* ---------- dark theme ----------
+   Every surface fill here is a black wash over a light parchment ground. On the
+   dark theme they subtract from something already dark, so the panel loses its
+   structure: rows, stat tiles and the active subsystem tab all flatten into the
+   background. Lighten by the same amounts instead. (F38) */
+:is(.theme-dark, .dark) .the-shards-subsystems .izir-roster {
+  background: rgba(255, 255, 255, 0.03);
+}
+:is(.theme-dark, .dark) .the-shards-subsystems .izir-roster-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+:is(.theme-dark, .dark) .the-shards-subsystems .izir-roster-item.selected {
+  background: rgba(255, 255, 255, 0.12);
+}
+:is(.theme-dark, .dark) .the-shards-subsystems .izir-stat {
+  background: rgba(255, 255, 255, 0.05);
+}
+:is(.theme-dark, .dark) .the-shards-subsystems .shards-subswitch-tab.active {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-light-highlight, #f0f0e0);
 }

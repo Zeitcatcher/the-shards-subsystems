@@ -87,6 +87,23 @@ export function slideNeeded(level) {
   return 3 * l;
 }
 
+/**
+ * The highest slide a level may sit at without being "ready to rise".
+ *
+ * `applySlide` never produces a full bar below level 9 — it carries the overflow
+ * into the next level instead. Stepping DOWN used to skip that rule and could park
+ * a character at, say, 12/12 at immersion 4, showing the Tenth Step as ready and
+ * levelling again on the next single failure. Level 9 is the exception: a full bar
+ * there is the real signal that the fork is available. (F23)
+ */
+export function clampSlideForLevel(slide, level) {
+  const l = clampLevel(level);
+  const s = Math.max(0, Math.trunc(Number(slide)) || 0);
+  const needed = slideNeeded(l);
+  if (needed <= 0) return 0;
+  return Math.min(s, l === MAX_LEVEL - 1 ? needed : needed - 1);
+}
+
 /** Slide delta for a temptation outcome: fail +1, crit fail +2, success holds. */
 export function slideDeltaFor(outcome) {
   if (outcome === "failure") return 1;

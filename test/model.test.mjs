@@ -9,6 +9,7 @@ import {
   slideNeeded,
   slideDeltaFor,
   applySlide,
+  clampSlideForLevel,
   rerollCorrection,
   TIERS,
   MAX_LEVEL,
@@ -145,5 +146,28 @@ describe("rerollCorrection", () => {
   it("survives a missing or malformed snapshot", () => {
     expect(rerollCorrection(null, 1, "failure")).toMatchObject({ level: 0, slide: 0 });
     expect(rerollCorrection({ level: "x", slide: -4 }, 0, "success")).toMatchObject({ level: 0, slide: 0 });
+  });
+});
+
+describe("clampSlideForLevel", () => {
+  it("never parks a level below 9 on a full bar", () => {
+    // Immersion 5 at 14/15, stepped down to 4: 12/12 would show the bar full and
+    // the Tenth Step ready at immersion 4, and the next single failure re-raised
+    // the level. applySlide can never produce that state going up. (F23)
+    expect(clampSlideForLevel(14, 4)).toBe(11);
+    expect(clampSlideForLevel(2, 4)).toBe(2);
+    expect(clampSlideForLevel(11, 4)).toBe(11);
+  });
+  it("lets level 9 sit on a full bar, because that IS the fork signal", () => {
+    expect(clampSlideForLevel(99, 9)).toBe(27);
+    expect(clampSlideForLevel(27, 9)).toBe(27);
+  });
+  it("is zero where there is no slide at all", () => {
+    expect(clampSlideForLevel(5, 0)).toBe(0);
+    expect(clampSlideForLevel(5, 10)).toBe(0);
+  });
+  it("floors at zero and survives junk", () => {
+    expect(clampSlideForLevel(-4, 3)).toBe(0);
+    expect(clampSlideForLevel("x", 3)).toBe(0);
   });
 });

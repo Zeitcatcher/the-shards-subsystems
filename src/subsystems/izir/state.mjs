@@ -6,6 +6,7 @@
  */
 
 import { MODULE_ID, IZIR } from "../../core/constants.mjs";
+import { actorKey } from "../../core/platform.mjs";
 import {
   readSubsystemFlag,
   patchSubsystemFlag,
@@ -50,6 +51,7 @@ export function emptyIzirState() {
       },
       original: null, // { portrait, token } captured before the first swap
       applied: null, // "4" | "7" | "10" | null
+      hold: false, // a manual revert pauses automatic swaps until art is applied again
     },
     pendingTemptation: null, // { id, dc, reason, createdAt }
     log: [], // [{ t, type, data, note }]
@@ -128,8 +130,43 @@ export async function patchIzir(actor, patch) {
   await patchSubsystemFlag(actor, IZIR, patch);
 }
 
+/* ------------------------------------------------------------------ */
+/* Mutation lock                                                       */
+/* ------------------------------------------------------------------ */
+
+const locks = new Map();
+
+/**
+ * Serialize read-modify-write mutations on one actor's flag.
+ *
+ * Every mutation here reads the whole state, edits a copy and writes it back. Two
+ * of them overlapping inside a single server round trip both read the same
+ * starting point and the second write wins: two quick taps on the slide "+" lost
+ * an increment and a history row, and two suppress toggles on different families
+ * clobbered each other's array — leaving an ability live that the GM believed
+ * suppressed. Chained per actor, the same way sync.mjs chains its convergence
+ * runs, and keyed by uuid so two tokens of one statblock don't share a lock. (F18)
+ */
+export async function withActorLock(actor, fn) {
+  const key = actorKey(actor);
+  if (!key) return fn();
+  const prev = locks.get(key) ?? Promise.resolve();
+  const run = prev.then(fn, fn);
+  // The queue tail swallows failures so one thrown mutation can't wedge the rest.
+  const tail = run.then(
+    () => {},
+    () => {},
+  );
+  locks.set(key, tail);
+  try {
+    return await run;
+  } finally {
+    if (locks.get(key) === tail) locks.delete(key);
+  }
+}
+
 /** Newest-N cap on the history log so a long campaign can't grow it without bound. */
-const LOG_CAP = 300;
+export const LOG_CAP = 300;
 
 /** Append one entry to the history log (capped to the newest LOG_CAP). GM-side only. */
 export async function appendLog(actor, type, data = {}, note = "") {

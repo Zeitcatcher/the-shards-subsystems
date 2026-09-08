@@ -285,7 +285,9 @@ function warnDroppedRules(actor, composed) {
 
 /** Sync every marked actor (e.g. after a transparency change). Primary GM only. */
 export async function syncAllMarked(opts = {}) {
-  if (!isPrimaryGM()) return 0;
+  // null, not 0: "I declined" and "nothing needed doing" are different answers,
+  // and a co-GM used to be told "all marked actors re-synced" after this bailed. (F27)
+  if (!isPrimaryGM()) return null;
   let changed = 0;
   for (const actor of listMarkedActors()) {
     changed += (await syncActor(actor, opts).catch((err) => {
@@ -314,14 +316,31 @@ function scheduleResync(actor) {
 }
 
 /** Badge edits, manual deletions, and character level-ups all feed back into sync. */
-export function registerSyncHooks(onLevelFromBadge) {
+export function registerSyncHooks(onLevelFromBadge, onFlagChange) {
   // Self-heal: a manually deleted module item is restored (suppress in the panel instead).
-  Hooks.on("deleteItem", (item) => {
+  Hooks.on("deleteItem", (item, _options, userId) => {
     if (!isPrimaryGM()) return;
     const actor = item.parent;
     if (!actor || syncing.has(actorKey(actor))) return;
     const tag = item.getFlag?.(MODULE_ID, IZIR);
     if (!tag?.entryId || !isMarked(actor)) return;
+
+    // pf2e's counter badge deletes the effect at its minimum instead of going to
+    // zero, so right-clicking the counter at immersion 1 made the icon blink and
+    // come back at 1 — while the panel stepper reaches 0 fine. Read the delete as
+    // the level change it plainly is. (F24)
+    const st = readIzir(actor);
+    if (
+      tag.entryId === EFFECT_ENTRY_ID &&
+      st.level === 1 &&
+      !st.terminal &&
+      game.users?.get(userId)?.isGM
+    ) {
+      Promise.resolve(onLevelFromBadge?.(actor, 1, 0)).catch((err) =>
+        console.error(`${MODULE_ID} | badge level change`, err),
+      );
+      return;
+    }
     scheduleResync(actor);
   });
 
@@ -358,6 +377,13 @@ export function registerSyncHooks(onLevelFromBadge) {
     if (syncing.has(actorKey(actor)) || !isMarked(actor)) return;
     if (changes?.system?.details?.level?.value === undefined) return;
     scheduleResync(actor);
+  });
+
+  // Read-only, on EVERY client: a co-GM's open panel used to sit on stale numbers
+  // until they happened to click something, because every watcher here is gated on
+  // the primary GM. (F27)
+  Hooks.on("updateActor", (_actor, changes) => {
+    if (foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.${IZIR}`)) onFlagChange?.();
   });
 }
 

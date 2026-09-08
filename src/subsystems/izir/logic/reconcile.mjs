@@ -29,6 +29,13 @@ export const INTERNAL_PACK = "izir-internal";
 /** Full compendium uuid of a document in the machinery pack. */
 export const packUuid = (id) => `Compendium.${MODULE_ID}.${INTERNAL_PACK}.Item.${id}`;
 
+/**
+ * The pf2e slug the pack builder stamps on a machinery document. terror.mjs
+ * watches for the aura marker by this slug and used to carry its own hand-copied
+ * literal of it, which nothing cross-checked. (F31)
+ */
+export const packSlug = (id) => `shards-izir-pack-${id}`;
+
 const PACK_TOKEN = /\{\{izirPack:([A-Za-z0-9_-]+)\}\}/g;
 
 /**

@@ -1,4 +1,7 @@
 <div class="izir-art">
+  {{!-- Whose art this is. The window title alone said nothing, so an open dialog
+        could look as though it followed the roster selection. (F39) --}}
+  <div class="izir-history-head"><h4>{{name}}</h4></div>
   <p class="izir-hint">{{localize "SHARDS.Izir.ArtHint"}}</p>
   {{#each rows}}
   <div class="izir-art-row {{#if this.applied}}applied{{/if}}">

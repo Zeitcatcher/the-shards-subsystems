@@ -63,19 +63,29 @@ export async function applyThresholdArt(actor, threshold) {
   const token = slot.token || slot.portrait || currentTokenSrc(actor);
   await updateActorArt(actor, portrait, token);
   await updatePlacedTokens(actor, token);
-  await patchIzir(actor, { art: { applied: String(threshold) } });
+  // Applying by hand lifts the hold a manual revert put on: the GM has said, in
+  // the clearest way available, that they want the swap after all. (F25)
+  await patchIzir(actor, { art: { applied: String(threshold), hold: false } });
   await appendLog(actor, "art", { threshold: String(threshold) });
   return true;
 }
 
-/** Restore the captured original art. Returns true if a revert happened. */
-export async function revertArt(actor) {
+/**
+ * Restore the captured original art. Returns true if a revert happened.
+ *
+ * The capture is released with it. Keeping a stale `original` meant that a GM who
+ * reverted, set new base art, then swapped and reverted again got the FIRST
+ * portrait stamped back over the new one, on the actor and every token, with no
+ * log line saying where it came from. The early return in `captureOriginalArt`
+ * still protects a 4 → 7 chain, because nothing reverts in between. (F25)
+ */
+export async function revertArt(actor, { hold = false } = {}) {
   const st = readIzir(actor);
   const orig = st.art.original;
   if (!orig) return false;
   await updateActorArt(actor, orig.portrait, orig.token);
   await updatePlacedTokens(actor, orig.token);
-  await patchIzir(actor, { art: { applied: null } });
+  await patchIzir(actor, { art: { applied: null, original: null, hold } });
   await appendLog(actor, "art", { threshold: "revert" });
   return true;
 }
@@ -87,6 +97,11 @@ export async function revertArt(actor) {
 export async function maybeSwapForLevel(actor, level) {
   if (!artSwapOn()) return;
   const st = readIzir(actor);
+  // A manual revert holds. The GM who put a bearer's own face back for a social
+  // scene at immersion 8 did not want the next failed save to stamp the horror
+  // art on again unasked. The hold lifts when they apply art by hand or edit a
+  // threshold row. (F25)
+  if (st.art.hold) return;
   const target = pickThresholdForLevel(level, st.art.thresholds);
   if (target === st.art.applied) return;
   if (target) await applyThresholdArt(actor, target);

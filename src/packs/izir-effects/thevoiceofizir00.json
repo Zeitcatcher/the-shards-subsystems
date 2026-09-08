@@ -29,7 +29,32 @@
       "value": [],
       "rarity": "common"
     },
-    "rules": [],
+    "rules": [
+      {
+        "key": "GrantItem",
+        "uuid": "Compendium.pf2e.conditionitems.Item.e1XGnhKNSQIm5IXg",
+        "inMemoryOnly": true,
+        "alterations": [
+          {
+            "mode": "override",
+            "property": "badge-value",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "key": "GrantItem",
+        "uuid": "Compendium.pf2e.conditionitems.Item.3uh1r86TzbQvosxv",
+        "inMemoryOnly": true,
+        "alterations": [
+          {
+            "mode": "override",
+            "property": "badge-value",
+            "value": 1
+          }
+        ]
+      }
+    ],
     "start": {
       "value": 0,
       "initiative": null

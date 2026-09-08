@@ -62,11 +62,14 @@ export function remainingRounds(effect) {
 
 async function whisperStillRecharging(actor, name, rounds) {
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
-  await ChatMessage.create({
-    content: `<div class="izir-temptation-card"><p>${game.i18n.format("SHARDS.Izir.StillRecharging", { name, rounds })}</p></div>`,
-    whisper: gmIds,
-    speaker: ChatMessage.getSpeaker({ actor }),
-  });
+  await ChatMessage.create(
+    {
+      content: `<div class="izir-temptation-card"><p>${game.i18n.format("SHARDS.Izir.StillRecharging", { name, rounds })}</p></div>`,
+      whisper: gmIds,
+      speaker: ChatMessage.getSpeaker({ actor }),
+    },
+    { chatBubble: false }, // not speech (F36)
+  );
 }
 
 /** Roll the recharge die (publicly, with dice animation) and return the rounds. */
@@ -169,14 +172,24 @@ async function normalizeMarker(item) {
   // it undid deliberate prep with no explanation; leave it where it was put. (F16)
   if (!inActiveCombat(actor)) return;
 
+  // The auto path is mid-roll for this ability: this copy is the card's Apply
+  // Effect landing inside that window. Drop it before it can trigger a second
+  // public recharge die. (F34)
+  if (rolling.has(`${actorKey(actor)}:${entryId}`)) {
+    await item.delete();
+    return;
+  }
+
   // A live marker already exists: this copy is a duplicate. An expired sibling is
   // not in the way and is left for the sweep. (F4)
   const sibling = actor.items.find(
     (i) => i.id !== item.id && i.getFlag?.(MODULE_ID, "izirRecharge") === entryId && isRunning(i),
   );
   if (sibling) {
+    // Silently: the cooldown that matters was already announced when it was
+    // rolled, and repeating "still recharging" here read as a refused reuse — with
+    // the effect's own name ("Recharge: Umbral Grasp") doubled into the line. (F34)
     await item.delete();
-    await whisperStillRecharging(actor, sibling.name, remainingRounds(sibling));
     return;
   }
 
@@ -241,13 +254,25 @@ async function clearRechargesFor(combat) {
 }
 
 async function sweepExpired(combat) {
+  // pf2e's own EffectTracker removes expired effects when the world automation is
+  // on, in the same tick. Sweeping on top of it means two deletes for one document
+  // and a console error for the loser. Stand down and let pf2e do it. (F34)
+  if (game.pf2e?.settings?.automation?.removeEffects) return;
+
   for (const combatant of combat.combatants) {
     const actor = combatant.actor;
     if (!actor) continue;
     const expired = actor.items.filter(
       (i) => i.getFlag?.(MODULE_ID, "izirRecharge") && (i.isExpired === true || i.system?.expired === true),
     );
-    if (expired.length) await actor.deleteEmbeddedDocuments("Item", expired.map((i) => i.id));
+    // Re-check the ids at delete time: another client may have removed them while
+    // this loop was awaiting an earlier actor.
+    const ids = expired.map((i) => i.id).filter((id) => actor.items.get?.(id));
+    if (ids.length) {
+      await actor
+        .deleteEmbeddedDocuments("Item", ids)
+        .catch((err) => console.warn(`${MODULE_ID} | recharge sweep`, err));
+    }
   }
 }
 
