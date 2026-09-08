@@ -2,6 +2,52 @@
 
 Notable changes, newest first. Every version is also on the [Releases page](https://github.com/Zeitcatcher/the-shards-subsystems/releases); to update inside Foundry VTT, press Update on the module.
 
+## 0.7.0
+
+An audit release for Izir. Four bugs that changed outcomes at the table, and a long tail of panel, content, and platform fixes. Ansu is untouched.
+
+- The Izir panel is GM-only. The scene-control button was hidden from players, but the launcher macro and the module API were not, and a player who reached the panel could set their own immersion, suppress their own prices and press the one-way fork.
+- Void Lash rolls the Izir attack bonus for a player character. Pathfinder reads a fixed attack modifier on NPC actors only, so on a PC the strike quietly used the character's own unarmed math while the panel advertised a different number.
+- A temptation save rerolled with a hero point replaces the first result. The reroll used to be discarded: the slide, the immersion level and the history all kept the outcome the table had thrown away. The track rewinds to where it stood before the first result and the new one is applied from there. Terror saves reconcile the same way, and frightened comes off when the reroll succeeds.
+- Removing the mark puts the original portrait and token art back. Unmark deletes the actor's Izir data, and the captured originals lived inside it, so a transformed character kept Izir's face with no record of their own.
+- Two tokens built from one statblock no longer block each other. Sync, recharge and temptation guards were keyed on the base actor's id, so one token's work could swallow the other's.
+- The GM's NPC temptation roll is whispered again. The visibility option was passed under a name Pathfinder no longer reads, so the save went to the whole table.
+- Recharge reads the bearer's own encounter instead of the one on the scene the GM happens to be looking at. Cooldowns end with the fight that gave them meaning, and an expired marker the world never removed no longer greys out the Use button.
+- Out of combat there is no cooldown, and the ability texts say so. A recharge marker dropped on an actor by hand between fights stays where the GM put it instead of vanishing.
+- The recharge die is rolled to the GM rather than the table.
+- Aura effects and recharge markers moved to a second compendium that players can read. Pathfinder resolves a self-effect on the clicking client and grants an aura effect on the receiving one, so both used to fail silently from a GM-only pack.
+- Nine reminder notes attached to every roll the character made are down to two, on the checks they belong to. Their text is still in the ability descriptions and on the ladder.
+- Re-sync rebuilds every tracked item instead of skipping when nothing looks changed, and reports how many it actually rebuilt. Upgrading runs that rebuild once on its own.
+- Turning the Izir Immersion token icon off now reaches the effect.
+- A temptation DC typed for one Nameless stays with them instead of following the GM to the next actor in the roster.
+- The Tenth Step chips on the ladder are dead below immersion 9 and each one names the fate it stands for. Forcing the fork early is still possible from the stepper button, which says plainly that the character has not walked the whole track.
+- Izir's Terror prompts once per encounter, the way Frightful Presence works. A minute-long immunity let a long fight re-prompt the same foe, while a marker left from an earlier fight ate the first save of the next one.
+- The panel keeps its scroll position through a level nudge or a suppression toggle, and the temptation fields keep focus.
+- Two quick clicks on the slide no longer lose one, and two suppress toggles no longer clobber each other.
+- The history records what the slide actually did. A failed save at immersion 0, or on a full bar at 9, used to log points that never moved, and said nothing about why.
+- A temptation that was never rolled clears itself. Calling one on an actor with no Will save, or closing the check dialog, left the panel waiting forever, and a Nineveh fork left an hourglass on the roster with no way to remove it.
+- Subjugation capstones carry their action cost, their frequency and their suppress control once subjugation happens. A greyed replaced chip now warns that suppressing it takes the live rank off the sheet too, and a consumed character no longer shows a ladder of abilities that no longer exist.
+- Rewording a suppression reason writes its own history line instead of a second Suppressed entry.
+- Stepping the immersion down leaves the slide one point short of full instead of full and ready to level again.
+- The token badge steps down to immersion 0, matching the panel stepper.
+- Art thresholds: a revert holds until you apply art by hand or edit a row, so the next failed save no longer stamps the horror portrait back on. A revert also releases the capture, so a later swap remembers the art that is actually there. Clearing a row that is currently applied takes that art off the actor.
+- Duplicating a marked actor gives the copy its own history journal instead of overwriting the original's.
+- A second GM's panel follows what the first one does, and Shift-Re-sync tells them when only the active GM can run it.
+- The roster follows tokens as they are placed and deleted, and a handler with nothing selected says so instead of doing nothing.
+- A rejected macro write at world load no longer takes the whole subsystem down with it, and the hooks are registered before the content file is fetched rather than after.
+- When the content file cannot be read the panel says so where the ladder would be, and the Tenth Step refuses instead of committing a terminal it cannot finish.
+- Izir Wave I, Izir Wave II and Devour Light roll at least one die at character level 1. They rolled none, while the basic save still prompted.
+- The Voice of Izir applies stupefied 1 and doomed 1. It named both conditions and granted neither, so dying thresholds and spell DCs were untouched.
+- The Body Betrays is a -3 penalty. At -2 it duplicated The Face Fades and changed no number at level 8.
+- Strength of the Void says Speeds, which is what the bonus has always applied to.
+- The compendium card for Anathema to the Holy prints the scaling clause once.
+- The selected roster row is visible under Foundry's dark theme, and the suppress, reveal and reason controls can be reached with the keyboard.
+- The Art window names the actor it belongs to and stays with them when the roster selection moves.
+- Content validation rejects an action entry carrying rules, a recharge that is not a die formula, a pack id that could never resolve, and an aura pointing somewhere other than the effect it declares. The validator's own rejection rules are covered by tests.
+- The module is distributed from GitHub only, so Foundry will not offer it an update badge. The README says to paste the manifest URL again.
+
+Verified on Pathfinder 2e (Foundry v14.367, pf2e 8.5.0). 479 tests green; content and pack checks clean.
+
 ## 0.6.6
 
 An audit release for Ansu. Nine bugs that changed outcomes at the table, and a long tail of panel, card, and text fixes. Izir is untouched.
