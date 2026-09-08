@@ -12,9 +12,9 @@ A corruption tracker for the Nameless. The GM marks an actor and sets their imme
 - Every level pairs a passive, an active ability, and a price. Prices apply unidentified and are revealed one at a time; the GM can suppress any single entry and note why.
 - Temptation saves (DC 20 at immersion 1, +3 per level) fill a slide bar. Three failures per current level raise the immersion on its own, and the token badge doubles as a level control.
 - Izir casting matches a true caster at immersion 5 and gains one step per level after that.
-- Actives recharge on 1d6 rounds like a dragon's breath. In combat the roll and the cooldown effect are automatic; the Use button stays spent until the recharge ends.
+- Actives recharge on 1d6 rounds like a dragon's breath. The cooldown is an encounter thing: in a fight the roll and the marker are automatic and the Use button stays spent until it ends, while out of combat there is nothing to count and the ability is simply available. Ending the encounter clears every marker it rolled.
 - Terror aura prompts a Will save when an enemy enters; frightened lands only on a failed roll.
-- A compendium ships every ability as a browsable item, foldered by tier, usable on any token without the tracker.
+- A compendium ships every ability as a browsable item, foldered by tier, usable on any token without the tracker. A second, smaller one holds the machinery the players' own clients have to read — aura effects and recharge markers.
 
 ## Ansu
 
@@ -44,6 +44,8 @@ In Foundry: Add-on Modules, Install Module, paste the manifest URL:
 ```
 https://github.com/Zeitcatcher/the-shards-subsystems/releases/latest/download/module.json
 ```
+
+The module is distributed from GitHub only, not through Foundry's package listing, so Foundry will not offer it an update badge. Paste the same manifest URL again to pull a new version.
 
 Engine, content, and both compendia are done. Screenshots and the stable-release polish are still ahead.
 

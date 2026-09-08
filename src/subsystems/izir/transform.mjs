@@ -73,11 +73,31 @@ export async function rewindLevelSlide(actor, snapshot) {
   await maybeSwapForLevel(actor, to);
 }
 
-async function openForkDialog(actor) {
-  const content = `<div class="izir-fork">
-    <p>${game.i18n.format("SHARDS.Izir.ForkPrompt", { name: foundry.utils.escapeHTML(actor.name) })}</p>
+/**
+ * The prompt body. Below immersion 9 it says so plainly rather than pretending the
+ * character has walked the whole track — the early fork is a deliberate GM
+ * override, not an accident to be papered over. (F13)
+ */
+function forkPrompt(actor, level, path = null) {
+  const name = foundry.utils.escapeHTML(actor.name);
+  const early = level < MAX_LEVEL - 1;
+  const lead = early
+    ? game.i18n.format("SHARDS.Izir.ForkPromptEarly", { name, level })
+    : game.i18n.format("SHARDS.Izir.ForkPrompt", { name });
+  const chosen = path
+    ? `<p class="izir-fork-chosen"><strong>${game.i18n.localize(
+        path === "nineveh" ? "SHARDS.Izir.ForkNineveh" : "SHARDS.Izir.ForkSubjugated",
+      )}</strong></p>`
+    : "";
+  return `<div class="izir-fork">
+    <p>${lead}</p>
+    ${chosen}
     <p class="izir-fork-warn">${game.i18n.localize("SHARDS.Izir.ForkWarn")}</p>
   </div>`;
+}
+
+async function openForkDialog(actor, level) {
+  const content = forkPrompt(actor, level);
   const choice = await foundry.applications.api.DialogV2.wait({
     window: { title: game.i18n.localize("SHARDS.Izir.ForkTitle"), icon: "fa-solid fa-skull" },
     classes: ["the-shards-subsystems", "izir-fork-dialog"],
@@ -129,11 +149,30 @@ async function applySubjugation(actor) {
   await postGuidance(actor, "subjugated");
 }
 
+const FORK_PATHS = new Set(["nineveh", "subjugated"]);
+
 /**
- * Open the fork dialog and apply the chosen fate. Returns true if a fate was chosen.
+ * Apply the Tenth Step. With no `preselect` the GM picks from both fates; a ladder
+ * chip passes the fate it stands for and only asks to confirm.
+ * Returns true if a fate was chosen.
  */
-export async function triggerFork(actor) {
-  const choice = await openForkDialog(actor);
+export async function triggerFork(actor, preselect = null) {
+  const st = readIzir(actor);
+  if (st.terminal) return false;
+  const level = clampLevel(st.level);
+
+  let choice = null;
+  if (preselect && FORK_PATHS.has(preselect)) {
+    const ok = await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize("SHARDS.Izir.ForkTitle"), icon: "fa-solid fa-skull" },
+      classes: ["the-shards-subsystems", "izir-fork-dialog"],
+      content: forkPrompt(actor, level, preselect),
+    }).catch(() => false);
+    if (ok) choice = preselect;
+  } else {
+    choice = await openForkDialog(actor, level);
+  }
+
   if (!choice) return false;
   if (choice === "nineveh") await applyNineveh(actor);
   else await applySubjugation(actor);

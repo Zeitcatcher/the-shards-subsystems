@@ -9,10 +9,37 @@
  * in place — no delete-and-recreate churn).
  */
 
+import { MODULE_ID } from "../../../core/constants.mjs";
 import { clampLevel, tierForLevel, izirAttack, izirDC, MAX_LEVEL } from "./model.mjs";
 
 export const EFFECT_ENTRY_ID = "izir-immersion";
 const MASKED_LABEL = "SHARDS.Izir.MaskedLabel";
+
+/**
+ * The machinery pack: aura-granted effects and the generated recharge markers.
+ *
+ * These are split out of `izir-effects` because a player's client has to resolve
+ * them. pf2e's Use button reads the action's `selfEffect` uuid on the CLICKING
+ * client, and an aura grants its effect on the receiving client, so both fail
+ * silently when the pack is closed to players. The browsable ability pack stays
+ * at NONE — that one is the GM's spoiler shelf. (F7)
+ */
+export const INTERNAL_PACK = "izir-internal";
+
+/** Full compendium uuid of a document in the machinery pack. */
+export const packUuid = (id) => `Compendium.${MODULE_ID}.${INTERNAL_PACK}.Item.${id}`;
+
+const PACK_TOKEN = /\{\{izirPack:([A-Za-z0-9_-]+)\}\}/g;
+
+/**
+ * Expand `{{izirPack:<id>}}` into a full compendium uuid. Content declares the
+ * document id and nothing else, so the pack can be renamed in one place instead of
+ * in every rule element that points at it.
+ */
+export function injectPackUuids(text) {
+  if (typeof text !== "string") return text;
+  return text.replace(PACK_TOKEN, (_m, id) => packUuid(id));
+}
 
 /* ------------------------------------------------------------------ */
 /* Entry selection                                                     */
@@ -66,14 +93,16 @@ export function buildCtx(charLevel, level) {
   };
 }
 
-/** Replace {{izirDC}} / {{izirAttack}} / {{izirLevel}} / {{izirHolyWeak}} tokens. */
+/** Replace {{izirDC}} / {{izirAttack}} / {{izirLevel}} / {{izirHolyWeak}} / {{izirPack:id}}. */
 export function injectNumbers(text, ctx) {
   if (typeof text !== "string") return text;
-  return text
-    .replaceAll("{{izirDC}}", String(ctx.dc))
-    .replaceAll("{{izirAttack}}", String(ctx.attack))
-    .replaceAll("{{izirLevel}}", String(ctx.level))
-    .replaceAll("{{izirHolyWeak}}", String(ctx.holyWeak));
+  return injectPackUuids(
+    text
+      .replaceAll("{{izirDC}}", String(ctx.dc))
+      .replaceAll("{{izirAttack}}", String(ctx.attack))
+      .replaceAll("{{izirLevel}}", String(ctx.level))
+      .replaceAll("{{izirHolyWeak}}", String(ctx.holyWeak)),
+  );
 }
 
 function deepInject(value, ctx) {
@@ -228,12 +257,18 @@ export function composeEffect(state, content, opts = {}) {
     }
   }
 
+  // Part of the composed identity, not read straight from settings at build time:
+  // the token-icon toggle has to change the hash, or flipping it left every marked
+  // actor's effect untouched until something else happened to them. (F9)
+  const tokenIcons = opts.tokenIcons !== false;
+
   return {
     entryId: EFFECT_ENTRY_ID,
     kind: "composed-effect",
     level,
     tier,
     terminal: state.terminal ?? null,
+    tokenIcons,
     badge: { value: Math.max(1, Math.min(level, MAX_LEVEL)), max: consumed || subjugated ? MAX_LEVEL : MAX_LEVEL - 1 },
     rules,
     boonLines,
@@ -246,6 +281,7 @@ export function composeEffect(state, content, opts = {}) {
         level,
         tier,
         terminal: state.terminal ?? null,
+        tokenIcons,
         rules,
         boonLines,
         abilityLines,

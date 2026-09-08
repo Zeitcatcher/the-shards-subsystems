@@ -8,7 +8,7 @@
   "sort": 6250,
   "system": {
     "description": {
-      "value": "<p>You fold through the dark between two shadows.</p><hr /><p><strong>Requirements</strong> You are in dim light or darkness.</p><p><strong>Effect</strong> Teleport up to 15 feet to a space you can see that is in dim light or darkness.</p><p><em>You can't use this ability again for [[/r 1d6 #Recharge this ability]]{1d6 rounds}.</em></p>"
+      "value": "<p>You fold through the dark between two shadows.</p><hr /><p><strong>Requirements</strong> You are in dim light or darkness.</p><p><strong>Effect</strong> Teleport up to 15 feet to a space you can see that is in dim light or darkness.</p><p><em>In an encounter, you can't use this ability again for [[/gmr 1d6 #Recharge this ability]]{1d6 rounds}. Out of combat there is no cooldown.</em></p>"
     },
     "slug": "shards-izir-void-step",
     "actionType": {

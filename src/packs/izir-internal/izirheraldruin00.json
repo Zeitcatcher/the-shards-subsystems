@@ -4,7 +4,7 @@
   "name": "Herald of Ruin",
   "type": "effect",
   "img": "icons/magic/control/buff-flight-wings-runes-purple.webp",
-  "folder": "izirfolderintern",
+  "folder": null,
   "sort": 100,
   "system": {
     "description": {

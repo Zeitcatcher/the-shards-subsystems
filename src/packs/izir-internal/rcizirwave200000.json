@@ -1,16 +1,16 @@
 {
-  "_id": "rcumbralgrasp000",
-  "_key": "!items!rcumbralgrasp000",
-  "name": "Recharge: Umbral Grasp",
+  "_id": "rcizirwave200000",
+  "_key": "!items!rcizirwave200000",
+  "name": "Recharge: Izir Wave II",
   "type": "effect",
   "img": "icons/magic/time/hourglass-tilted-glowing-gold.webp",
-  "folder": "izirfolderintern",
+  "folder": null,
   "sort": 200,
   "system": {
     "description": {
-      "value": "<p>Umbral Grasp is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>"
+      "value": "<p>Izir Wave II is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>"
     },
-    "slug": "shards-izir-recharge-umbral-grasp",
+    "slug": "shards-izir-recharge-izir-wave-2",
     "duration": {
       "value": 1,
       "unit": "rounds",
@@ -43,7 +43,7 @@
   },
   "flags": {
     "the-shards-subsystems": {
-      "izirRecharge": "umbral-grasp"
+      "izirRecharge": "izir-wave-2"
     }
   }
 }

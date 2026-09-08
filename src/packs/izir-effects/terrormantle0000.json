@@ -41,7 +41,7 @@
         ],
         "effects": [
           {
-            "uuid": "Compendium.the-shards-subsystems.izir-effects.Item.izirterroraura00",
+            "uuid": "Compendium.the-shards-subsystems.izir-internal.Item.izirterroraura00",
             "affects": "enemies",
             "events": [
               "enter"

@@ -40,7 +40,7 @@ for (const t of TARGETS) {
 // {{tokens}} that leaked past a scrub, inline @Check enrichers whose dc is prose,
 // and (Ansu) a baked rule number that disagrees with model.mjs at the entry's own
 // unlock attunement. All three shipped broken content before these guards existed.
-for (const dir of ["src/packs/izir-effects", "src/packs/ansu-effects"]) {
+for (const dir of ["src/packs/izir-effects", "src/packs/izir-internal", "src/packs/ansu-effects"]) {
   let files;
   try {
     files = readdirSync(resolve(ROOT, dir)).filter((f) => f.endsWith(".json"));

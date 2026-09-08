@@ -29,15 +29,7 @@
       "value": [],
       "rarity": "common"
     },
-    "rules": [
-      {
-        "key": "Note",
-        "selector": "all",
-        "title": "The Voice of Izir",
-        "text": "Permanent stupefied 1 and doomed 1 while immersed at this depth.",
-        "visibility": "gm"
-      }
-    ],
+    "rules": [],
     "start": {
       "value": 0,
       "initiative": null

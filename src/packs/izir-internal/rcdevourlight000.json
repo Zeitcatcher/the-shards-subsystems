@@ -1,16 +1,16 @@
 {
-  "_id": "rcizirwave200000",
-  "_key": "!items!rcizirwave200000",
-  "name": "Recharge: Izir Wave II",
+  "_id": "rcdevourlight000",
+  "_key": "!items!rcdevourlight000",
+  "name": "Recharge: Devour Light",
   "type": "effect",
   "img": "icons/magic/time/hourglass-tilted-glowing-gold.webp",
-  "folder": "izirfolderintern",
+  "folder": null,
   "sort": 200,
   "system": {
     "description": {
-      "value": "<p>Izir Wave II is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>"
+      "value": "<p>Devour Light is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>"
     },
-    "slug": "shards-izir-recharge-izir-wave-2",
+    "slug": "shards-izir-recharge-devour-light",
     "duration": {
       "value": 1,
       "unit": "rounds",
@@ -43,7 +43,7 @@
   },
   "flags": {
     "the-shards-subsystems": {
-      "izirRecharge": "izir-wave-2"
+      "izirRecharge": "devour-light"
     }
   }
 }

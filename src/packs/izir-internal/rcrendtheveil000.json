@@ -1,16 +1,16 @@
 {
-  "_id": "rcvoidstep000000",
-  "_key": "!items!rcvoidstep000000",
-  "name": "Recharge: Void Step",
+  "_id": "rcrendtheveil000",
+  "_key": "!items!rcrendtheveil000",
+  "name": "Recharge: Rend the Veil",
   "type": "effect",
   "img": "icons/magic/time/hourglass-tilted-glowing-gold.webp",
-  "folder": "izirfolderintern",
+  "folder": null,
   "sort": 200,
   "system": {
     "description": {
-      "value": "<p>Void Step is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>"
+      "value": "<p>Rend the Veil is spent. The remaining rounds count down on this effect; the ability is available again when it ends.</p>"
     },
-    "slug": "shards-izir-recharge-void-step",
+    "slug": "shards-izir-recharge-rend-the-veil",
     "duration": {
       "value": 1,
       "unit": "rounds",
@@ -43,7 +43,7 @@
   },
   "flags": {
     "the-shards-subsystems": {
-      "izirRecharge": "void-step"
+      "izirRecharge": "rend-the-veil"
     }
   }
 }

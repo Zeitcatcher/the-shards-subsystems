@@ -14,6 +14,8 @@
  * @property {(app:any, root:HTMLElement)=>void} [sheetButton]
  * @property {()=>void} [onInit]
  * @property {()=>void} [onReady]
+ * @property {(from:string, to:string)=>Promise<void>} [onMigrate] - one-time work when the
+ *   module version changes; runs on the primary GM after every onReady has settled.
  */
 
 /** @type {SubsystemDef[]} */

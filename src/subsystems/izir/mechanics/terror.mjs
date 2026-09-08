@@ -10,12 +10,14 @@ import { MODULE_ID } from "../../../core/constants.mjs";
 import { isPrimaryGM } from "../../../core/platform.mjs";
 import { readIzir, isMarked } from "../state.mjs";
 import { suggestedDC } from "./temptation.mjs";
+import { encounterOf } from "./recharge.mjs";
 
 const MARKER_SLUG = "shards-izir-pack-izirterroraura00";
 const ROLL_OPTION = "shards-izir-terror";
 const ID_PREFIX = "shards-izir-terror-id:";
 const IMMUNITY_SLUG = "shards-izir-terror-immune";
 const IMMUNITY_MINUTES = 1;
+const COMBAT_FLAG = "terrorImmuneCombat";
 
 /**
  * What each prompted save actually applied, keyed by `<target>:<save id>`. pf2e's
@@ -78,19 +80,48 @@ async function promptTerrorSave(markerItem) {
   await grantTerrorImmunity(target, bearer);
 }
 
-/** Does this target already carry a live Terror immunity from this bearer? */
+/**
+ * Does this target already carry a live Terror immunity from this bearer?
+ *
+ * Frightful Presence is once per encounter, and a wall-clock minute is not that:
+ * a long fight let the same foe be prompted again and again, while a marker left
+ * over from an earlier fight silently suppressed the first save of the next one.
+ * Copies stamped with a different encounter are stale — deleted here rather than
+ * left to a pf2e automation setting the world may have switched off. (F14)
+ */
 function hasTerrorImmunity(target, bearer) {
-  return (target.items ?? []).some(
+  const combatId = encounterOf(target)?.id ?? null;
+  const mine = (target.items ?? []).filter(
     (i) =>
       i.type === "effect" &&
       i.system?.slug === IMMUNITY_SLUG &&
-      i.getFlag?.(MODULE_ID, "terrorImmuneFrom") === bearer.uuid &&
-      !(i.isExpired === true || i.system?.expired === true),
+      i.getFlag?.(MODULE_ID, "terrorImmuneFrom") === bearer.uuid,
   );
+
+  const stale = [];
+  let immune = false;
+  for (const i of mine) {
+    const stamped = i.getFlag?.(MODULE_ID, COMBAT_FLAG) ?? null;
+    const expired = i.isExpired === true || i.system?.expired === true;
+    if (expired || stamped !== combatId) stale.push(i.id);
+    else immune = true;
+  }
+  if (stale.length) {
+    target.deleteEmbeddedDocuments("Item", stale).catch(() => {});
+  }
+  return immune;
 }
 
-/** Apply a 1-minute per-bearer immunity so re-entry doesn't re-prompt. */
+/**
+ * Grant the per-bearer immunity. Inside an encounter it is stamped with that
+ * encounter and rides pf2e's "encounter" duration; outside one there is no
+ * encounter to be once-per, so it falls back to the wall-clock minute.
+ */
 async function grantTerrorImmunity(target, bearer) {
+  const combat = encounterOf(target);
+  const duration = combat
+    ? { value: -1, unit: "encounter", sustained: false, expiry: null }
+    : { value: IMMUNITY_MINUTES, unit: "minutes", sustained: false, expiry: "turn-start" };
   try {
     await target.createEmbeddedDocuments("Item", [
       {
@@ -100,7 +131,7 @@ async function grantTerrorImmunity(target, bearer) {
         system: {
           slug: IMMUNITY_SLUG,
           description: { value: `<p>${game.i18n.localize("SHARDS.Izir.TerrorImmuneDesc")}</p>` },
-          duration: { value: IMMUNITY_MINUTES, unit: "minutes", sustained: false, expiry: "turn-start" },
+          duration,
           unidentified: false,
           level: { value: 1 },
           tokenIcon: { show: false },
@@ -109,7 +140,7 @@ async function grantTerrorImmunity(target, bearer) {
           start: { value: 0, initiative: null },
           publication: { title: "The Shards", authors: "Zeitcatcher", license: "ORC", remaster: true },
         },
-        flags: { [MODULE_ID]: { terrorImmuneFrom: bearer.uuid } },
+        flags: { [MODULE_ID]: { terrorImmuneFrom: bearer.uuid, [COMBAT_FLAG]: combat?.id ?? null } },
       },
     ]);
   } catch (err) {

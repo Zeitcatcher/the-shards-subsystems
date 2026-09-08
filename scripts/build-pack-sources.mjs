@@ -9,15 +9,19 @@
  * These reusable copies carry flags[MODULE_ID].izirPack (NOT the tracker's `.izir` tag),
  * so the reconciliation engine ignores them — dragging one on is fully manual.
  *
- * The aura-granted effects (packEffects) also live here (Internal folder); their stable
- * _ids are what the Terror's Mantle Aura rule element references.
+ * The aura-granted effects (packEffects) and the generated recharge markers do NOT
+ * live here. They go to src/packs/izir-internal, a second pack open to players at
+ * OBSERVER: pf2e resolves a selfEffect uuid on the CLICKING client and grants an
+ * aura effect on the RECEIVING one, so both fail silently from a GM-only pack. (F7)
  *
- * Output: src/packs/izir-effects/<_id>.json (folders + items; committed).
+ * Output: src/packs/izir-effects/<_id>.json  (folders + browsable abilities)
+ *         src/packs/izir-internal/<_id>.json (aura effects + recharge markers)
  */
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ansuRuleTokenValues, ansuRulesCarryTokens, ansuScrubbedValue } from "./pack-checks.mjs";
+import { injectPackUuids } from "../src/subsystems/izir/logic/reconcile.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULE_ID = "the-shards-subsystems";
@@ -36,7 +40,6 @@ const FOLDERS = [
   { key: "grip", name: "Tier II: Grip (Lv 4-6)" },
   { key: "call", name: "Tier III: Call (Lv 7-9)" },
   { key: "nineveh", name: "Terminal: Nineveh & Subjugation (Lv 10)" },
-  { key: "internal", name: "Internal: Aura Effects" },
 ];
 const folderId = (key) => makeId(`izirfolder-${key}`);
 
@@ -50,7 +53,7 @@ function tierKeyFor(entry) {
 
 /** Pack copies are static: replace the runtime number tokens with readable text. */
 function scrub(text) {
-  return String(text ?? "")
+  return injectPackUuids(String(text ?? ""))
     // Inside an inline @Check the DC must be numeric/resolvable/empty, never prose.
     // Static pack copies can't compute it, so emit an empty dc (the official
     // glossary pattern) so the save stays clickable and the GM reads the DC. (T1)
@@ -63,8 +66,16 @@ function scrub(text) {
 
 /** Pack-copy rules with number tokens neutralized (static docs can't compute). */
 function scrubRules(rules) {
+  // Pack uuids are expanded, not neutralized: a static copy of Terror's Mantle
+  // still has to point its Aura at a real document. (F7)
+  const walk = (v) => {
+    if (typeof v === "string") return injectPackUuids(v);
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    return v;
+  };
   return (Array.isArray(rules) ? rules : []).map((r) => {
-    const out = { ...r };
+    const out = walk({ ...r });
     for (const [k, v] of Object.entries(out)) {
       if (typeof v === "string" && v.includes("{{izirHolyWeak}}")) out[k] = 2;
     }
@@ -178,7 +189,7 @@ function packEffectItem(pe) {
     name: pe.name,
     type: "effect",
     img: pe.img || DEFAULT_EFFECT_IMG,
-    folder: folderId("internal"),
+    folder: null,
     sort: 100,
     system: {
       description: { value: pe.description ?? "" },
@@ -221,7 +232,7 @@ function rechargeEffectItem(entry) {
     name: `Recharge: ${entry.name}`,
     type: "effect",
     img: "icons/magic/time/hourglass-tilted-glowing-gold.webp",
-    folder: folderId("internal"),
+    folder: null,
     sort: 200,
     system: {
       description: {
@@ -244,15 +255,16 @@ function rechargeEffectItem(entry) {
 
 const rechargeEntries = (content.entries ?? []).filter((e) => e.actionData?.recharge);
 
-const docs = [
-  ...FOLDERS.map(folderDoc),
-  ...(content.entries ?? []).map(entryItem),
+const docs = [...FOLDERS.map(folderDoc), ...(content.entries ?? []).map(entryItem)];
+
+const internalDocs = [
   ...rechargeEntries.map(rechargeEffectItem),
   ...(content.packEffects ?? []).map(packEffectItem),
 ];
 
-// Guard against id collisions from makeId truncation.
-const ids = docs.map((d) => d._id);
+// Guard against id collisions from makeId truncation — across BOTH packs, since a
+// uuid names the pack and the id together and a clash would be invisible.
+const ids = [...docs, ...internalDocs].map((d) => d._id);
 const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
 if (dupes.length) {
   console.error(`build-pack-sources: DUPLICATE ids after makeId: ${[...new Set(dupes)].join(", ")}`);
@@ -260,6 +272,8 @@ if (dupes.length) {
 }
 
 const n = writeDir("src/packs/izir-effects", docs);
+const ni = writeDir("src/packs/izir-internal", internalDocs);
+console.log(`build-pack-sources: wrote ${ni} izir-internal docs (aura effects + recharge markers).`);
 console.log(
   `build-pack-sources: wrote ${FOLDERS.length} folders + ${(content.entries ?? []).length} abilities + ${(content.packEffects ?? []).length} aura effect(s) = ${n} docs.`,
 );

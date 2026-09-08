@@ -4,7 +4,7 @@
   "name": "Izir's Terror",
   "type": "effect",
   "img": "icons/magic/unholy/orb-glowing-purple.webp",
-  "folder": "izirfolderintern",
+  "folder": null,
   "sort": 100,
   "system": {
     "description": {

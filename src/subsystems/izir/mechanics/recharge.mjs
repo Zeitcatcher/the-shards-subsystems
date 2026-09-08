@@ -11,22 +11,42 @@
  */
 
 import { MODULE_ID, IZIR } from "../../../core/constants.mjs";
-import { isPrimaryGM } from "../../../core/platform.mjs";
+import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
 import { loadContent } from "../content.mjs";
 import { isMarked } from "../state.mjs";
 
 const RECHARGE_IMG = "icons/magic/time/hourglass-tilted-glowing-gold.webp";
 
-/** Is this actor currently in the active, started combat? */
+/**
+ * Is this actor in a started encounter — any of them?
+ *
+ * `game.combat` is the encounter on the GM's VIEWED scene, so a party fighting on
+ * one map while the GM had another open read as out of combat: the Use button
+ * rolled no cooldown at all. Ask the encounters themselves instead. (F4)
+ */
 export function inActiveCombat(actor) {
-  const combat = game.combat;
-  if (!combat?.started) return false;
-  return combat.combatants.some((c) => c.actor === actor || c.actor?.uuid === actor.uuid);
+  return Boolean(encounterOf(actor));
 }
 
-/** The active recharge marker for an entry, if any. */
+/** The started encounter this actor is fighting in, or null. */
+export function encounterOf(actor) {
+  if (!actor) return null;
+  const combats = game.combats?.contents ?? game.combats ?? [];
+  return (
+    [...combats].find(
+      (c) => c?.started && (c.combatants ?? []).some((x) => x.actor === actor || x.actor?.uuid === actor.uuid),
+    ) ?? null
+  );
+}
+
+/** The recharge marker for an entry, if any — expired copies included. */
 export function findRechargeEffect(actor, entryId) {
   return actor.items.find((i) => i.type === "effect" && i.getFlag?.(MODULE_ID, "izirRecharge") === entryId);
+}
+
+/** Is a marker still counting down? An expired one blocks nothing. (F4) */
+export function isRunning(effect) {
+  return Boolean(effect) && effect.isExpired !== true && effect.system?.expired !== true;
 }
 
 /** Remaining rounds on a recharge effect (native duration, defensively read). */
@@ -111,7 +131,7 @@ async function handleUseMessage(message) {
 
   // A double-click posts two self-effect messages that would both pass the gate
   // and roll twice; the synchronous check-and-add lets only the first win. (F)
-  const gateKey = `${actor.id}:${entry.id}`;
+  const gateKey = `${actorKey(actor)}:${entry.id}`;
   if (rolling.has(gateKey)) return;
   rolling.add(gateKey);
   try {
@@ -144,15 +164,15 @@ async function normalizeMarker(item) {
   const actor = item.parent;
   if (!entryId || !actor) return;
 
-  // Out of combat there is no cooldown to track.
-  if (!inActiveCombat(actor)) {
-    if (!item.getFlag(MODULE_ID, "izirRolled")) await item.delete();
-    return;
-  }
+  // Out of combat there is no round clock to hang a cooldown on, but a marker
+  // dropped on an actor between fights is the GM staging one on purpose. Deleting
+  // it undid deliberate prep with no explanation; leave it where it was put. (F16)
+  if (!inActiveCombat(actor)) return;
 
-  // A rolled marker already exists: this copy is a duplicate.
+  // A live marker already exists: this copy is a duplicate. An expired sibling is
+  // not in the way and is left for the sweep. (F4)
   const sibling = actor.items.find(
-    (i) => i.id !== item.id && i.getFlag?.(MODULE_ID, "izirRecharge") === entryId,
+    (i) => i.id !== item.id && i.getFlag?.(MODULE_ID, "izirRecharge") === entryId && isRunning(i),
   );
   if (sibling) {
     await item.delete();
@@ -188,6 +208,14 @@ export function registerRechargeHooks() {
     normalizeMarker(item).catch((err) => console.error(`${MODULE_ID} | recharge normalize`, err));
   });
 
+  // Cooldowns are measured in rounds, so they cannot outlive the encounter that
+  // gave them meaning. Without this, ending a fight left every marker frozen on
+  // the sheet and the ability greyed out until someone deleted it by hand. (F4)
+  Hooks.on("deleteCombat", (combat) => {
+    if (!isPrimaryGM()) return;
+    clearRechargesFor(combat).catch((err) => console.error(`${MODULE_ID} | recharge cleanup`, err));
+  });
+
   // pf2e leaves expired effects in place unless the world auto-removes them;
   // sweep our markers on round/turn changes so abilities come back on time.
   Hooks.on("updateCombat", (combat, changes) => {
@@ -195,6 +223,21 @@ export function registerRechargeHooks() {
     if (changes?.round === undefined && changes?.turn === undefined) return;
     sweepExpired(combat).catch((err) => console.error(`${MODULE_ID} | recharge sweep`, err));
   });
+}
+
+/** Encounter over: drop every cooldown this module rolled during it. */
+async function clearRechargesFor(combat) {
+  for (const combatant of combat.combatants ?? []) {
+    const actor = combatant.actor;
+    if (!actor) continue;
+    // Only markers we rolled. One a GM staged by hand and never used stays put.
+    const ours = actor.items.filter(
+      (i) => i.getFlag?.(MODULE_ID, "izirRecharge") && i.getFlag?.(MODULE_ID, "izirRolled"),
+    );
+    if (ours.length) {
+      await actor.deleteEmbeddedDocuments("Item", ours.map((i) => i.id)).catch(() => {});
+    }
+  }
 }
 
 async function sweepExpired(combat) {
@@ -223,7 +266,9 @@ export function rechargeSheetShim(app, root) {
   for (const item of actor.items) {
     const tag = item.getFlag?.(MODULE_ID, IZIR);
     if (!tag?.entryId || item.type !== "action") continue;
-    const running = findRechargeEffect(actor, tag.entryId);
+    // An expired marker the world never removed must not keep the button greyed. (F4)
+    const marker = findRechargeEffect(actor, tag.entryId);
+    const running = isRunning(marker) ? marker : null;
     const row = root.querySelector?.(`[data-item-id="${item.id}"]`);
     if (!row) continue;
     const btn = row.querySelector('button[data-action="use-action"], [data-action="use-action"]');

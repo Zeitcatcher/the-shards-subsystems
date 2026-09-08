@@ -97,7 +97,7 @@ async function onUnmark(_event, target) {
   if (!actor) return;
   const ok = await foundry.applications.api.DialogV2.confirm({
     window: { title: game.i18n.localize("SHARDS.Izir.Unmark") },
-    content: `<p>${game.i18n.format("SHARDS.Izir.UnmarkConfirm", { name: actor.name })}</p>`,
+    content: `<p>${game.i18n.format("SHARDS.Izir.UnmarkConfirm", { name: foundry.utils.escapeHTML(actor.name) })}</p>`,
   }).catch(() => false);
   if (!ok) return;
   // Put the original portrait and token back BEFORE the flag goes. The captured
@@ -134,12 +134,13 @@ async function onLevelDown() {
   this.render();
 }
 
-async function onFork() {
+async function onFork(_event, target) {
   const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const st = readIzir(actor);
   if (st.terminal) return;
-  await triggerFork(actor);
+  // A ladder chip names the fate it stands for; the stepper button offers both. (F13)
+  await triggerFork(actor, target?.dataset?.path ?? null);
   this.render();
 }
 
@@ -219,8 +220,8 @@ async function onTempt() {
     ui.notifications?.warn(game.i18n.localize("SHARDS.Izir.BadDc"));
     return;
   }
-  this._reasonDraft = "";
-  this._dcDraft = null;
+  this._reasonDrafts.delete(actor.uuid);
+  this._dcDrafts.delete(actor.uuid);
   await callTemptation(actor, dc, reason);
   this.render();
 }
@@ -268,14 +269,24 @@ async function onExportJournal() {
 }
 
 async function onResync(event) {
+  // Re-sync is the "something is wrong, rebuild it" button, so it forces: the
+  // content hash only covers what we compose, and an item can be stale in ways
+  // the hash cannot see. It also reports what actually moved rather than always
+  // claiming success. (F9)
   if (event?.shiftKey) {
-    await syncAllMarked();
-    ui.notifications?.info(game.i18n.localize("SHARDS.Izir.ResyncAllDone"));
+    const n = await syncAllMarked({ force: true });
+    ui.notifications?.info(
+      n ? game.i18n.format("SHARDS.Izir.ResyncAllDone", { n }) : game.i18n.localize("SHARDS.Izir.ResyncNoChange"),
+    );
   } else {
     const actor = resolveActor(this._actorUuid);
     if (!actor) return;
-    await syncActor(actor);
-    ui.notifications?.info(game.i18n.format("SHARDS.Izir.ResyncDone", { name: actor.name }));
+    const n = await syncActor(actor, { force: true });
+    ui.notifications?.info(
+      n
+        ? game.i18n.format("SHARDS.Izir.ResyncDone", { name: actor.name, n })
+        : game.i18n.localize("SHARDS.Izir.ResyncNoChange"),
+    );
   }
   this.render();
 }
@@ -434,8 +445,10 @@ const PANEL_ACTIONS = {
 
 export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   _actorUuid = null;
-  _dcDraft = null;
-  _reasonDraft = "";
+  // Keyed by actor uuid: a DC typed for one Nameless used to follow the GM to the
+  // next one in the roster and quietly overwrite its suggested DC. (F11)
+  _dcDrafts = new Map();
+  _reasonDrafts = new Map();
 
   static DEFAULT_OPTIONS = {
     id: `${MODULE_ID}-izir`,
@@ -447,7 +460,9 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   static PARTS = {
-    main: { template: TEMPLATES.IZIR_PANEL },
+    // Named scroll containers survive a re-render; without them every level nudge
+    // or suppression toggle threw the GM back to the top of a long ladder. (F17)
+    main: { template: TEMPLATES.IZIR_PANEL, scrollable: [".izir-dash", ".izir-roster-list"] },
   };
 
   /** Nothing renders this dashboard for a player, whatever opened it. */
@@ -459,15 +474,28 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     super._onRender?.(context, options);
     renderSubsystemSwitcher(this, IZIR);
     // Keep the temptation inputs alive across re-renders.
+    const uuid = this._actorUuid;
     const dcInput = this.element.querySelector('input[name="temptDc"]');
     const reasonInput = this.element.querySelector('input[name="temptReason"]');
-    if (dcInput) {
-      if (this._dcDraft !== null) dcInput.value = this._dcDraft;
-      dcInput.addEventListener("input", () => (this._dcDraft = dcInput.value));
+    if (dcInput && uuid) {
+      const draft = this._dcDrafts.get(uuid);
+      if (draft) dcInput.value = draft;
+      dcInput.addEventListener("input", () => {
+        // An emptied field is no draft at all, so the suggested DC comes back
+        // rather than the box staying blank.
+        const v = dcInput.value.trim();
+        if (v) this._dcDrafts.set(uuid, v);
+        else this._dcDrafts.delete(uuid);
+      });
     }
-    if (reasonInput) {
-      if (this._reasonDraft) reasonInput.value = this._reasonDraft;
-      reasonInput.addEventListener("input", () => (this._reasonDraft = reasonInput.value));
+    if (reasonInput && uuid) {
+      const draft = this._reasonDrafts.get(uuid);
+      if (draft) reasonInput.value = draft;
+      reasonInput.addEventListener("input", () => {
+        const v = reasonInput.value;
+        if (v) this._reasonDrafts.set(uuid, v);
+        else this._reasonDrafts.delete(uuid);
+      });
     }
   }
 
@@ -517,7 +545,7 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         atNinth: !st.terminal && st.level === MAX_LEVEL - 1,
       };
       const dcPreview = suggestedDC(st);
-      detail.temptDc = this._dcDraft ?? dcPreview;
+      detail.temptDc = this._dcDrafts.get(selected.uuid) ?? dcPreview;
       const content = await loadContent().catch(() => null);
       const transparency = game.settings.get(MODULE_ID, SETTINGS.IZIR_TRANSPARENCY) === true;
       if (content) ladder = buildLadder(st, content, transparency, charLevel);

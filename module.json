@@ -70,6 +70,19 @@
       }
     },
     {
+      "name": "izir-internal",
+      "label": "The Shards: Izir (internal)",
+      "type": "Item",
+      "system": "pf2e",
+      "path": "packs/izir-internal",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "TRUSTED": "OBSERVER",
+        "ASSISTANT": "OWNER",
+        "GAMEMASTER": "OWNER"
+      }
+    },
+    {
       "name": "ansu-effects",
       "label": "The Shards: Ansu",
       "type": "Item",
@@ -89,6 +102,7 @@
       "sorting": "m",
       "packs": [
         "izir-effects",
+        "izir-internal",
         "ansu-effects"
       ]
     }

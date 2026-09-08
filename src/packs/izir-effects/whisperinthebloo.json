@@ -32,10 +32,13 @@
     "rules": [
       {
         "key": "Note",
-        "selector": "all",
+        "selector": "saving-throw",
         "title": "Whisper in the Blood",
         "text": "On a critical failure on a save in combat: off-guard until end of your next turn; GM may call a temptation check.",
-        "visibility": "gm"
+        "visibility": "gm",
+        "outcome": [
+          "criticalFailure"
+        ]
       }
     ],
     "start": {

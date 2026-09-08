@@ -6,6 +6,9 @@ import {
   diffAll,
   injectNumbers,
   buildCtx,
+  packUuid,
+  injectPackUuids,
+  INTERNAL_PACK,
   EFFECT_ENTRY_ID,
 } from "../src/subsystems/izir/logic/reconcile.mjs";
 import { izirAttack, izirDC } from "../src/subsystems/izir/logic/model.mjs";
@@ -247,5 +250,55 @@ describe("diffAll", () => {
     expect(r.toDeleteIds).toEqual(["iDUP"]);
     expect(r.toCreate).toEqual([]);
     expect(r.toUpdate).toEqual([]);
+  });
+});
+
+describe("pack uuids", () => {
+  it("names the machinery pack, not the browsable one", () => {
+    // The GM-only ability pack cannot be read by a player's client, so anything
+    // pf2e resolves on their side has to live in izir-internal. (F7)
+    expect(INTERNAL_PACK).toBe("izir-internal");
+    expect(packUuid("izirterroraura00")).toBe(
+      "Compendium.the-shards-subsystems.izir-internal.Item.izirterroraura00",
+    );
+  });
+
+  it("expands {{izirPack:id}} wherever content declares one", () => {
+    const rule = { key: "Aura", effects: [{ uuid: "{{izirPack:izirterroraura00}}" }] };
+    const out = JSON.parse(injectPackUuids(JSON.stringify(rule)));
+    expect(out.effects[0].uuid).toBe(packUuid("izirterroraura00"));
+  });
+
+  it("leaves text without a token alone", () => {
+    expect(injectPackUuids("no tokens here")).toBe("no tokens here");
+    expect(injectPackUuids(42)).toBe(42);
+  });
+
+  it("resolves the aura uuid through the normal injection path", () => {
+    const content = {
+      entries: [
+        {
+          id: "terror", family: "terror", rank: 1, level: 1, kind: "boon", form: "effect", name: "Terror",
+          description: "<p>Fear.</p>",
+          rules: [{ key: "Aura", slug: "izir-terror", radius: 10, effects: [{ uuid: "{{izirPack:izirterroraura00}}" }] }],
+        },
+      ],
+    };
+    const c = composeEffect(at({ level: 1 }), content, { charLevel: 3 });
+    const aura = c.rules.find((r) => r.key === "Aura");
+    expect(aura.effects[0].uuid).toBe(packUuid("izirterroraura00"));
+  });
+});
+
+describe("the token-icon toggle is part of the composed identity", () => {
+  it("changes the hash, so a settings flip actually reaches the effect", () => {
+    const on = composeEffect(at({ level: 3 }), CONTENT, { charLevel: 5, tokenIcons: true });
+    const off = composeEffect(at({ level: 3 }), CONTENT, { charLevel: 5, tokenIcons: false });
+    expect(on.tokenIcons).toBe(true);
+    expect(off.tokenIcons).toBe(false);
+    expect(on.hash).not.toBe(off.hash);
+  });
+  it("defaults to shown when the caller says nothing", () => {
+    expect(composeEffect(at({ level: 3 }), CONTENT, { charLevel: 5 }).tokenIcons).toBe(true);
   });
 });

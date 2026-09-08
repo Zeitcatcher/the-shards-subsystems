@@ -42,7 +42,7 @@
       },
       {
         "key": "Note",
-        "selector": "all",
+        "selector": "strike-damage",
         "title": "Hunger for the Kill",
         "text": "On dropping a foe: Will vs temptation DC or compelled to Strike it (or the nearest hostile).",
         "visibility": "gm"

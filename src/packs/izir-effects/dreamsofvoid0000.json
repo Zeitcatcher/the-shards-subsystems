@@ -29,15 +29,7 @@
       "value": [],
       "rarity": "common"
     },
-    "rules": [
-      {
-        "key": "Note",
-        "selector": "all",
-        "title": "Dreams of the Void",
-        "text": "After daily preparations: DC 4 flat check or fatigued until 10 minutes of communion with Izir.",
-        "visibility": "gm"
-      }
-    ],
+    "rules": [],
     "start": {
       "value": 0,
       "initiative": null

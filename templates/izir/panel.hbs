@@ -144,8 +144,12 @@
             {{#if (shardsEq detail.terminal "nineveh")}}☠ {{localize "SHARDS.Izir.ForkNineveh"}}{{else}}♛ {{localize "SHARDS.Izir.ForkSubjugated"}}{{/if}}
           </span>
           {{else}}
-          <button type="button" class="izir-fork-chip nin" data-action="fork">☠ {{localize "SHARDS.Izir.ForkNineveh"}}</button>
-          <button type="button" class="izir-fork-chip sub" data-action="fork">♛ {{localize "SHARDS.Izir.ForkSubjugated"}}</button>
+          {{!-- Each chip names its own fate, and neither is live below immersion 9.
+                The Tenth Step button in the stepper is the deliberate early override. --}}
+          <button type="button" class="izir-fork-chip nin" data-action="fork" data-path="nineveh"
+            {{#unless detail.atNinth}}disabled data-tooltip="{{localize 'SHARDS.Izir.ForkLocked'}}"{{/unless}}>☠ {{localize "SHARDS.Izir.ForkNineveh"}}</button>
+          <button type="button" class="izir-fork-chip sub" data-action="fork" data-path="subjugated"
+            {{#unless detail.atNinth}}disabled data-tooltip="{{localize 'SHARDS.Izir.ForkLocked'}}"{{/unless}}>♛ {{localize "SHARDS.Izir.ForkSubjugated"}}</button>
           {{/if}}
           {{#each ladder.gateChips}}
           <span class="izir-chip {{#if this.isBane}}price{{else}}passive{{/if}} gate {{#if this.suppressed}}suppressed{{/if}}">
@@ -161,8 +165,9 @@
     <div class="izir-tempt">
       <div class="izir-tempt-row">
         <span class="izir-tempt-dc">{{localize "SHARDS.Izir.TemptationShort"}} · DC</span>
-        <input type="number" name="temptDc" value="{{detail.temptDc}}" min="1" step="1" class="izir-dc-input">
-        <input type="text" name="temptReason" placeholder="{{localize 'SHARDS.Izir.TemptationReasonHint'}}" class="izir-reason-input">
+        {{!-- Stable ids so ApplicationV2 can keep focus and caret across a re-render. --}}
+        <input type="number" id="izir-tempt-dc" name="temptDc" value="{{detail.temptDc}}" min="1" step="1" class="izir-dc-input">
+        <input type="text" id="izir-tempt-reason" name="temptReason" placeholder="{{localize 'SHARDS.Izir.TemptationReasonHint'}}" class="izir-reason-input">
         <button type="button" class="izir-primary" data-action="tempt" {{#if temptation.pending}}disabled{{/if}}>
           <i class="fa-solid fa-dice-d20"></i> {{localize "SHARDS.Izir.TemptationTrigger"}}
         </button>

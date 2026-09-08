@@ -4,7 +4,7 @@
  * game logic itself.
  */
 
-import { MODULE_ID, TEMPLATES } from "./core/constants.mjs";
+import { MODULE_ID, SETTINGS, TEMPLATES } from "./core/constants.mjs";
 import { registerAllSettings } from "./core/settings.mjs";
 import { registerControls, ensureLauncherMacros } from "./core/controls.mjs";
 import { registerSheetButtons } from "./core/sheet-buttons.mjs";
@@ -42,5 +42,34 @@ Hooks.once("ready", async () => {
   // Only the primary GM creates world documents (macros), so a second GM logging in
   // doesn't duplicate them.
   if (isPrimaryGM()) await ensureLauncherMacros();
-  for (const sub of getSubsystems()) sub.onReady?.();
+  // Awaited — concurrently, so no subsystem waits on another — because the
+  // migrations below need fully-started subsystems, and because an onReady that
+  // threw used to disappear as an unhandled rejection.
+  await Promise.all(
+    getSubsystems().map((sub) =>
+      Promise.resolve(sub.onReady?.()).catch((err) => console.error(`${MODULE_ID} | ${sub.id} onReady`, err)),
+    ),
+  );
+  if (isPrimaryGM()) await runMigrations();
 });
+
+/**
+ * One-time work gated on the module version.
+ *
+ * The stored world setting is the last version that finished migrating. Each
+ * subsystem gets one `onMigrate(from, to)` call, and the setting is written only
+ * after every one of them succeeds — a failure leaves the old version in place so
+ * the next load tries again rather than silently skipping the work. (F10)
+ */
+async function runMigrations() {
+  const to = game.modules.get(MODULE_ID)?.version ?? "0.0.0";
+  const from = game.settings.get(MODULE_ID, SETTINGS.SCHEMA_VERSION) || "0.0.0";
+  if (!to || from === to) return;
+  try {
+    for (const sub of getSubsystems()) await sub.onMigrate?.(from, to);
+    await game.settings.set(MODULE_ID, SETTINGS.SCHEMA_VERSION, to);
+    console.log(`${MODULE_ID} | migrated ${from} -> ${to}`);
+  } catch (err) {
+    console.error(`${MODULE_ID} | migration ${from} -> ${to} failed; retrying on next load`, err);
+  }
+}
