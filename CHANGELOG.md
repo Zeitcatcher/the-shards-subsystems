@@ -2,6 +2,43 @@
 
 Notable changes, newest first. Every version is also on the [Releases page](https://github.com/Zeitcatcher/the-shards-subsystems/releases); to update inside Foundry VTT, press Update on the module.
 
+## 0.8.0
+
+The Ansu rework. The Climb is gone: the bond now runs on loyalty and Wrath, the Call and the release roll new checks, and the Ansu takes the body only through a conflict of will, with the bearer's consent, or by the GM's hand. Izir is untouched.
+
+After updating, every bearer reads as loyalty 5 and Wrath 0. Set both by hand on the Ansu panel to where the story stands. Attunement levels carry over.
+
+- Invoke the Ansu rolls Athletics against the Call DC: 20 + 2 per attunement, 2 higher when the Ansu is hostile, 1 higher when it is cold, 1 lower when it trusts the bearer. The card names the loyalty band and what it does to the DC.
+- The Call's result sets how long Communion lasts. Trial: 10 rounds on a critical success, 3 on a success, 1 on a failure. Discipline: 10, 5 and 2. Union: 100, 10 and 3. A failure also makes the release DC 2 higher. A critical failure grants no Communion: the release save goes up at once, and the Ansu won't answer another Call for 1 minute.
+- The Call is refused, with a notice, while the bearer is Fatigued, a lockout runs, the Ansu holds the body, or a release card is still waiting for its roll. At Wrath 6 an Invoke also tells the GM to call a conflict. Mastery keeps its free toggle.
+- Ending Communion, early or when it runs out, takes a Fortitude save against the release DC: 20 + 2 per attunement, capped at 30, +2 after a failed Call. A success ends Communion cleanly. A failure costs Hit Points equal to twice the attunement. A critical failure costs four times the attunement, leaves the bearer Fatigued and locks the Call out: until the next night's rest at Trial, 1 hour at Discipline, 10 minutes at Union. The Hit Point loss is not damage and never takes the bearer below 1.
+- Conflict of will. The GM opens one from the panel with what the Ansu wants and how serious it is. The bearer may first try to Persuade (Diplomacy or Intimidation), then rolls a Will save (mental). The DC is the standard DC for the character's level, +2 for a serious demand, +5 for a betrayal, and +2 more while the Ansu is angry. Winning the argument or a critical success on the Will save gives +1 loyalty; a success forces the Ansu back for +1 Wrath. A failure means a takeover, and a critical failure also costs 1 loyalty.
+- Three takeovers, chosen by Wrath or by the GM. Forced (calm or angry Ansu): the GM plays the bearer until the bearer's next turn ends, one turn later when angry; then the body comes back as it was, a running Communion resumes, and Wrath drops by 1 or 2. Berserk (Wrath 6): the Ansu goes through anyone in its way, allies too; at the end of each of the bearer's turns a Will save can take control back, and falling unconscious ends it; afterwards loyalty -1 and Wrath set to 2. Agreed: the GM lets the Ansu in, once a day, while Wrath is 2 or lower and below attunement 10; it lasts as long as a successful Call, then the release card goes up. In every takeover the Ansu uses abilities up to attunement + 3, at most 10. The GM's manual hold works as before, with the same cap.
+- Loyalty runs from 0 to 10 in four bands: hostile (0), cold (1 to 3), wary (4 to 6), trust (7 to 10). Wrath runs from 0 to 6: calm (0 to 2), angry (3 to 5), breaking point (6). The panel shows both bars, each with +1 and -1, a deed picker with an optional note, and a Night's rest button.
+- The deeds, loyalty first, then Wrath:
+  - Hard-won victory over a strong enemy: +1, -1.
+  - Stood up to the Ansu with a real argument: +1, 0 (also applied by a won conflict).
+  - Acted as a murkhor, not a slave: +1, -1.
+  - Let the Ansu in and reached the goal together: +1, -1.
+  - Finished a task the Ansu set: +2, Wrath set to 0.
+  - A great deed for the murkhor heritage: +2, -1.
+  - Called him for nothing or to show off: 0, +1.
+  - Went against his demand without making the case: 0, +1.
+  - Feasting with the "lower races": 0, +1.
+  - Weakness (ran, begged or had to be rescued): -1, 0.
+  - Broke a word given to the Ansu, refused his task outright, or betrayed murkhor kin: -2, +2 each.
+  - Applied on their own: forced him back in a conflict (0, +1), broke in a conflict of will (-1, 0), the Ansu got his way (0, -1) or got his way and more (0, -2), the Ansu broke loose (-1, Wrath set to 2), and a night's rest (Wrath -1, skipped at loyalty 0).
+- Attunement rises on its own when loyalty reaches 10 with Wrath at 2 or lower, if the character's level allows it (attunement up to half the character level). Loyalty then returns to 5 and Wrath to 0. Attunement 0 and the step from 9 to the tenth stay the GM's call. While the Ansu holds the body nothing levels up; the check runs once when the body returns.
+- A night's rest lowers Wrath by 1, clears a lockout that lasts until rest, and makes the agreed takeover available again. Pathfinder's Rest for the Night runs it, and so does the panel button.
+- The player sees loyalty, Wrath, their bands, the Call lengths and the next-level rule on the Attunement effect. A journal page, What the Ansu values, lists the deeds and the last ten that were applied. With the DC setting on GM only, the Attunement, Invoke and Release texts and the public berserk card show no DC numbers.
+- Throw the Blade (attunement 3, two actions): a ranged Strike with the melee attack modifier. The range increment is 30 feet at Trial, 40 at Discipline, 60 at Union and 80 at attunement 10.
+- Call the Blade (attunement 3, one action) brings the blade back from 40 feet at attunement 3 up to 300 at attunement 10, smashing through wood, plaster and glass; stone and metal stop it. It has 1 to 4 uses per Communion by attunement, one more in the trust band, and no limit at 10.
+- Hurl the Blade (attunement 6) improves the throw: on a hit, Call the Blade is a free action that still spends a use, and a critical hit adds 1d6 persistent bleed.
+- Blade's Return stays on the sheet from attunement 3, even without Communion: one action, once per 10 minutes, the blade flies back from 30 feet.
+- Salbarine Chain replaces Hand of the Ansu at attunement 10. One action (manipulate) draws a chain from the bearer's Salbarium inlays that lasts until Communion ends. With it the bearer can Grapple, Trip, Disarm, Reposition or Shove at up to 60 feet, Interact at 60 feet, and Anchor to haul themselves to a point within 60 feet, across gaps and up walls. The chain has Hardness 15 and 60 Hit Points.
+- Trait cleanup: no Ansu ability carries magical any more. Invoke and Release lost concentrate, Call the Blade lost concentrate and magical. The release save is no longer mental; the conflict's Will save is.
+- Removed: the Climb and its two settings, the release-streak suggestions on the panel, Lingering (a failed release no longer leaves the boons on), the automatic seizures on a critically failed Call or release, and Hand of the Ansu.
+
 ## 0.7.0
 
 An audit release for Izir. Four bugs that changed outcomes at the table, and a long tail of panel, content, and platform fixes. Ansu is untouched.

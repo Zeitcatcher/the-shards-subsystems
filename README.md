@@ -21,12 +21,11 @@ A corruption tracker for the Nameless. The GM marks an actor and sets their imme
 A mastery track for murkhor bearers. The GM attunes an actor and grows their bond with the Ansu from 0 to 10. The power is borrowed, not owned: the bearer invokes Communion for a burst of boons, then has to wrestle the Ansu back down to end it.
 
 - Ten levels in four tiers: Trial, Discipline, Union, and the terminal tenth step, where the GM chooses Mastery (the Ansu subjugated) or Taken (the Ansu wins the body — and at the GM's call that can happen at any level).
-- The power is never owed: invoking it takes an Intimidation check against the Call DC (20 + 2 per level, uncapped — 22 to 38). Fail and the action is wasted; critically fail and the Ansu comes anyway, seizing the body for a round before handing it back.
-- Communion lasts 1 round at Trial, 3 rounds at Discipline, a minute at Union, and forever at Mastery. In combat the countdown and the Release save on expiry run on their own.
-- Ending Communion takes a Will save: DC 20 + 2 per attunement level, frozen at 30 from level 5 — the wrestle stays real deep into the campaign. Failure means the Ansu lingers with the boons still on; a critical failure hands the body to the GM for a round.
-- Clean releases fill the Climb (2 + level points); a full bar raises attunement on its own, and the token badge doubles as a level control.
-- Two knowledge passives live as bonus feats in the Feats tab and stay on even while the power sleeps; every other boon and active materializes only inside Communion.
-- A GM override seizes the body at any attunement with the full level-10 kit and restores the exact prior state on return.
+- The power is never owed: invoking it takes an Athletics check against the Call DC (20 + 2 per level), moved by how loyal the Ansu is. The result sets how long Communion lasts, from 1 round on a failure at Trial to 100 rounds on a critical success at Union, and forever at Mastery. A critical failure grants no Communion, calls for the release save at once and locks the Call out for a minute.
+- Ending Communion, early or when it runs out, takes a Fortitude save: DC 20 + 2 per attunement level, capped at 30. A failure costs Hit Points; a critical failure also leaves the bearer Fatigued and locks the Call out for a while. In combat the countdown and the save on expiry run on their own.
+- Loyalty (0 to 10) and Wrath (0 to 6) carry the bond. The GM moves them with deeds from a list, and a few apply on their own. Loyalty 10 with a calm Ansu raises attunement, up to half the character level, and the token badge doubles as a level control.
+- When the Ansu wants something the bearer refuses, the GM calls a conflict of will. A lost conflict is a takeover: brief when the Ansu is calm or angry, berserk at breaking point. The bearer can also let the Ansu in once a day. In any takeover, including the GM's manual hold, the Ansu uses abilities up to attunement + 3.
+- Two knowledge passives live as bonus feats in the Feats tab and stay on even while the power sleeps; every other boon and active materializes only inside Communion, apart from Blade's Return.
 - One window serves both subsystems: tabs at the top switch between Izir and Ansu, and an actor can sit on both tracks at once.
 - A second compendium ships every Ansu ability as a browsable item.
 
