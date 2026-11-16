@@ -256,7 +256,7 @@
         <div class="ansu-ldisc">{{this.level}}</div>
         <div class="ansu-chips">
           {{#each this.chips}}
-          <span class="ansu-chip {{#if this.isAlways}}always{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}} {{#if this.dead}}dead{{/if}}">
+          <span data-tip-entry="{{this.entryId}}" class="ansu-chip {{#if this.isAlways}}always{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}} {{#if this.dead}}dead{{/if}}">
             {{this.name}}
             {{#if this.actionsGlyph}}<span class="cost">{{this.actionsGlyph}}</span>{{/if}}
             {{#if this.tag}}<span class="tag">{{this.tag}}</span>{{/if}}
@@ -295,7 +295,7 @@
             {{#unless detail.atNinth}}disabled data-tooltip="{{localize 'SHARDS.Ansu.TenthLockedTaken'}}"{{/unless}}>☠ {{localize "SHARDS.Ansu.ForkTaken"}}</button>
           {{/if}}
           {{#each ladder.gateChips}}
-          <span class="ansu-chip {{#if this.isAlways}}always{{else if this.isActive}}active{{else}}passive{{/if}} gate {{#if this.suppressed}}suppressed{{/if}}">
+          <span data-tip-entry="{{this.entryId}}" class="ansu-chip {{#if this.isAlways}}always{{else if this.isActive}}active{{else}}passive{{/if}} gate {{#if this.suppressed}}suppressed{{/if}}">
             {{this.name}}
             {{#if this.actionsGlyph}}<span class="cost">{{this.actionsGlyph}}</span>{{/if}}
             {{#if this.tag}}<span class="tag">{{this.tag}}</span>{{/if}}

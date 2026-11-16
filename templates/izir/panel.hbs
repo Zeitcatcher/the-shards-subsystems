@@ -113,7 +113,7 @@
         <div class="izir-ldisc">{{this.level}}</div>
         <div class="izir-chips">
           {{#each this.chips}}
-          <span class="izir-chip {{#if this.isBane}}price{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}}">
+          <span data-tip-entry="{{this.entryId}}" class="izir-chip {{#if this.isBane}}price{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}}">
             {{#if this.isBane}}<i class="fa-solid fa-skull-crossbones sk"></i>{{/if}}
             {{this.name}}
             {{#if this.actionsGlyph}}<span class="cost">{{this.actionsGlyph}}</span>{{/if}}
@@ -162,11 +162,11 @@
                 cost, tag and controls afterwards. (F21) --}}
           {{#each ladder.gateChips}}
           {{#if this.gateLocked}}
-          <span class="izir-chip {{#if this.isBane}}price{{else}}passive{{/if}} gate">
+          <span data-tip-entry="{{this.entryId}}" class="izir-chip {{#if this.isBane}}price{{else}}passive{{/if}} gate">
             {{this.name}} <span class="tag">{{this.tag}}</span>
           </span>
           {{else}}
-          <span class="izir-chip {{#if this.isBane}}price{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}}">
+          <span data-tip-entry="{{this.entryId}}" class="izir-chip {{#if this.isBane}}price{{else if this.isActive}}active{{else}}passive{{/if}} {{#if this.suppressed}}suppressed{{/if}} {{#if this.replaced}}replaced{{/if}}">
             {{#if this.isBane}}<i class="fa-solid fa-skull-crossbones sk"></i>{{/if}}
             {{this.name}}
             {{#if this.actionsGlyph}}<span class="cost">{{this.actionsGlyph}}</span>{{/if}}

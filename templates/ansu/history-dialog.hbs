@@ -10,7 +10,7 @@
     {{#each entries}}
     <li class="log-{{this.type}}">
       <span class="ansu-log-when">{{this.when}}</span>
-      <span class="ansu-log-desc">{{this.desc}}{{#if this.note}} — <em>{{this.note}}</em>{{/if}}</span>
+      <span class="ansu-log-desc">{{this.desc}}{{#if this.note}} (<em>{{this.note}}</em>){{/if}}</span>
     </li>
     {{/each}}
   </ul>

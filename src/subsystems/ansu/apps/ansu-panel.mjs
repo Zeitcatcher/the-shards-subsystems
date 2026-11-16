@@ -10,6 +10,7 @@
 import { MODULE_ID, ANSU, IZIR, SETTINGS, TEMPLATES } from "../../../core/constants.mjs";
 import { readSubsystemFlag } from "../../../core/flags.mjs";
 import { renderSubsystemSwitcher, applyHandoffPosition } from "../../../core/switcher.mjs";
+import { bindLadderTooltips, enrichPlain, tipHtml, TipCache } from "../../../core/ladder-tooltip.mjs";
 import {
   readAnsu,
   patchAnsu,
@@ -75,6 +76,7 @@ import { exportLog, deedEffectText, rebuildValuesPage } from "../journal.mjs";
 import { recordDeed, adjustBar, restForNight } from "../mechanics/deeds.mjs";
 import { triggerFork, triggerTaken, setAttunement } from "../transform.mjs";
 import { openArtDialog, openHistoryDialog } from "./ansu-dialogs.mjs";
+import { ansuLadderTip } from "../logic/tooltip.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -548,6 +550,7 @@ function chipFor(entry, st, replacedIds, ctx, doorsClosed = false) {
   if (replacedIds.includes(entry.id)) tag = game.i18n.localize("SHARDS.Ansu.TagReplaced");
   if (dead) tag = game.i18n.localize("SHARDS.Ansu.TagDoorClosed");
   return {
+    entryId: entry.id,
     family: entry.family,
     name: entry.name,
     isActive,
@@ -562,6 +565,31 @@ function chipFor(entry, st, replacedIds, ctx, doorsClosed = false) {
     dead,
     suppressed: Boolean(suppressedRec),
     reason: suppressedRec?.reason ?? "",
+  };
+}
+
+/**
+ * The hover popup for one ladder chip: cheap bake now, enrichment only on a
+ * cache miss (bindLadderTooltips calls build). Nothing here runs at render.
+ */
+async function resolveLadderTip(app, entryId) {
+  const actor = resolveActor(app._actorUuid);
+  if (!actor || !entryId) return null;
+  const content = await loadContent().catch(() => null);
+  const entry = content?.byId?.get(entryId) ?? content?.entries?.find((e) => e.id === entryId);
+  if (!entry) return null;
+  const charLevel = Math.max(1, Number(actor.system?.details?.level?.value ?? actor.level ?? 1) || 1);
+  const tip = ansuLadderTip(entry, readAnsu(actor), { charLevel, dials: readDials() });
+  return {
+    key: `${actor.uuid}:${tip.key}`,
+    build: async () =>
+      tipHtml({
+        name: tip.name,
+        cost: tip.cost,
+        tag: tip.tag,
+        levelLabel: `${game.i18n.localize("SHARDS.Ansu.Attunement")} ${tip.level}`,
+        bodyHtml: await enrichPlain(tip.text, { rollData: actor.getRollData?.() ?? {}, relativeTo: actor }),
+      }),
   };
 }
 
@@ -816,6 +844,11 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender?.(context, options);
     renderSubsystemSwitcher(this, ANSU);
+    bindLadderTooltips(this.element, {
+      selector: ".ansu-chip[data-tip-entry]",
+      cache: (this._tipCache ??= new TipCache()),
+      resolve: (chip) => resolveLadderTip(this, chip.dataset.tipEntry),
+    });
     // Keep the release inputs alive across re-renders.
     const dcInput = this.element.querySelector('input[name="releaseDc"]');
     const reasonInput = this.element.querySelector('input[name="releaseReason"]');

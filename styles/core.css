@@ -326,3 +326,50 @@
   background: rgba(255, 255, 255, 0.06);
   color: var(--color-text-light-highlight, #f0f0e0);
 }
+
+/* Ladder hover descriptions (Ansu and Izir panels). Foundry's own tooltip
+   element carries the colours and theme; this only sets width and layout. */
+.the-shards-subsystems [data-tip-entry] {
+  cursor: help;
+}
+#tooltip.shards-ladder-tip {
+  max-width: 420px;
+  text-align: left;
+  white-space: normal;
+}
+#tooltip.shards-ladder-tip .shards-tip-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  margin-bottom: 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid currentColor;
+  border-bottom-color: color-mix(in srgb, currentColor 30%, transparent);
+}
+#tooltip.shards-ladder-tip .shards-tip-name {
+  font-size: 1.05em;
+}
+#tooltip.shards-ladder-tip .shards-tip-level,
+#tooltip.shards-ladder-tip .shards-tip-tag {
+  opacity: 0.75;
+  font-size: 0.9em;
+}
+#tooltip.shards-ladder-tip .shards-tip-tag::before {
+  content: "· ";
+}
+#tooltip.shards-ladder-tip .shards-tip-body p {
+  margin: 0.3em 0;
+}
+#tooltip.shards-ladder-tip .shards-tip-body ul {
+  margin: 0.3em 0;
+  padding-left: 1.2em;
+}
+#tooltip.shards-ladder-tip .shards-tip-link {
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+}

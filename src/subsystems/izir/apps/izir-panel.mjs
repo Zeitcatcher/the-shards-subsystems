@@ -8,6 +8,7 @@
 
 import { MODULE_ID, IZIR, SETTINGS, TEMPLATES } from "../../../core/constants.mjs";
 import { renderSubsystemSwitcher, applyHandoffPosition } from "../../../core/switcher.mjs";
+import { bindLadderTooltips, enrichPlain, tipHtml, TipCache } from "../../../core/ladder-tooltip.mjs";
 import { isGM, refuseNonGM, gmGuarded } from "../../../core/gm.mjs";
 import {
   readIzir,
@@ -36,6 +37,7 @@ import { exportLog } from "../journal.mjs";
 import { revertArt } from "../art.mjs";
 import { triggerFork, setImmersion, applySlideChange } from "../transform.mjs";
 import { openArtDialog, openHistoryDialog } from "./izir-dialogs.mjs";
+import { izirLadderTip } from "../logic/tooltip.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -373,6 +375,7 @@ function chipFor(entry, st, replacedIds, transparency, ctx, familyNames) {
   const nActions = entry.actionData?.actions ?? 0;
   const siblings = familyNames?.get(entry.family) ?? [entry.name];
   return {
+    entryId: entry.id,
     family: entry.family,
     name: entry.name,
     isBane,
@@ -392,6 +395,31 @@ function chipFor(entry, st, replacedIds, transparency, ctx, familyNames) {
     reason: suppressedRec?.reason ?? "",
     revealed: !isBane || transparency || st.revealed.includes(entry.family),
     showEye: isBane && !transparency,
+  };
+}
+
+/**
+ * The hover popup for one ladder chip: cheap bake now, enrichment only on a
+ * cache miss (bindLadderTooltips calls build). Nothing here runs at render.
+ */
+async function resolveLadderTip(app, entryId) {
+  const actor = resolveActor(app._actorUuid);
+  if (!actor || !entryId) return null;
+  const content = await loadContent().catch(() => null);
+  const entry = content?.byId?.get(entryId) ?? content?.entries?.find((e) => e.id === entryId);
+  if (!entry) return null;
+  const charLevel = Math.max(1, Number(actor.system?.details?.level?.value ?? actor.level ?? 1) || 1);
+  const tip = izirLadderTip(entry, readIzir(actor), { charLevel });
+  return {
+    key: `${actor.uuid}:${tip.key}`,
+    build: async () =>
+      tipHtml({
+        name: tip.name,
+        cost: tip.cost,
+        tag: tip.tag,
+        levelLabel: `${game.i18n.localize("SHARDS.Izir.Immersion")} ${tip.level}`,
+        bodyHtml: await enrichPlain(tip.text, { rollData: actor.getRollData?.() ?? {}, relativeTo: actor }),
+      }),
   };
 }
 
@@ -530,6 +558,11 @@ export class IzirPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender?.(context, options);
     renderSubsystemSwitcher(this, IZIR);
+    bindLadderTooltips(this.element, {
+      selector: ".izir-chip[data-tip-entry]",
+      cache: (this._tipCache ??= new TipCache()),
+      resolve: (chip) => resolveLadderTip(this, chip.dataset.tipEntry),
+    });
     // Keep the temptation inputs alive across re-renders.
     const uuid = this._actorUuid;
     const dcInput = this.element.querySelector('input[name="temptDc"]');

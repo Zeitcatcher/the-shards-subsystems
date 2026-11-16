@@ -95,7 +95,7 @@ function renderLogHtml(actor, st, deeds = null) {
     .map((e) => {
       const when = new Date(e.t).toLocaleString();
       const desc = describeEntry(e, deeds);
-      const note = e.note ? ` — <em>${esc(e.note)}</em>` : "";
+      const note = e.note ? ` (<em>${esc(e.note)}</em>)` : "";
       return `<tr><td>${esc(when)}</td><td>${esc(desc)}${note}</td></tr>`;
     })
     .join("\n");
