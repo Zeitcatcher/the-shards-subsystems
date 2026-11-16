@@ -13,6 +13,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateContent as validateIzir } from "../src/subsystems/izir/content.mjs";
 import { validateContent as validateAnsu } from "../src/subsystems/ansu/content.mjs";
+import { validateDeeds as validateAnsuDeeds } from "../src/subsystems/ansu/logic/deeds.mjs";
 import { packSourceTextProblems, ansuBakedNumberProblems } from "./pack-checks.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -34,6 +35,18 @@ for (const t of TARGETS) {
   console.log(
     `validate-content: ${t.name} ok (${raw.entries.length} entries, ${(raw.packEffects ?? []).length} pack effects).`,
   );
+}
+
+// Ansu deeds (rework 0.8): the reasons loyalty and wrath move.
+{
+  const raw = JSON.parse(readFileSync(resolve(ROOT, "data/ansu/deeds.json"), "utf8"));
+  const problems = validateAnsuDeeds(raw);
+  if (problems.length) {
+    console.error(`ansu deeds invalid:\n - ${problems.join("\n - ")}`);
+    failed = true;
+  } else {
+    console.log(`validate-content: ansu deeds ok (${raw.deeds.length} deeds).`);
+  }
 }
 
 // Scan the generated pack sources for defects the schema can't see: unresolved

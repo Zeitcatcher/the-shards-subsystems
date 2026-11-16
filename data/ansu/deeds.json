@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "deeds": [
+    { "id": "victory", "label": "Hard-won victory over a strong enemy", "loyalty": 1, "wrath": -1, "picker": true, "auto": false },
+    { "id": "argument", "label": "Stood up to the Ansu with a real argument", "loyalty": 1, "wrath": 0, "picker": true, "auto": true },
+    { "id": "murkhor", "label": "Acted as a murkhor, not a slave", "loyalty": 1, "wrath": -1, "picker": true, "auto": false },
+    { "id": "together", "label": "Let the Ansu in and reached the goal together", "loyalty": 1, "wrath": -1, "picker": true, "auto": false },
+    { "id": "task", "label": "Finished a task the Ansu set", "loyalty": 2, "wrathSet": 0, "picker": true, "auto": false },
+    { "id": "heritage", "label": "A great deed for the murkhor heritage", "loyalty": 2, "wrath": -1, "picker": true, "auto": false },
+    { "id": "for-nothing", "label": "Called him for nothing or to show off", "loyalty": 0, "wrath": 1, "picker": true, "auto": false },
+    { "id": "defied", "label": "Went against his demand without making the case", "loyalty": 0, "wrath": 1, "picker": true, "auto": false },
+    { "id": "feast", "label": "Feasting with the \"lower races\"", "loyalty": 0, "wrath": 1, "picker": true, "auto": false },
+    { "id": "weakness", "label": "Weakness: ran, begged or had to be rescued", "loyalty": -1, "wrath": 0, "picker": true, "auto": false },
+    { "id": "broke-word", "label": "Broke a word given to the Ansu", "loyalty": -2, "wrath": 2, "picker": true, "auto": false },
+    { "id": "refused-task", "label": "Refused his task outright", "loyalty": -2, "wrath": 2, "picker": true, "auto": false },
+    { "id": "betrayed-kin", "label": "Betrayed murkhor kin", "loyalty": -2, "wrath": 2, "picker": true, "auto": false },
+    { "id": "forced-back", "label": "Forced him back in a conflict", "loyalty": 0, "wrath": 1, "picker": false, "auto": true },
+    { "id": "conflict-cf", "label": "Broke in a conflict of will", "loyalty": -1, "wrath": 0, "picker": false, "auto": true },
+    { "id": "vented-1", "label": "The Ansu got his way", "loyalty": 0, "wrath": -1, "picker": false, "auto": true },
+    { "id": "vented-2", "label": "The Ansu got his way and more", "loyalty": 0, "wrath": -2, "picker": false, "auto": true },
+    { "id": "berserk-end", "label": "The Ansu broke loose", "loyalty": -1, "wrathSet": 2, "picker": false, "auto": true },
+    { "id": "night", "label": "A night's rest", "loyalty": 0, "wrath": -1, "wrathSkipAtLoyalty0": true, "picker": false, "auto": true }
+  ]
+}

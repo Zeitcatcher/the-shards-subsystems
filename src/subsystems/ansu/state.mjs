@@ -13,6 +13,7 @@ import {
   deleteSubsystemFlag,
 } from "../../core/flags.mjs";
 import { MURKHOR_TRAIT } from "./traits.mjs";
+import { LOYALTY_DEFAULT, clampLoyalty, clampWrath } from "./logic/model.mjs";
 
 /** Add or remove the pf2e "murkhor" creature trait, keeping it in sync with attunement. */
 async function setMurkhorTrait(actor, on) {
@@ -37,13 +38,18 @@ export function emptyAnsuState() {
     v: 1,
     enabled: true,
     level: 0,
-    climb: 0, // progress toward the next level (needs 2 + level to rise)
+    climb: 0, // progress toward the next level (needs 2 + level to rise); unused from rework step E
+    loyalty: LOYALTY_DEFAULT, // 0..10, rework 0.8
+    wrath: 0, // 0..6, rework 0.8
+    lockout: null, // null | { until: worldTime|null, untilRest: boolean }
+    consentUsed: false, // reset by a night's rest
     terminal: null, // null | "subjugated" (Mastery) | "taken" (the Ansu wins)
     suppressed: [], // [{ id: <family>, reason: string, at: ts }]
     communion: {
       mode: "none", // "none" | "active" | "lingering" | "seized"
       rounds: null, // stamped duration at invoke (display only)
       startAt: null, // one-shot world-time stamp for the next countdown (seizure return); consumed by the sync
+      returnPenalty: 0, // 0 | 2, added to the next release DC
     },
     pendingRelease: null, // { id, dc, reason, createdAt }
     pendingCall: null, // { id, dc, createdAt } — the Intimidation gate on Invoke
@@ -55,7 +61,7 @@ export function emptyAnsuState() {
     lastCall: null, // { id, dc, outcome, at }
     rerollRelease: null, // { id, from, outcome, total, at }
     rerollCall: null, // { id, from, outcome, total, at }
-    seizure: null, // { snapshot, at, auto, returnAt: { combatId, round, turn } }
+    seizure: null, // { snapshot, at, auto, returnAt: { combatId, round, turn }, kind: "forced"|"agreed"|"berserk"|"manual", turnsLeft }
     cooldowns: [], // [{ id: <entryId>, until: worldTime }] — module-owned ability cooldowns (array: replaced wholesale on patch)
     art: {
       thresholds: {
@@ -77,7 +83,30 @@ export function emptyAnsuState() {
  * recurse. Pure — unit-tested.
  */
 export function healDefaults(raw) {
-  return merge(emptyAnsuState(), raw);
+  return healRework(merge(emptyAnsuState(), raw));
+}
+
+/**
+ * Rework 0.8 read-time healing: clamp loyalty 0..10 and wrath 0..6 (bad values
+ * fall back to 5 / 0), returnPenalty to 0 or 2, a malformed lockout to null,
+ * consentUsed to a boolean. No conversion from the Climb. Pure.
+ */
+function healRework(st) {
+  st.loyalty = clampLoyalty(st.loyalty);
+  st.wrath = clampWrath(st.wrath);
+  st.consentUsed = st.consentUsed === true;
+  if (st.communion && typeof st.communion === "object") {
+    st.communion.returnPenalty = Number(st.communion.returnPenalty) === 2 ? 2 : 0;
+  }
+  const lo = st.lockout;
+  if (!lo || typeof lo !== "object" || Array.isArray(lo)) {
+    st.lockout = null;
+  } else {
+    const until = Number.isFinite(Number(lo.until)) && lo.until !== null ? Number(lo.until) : null;
+    const untilRest = lo.untilRest === true;
+    st.lockout = until === null && !untilRest ? null : { until, untilRest };
+  }
+  return st;
 }
 
 function merge(def, raw) {
