@@ -4,7 +4,7 @@ Notable changes, newest first. Every version is also on the [Releases page](http
 
 ## 0.8.0
 
-The Ansu rework. The Climb is gone: the bond now runs on loyalty and Wrath, the Call and the release roll new checks, and the Ansu takes the body only through a conflict of will, with the bearer's consent, or by the GM's hand. Izir is untouched.
+The Ansu rework. The Climb is gone: the bond now runs on loyalty and Wrath, the Call and the release roll new checks, and the Ansu takes the body only through a conflict of will, with the bearer's consent, or by the GM's hand. Izir's rules are unchanged.
 
 After updating, every bearer reads as loyalty 5 and Wrath 0. Set both by hand on the Ansu panel to where the story stands. Attunement levels carry over.
 
