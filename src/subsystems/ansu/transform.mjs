@@ -8,7 +8,7 @@
  */
 
 import { MODULE_ID } from "../../core/constants.mjs";
-import { readAnsu, patchAnsu, appendLog } from "./state.mjs";
+import { readAnsu, patchAnsu, logEntry } from "./state.mjs";
 import { syncActor } from "./sync.mjs";
 import { maybeSwapForLevel } from "./art.mjs";
 import { clampLevel, forkAllowed, MAX_LEVEL } from "./logic/model.mjs";
@@ -23,8 +23,7 @@ export async function setAttunement(actor, next, note = "") {
   if (st.terminal) return;
   const to = clampLevel(Math.min(next, MAX_LEVEL - 1));
   if (to === st.level) return;
-  await patchAnsu(actor, { level: to });
-  await appendLog(actor, "level", { from: st.level, to }, note);
+  await patchAnsu(actor, { level: to }, { log: logEntry("level", { from: st.level, to }, note) });
   await syncActor(actor);
   await maybeSwapForLevel(actor, to);
 }
@@ -69,8 +68,7 @@ async function applySubjugation(actor) {
     pendingRelease: null,
     pendingCall: null,
     seizure: null,
-  });
-  await appendLog(actor, "transform", { path: "subjugated" });
+  }, { log: logEntry("transform", { path: "subjugated" }) });
   await syncActor(actor);
   await maybeSwapForLevel(actor, 10);
   await postGuidance(actor, "subjugated");
@@ -86,8 +84,7 @@ async function applyTaken(actor) {
     pendingRelease: null,
     pendingCall: null,
     seizure: null,
-  });
-  await appendLog(actor, "transform", { path: "taken" });
+  }, { log: logEntry("transform", { path: "taken" }) });
   await syncActor(actor);
   await maybeSwapForLevel(actor, 10);
   await postGuidance(actor, "taken");

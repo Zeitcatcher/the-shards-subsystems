@@ -11,6 +11,10 @@ import {
   readSubsystemFlag,
   patchSubsystemFlag,
   deleteSubsystemFlag,
+  withFlagLock,
+  logEntries,
+  appendEntries,
+  mergePatch,
 } from "../../core/flags.mjs";
 import { MURKHOR_TRAIT } from "./traits.mjs";
 import { LOYALTY_DEFAULT, clampLoyalty, clampWrath } from "./logic/model.mjs";
@@ -22,7 +26,10 @@ async function setMurkhorTrait(actor, on) {
   // into character source. Only NPC-type actors keep a written creature trait; a
   // PC that needs the tag gets it from the registered homebrew trait selector. (C4)
   if (actor?.type === "character") return;
-  const traits = actor.system?.traits?.value;
+  // Read from _source, not the prepared data: on an NPC the prepared list also
+  // holds traits rule elements added this data-prep pass, and writing it back
+  // bakes them into source for good. (Izir F15, ported in 0.8.0)
+  const traits = actor?._source?.system?.traits?.value ?? actor?.system?.traits?.value;
   if (!Array.isArray(traits)) return;
   const has = traits.includes(MURKHOR_TRAIT);
   if (on && !has) {
@@ -179,17 +186,73 @@ export async function unattuneActor(actor) {
   await deleteSubsystemFlag(actor, ANSU);
 }
 
-/** Apply a nested patch to the actor's Ansu state (arrays replaced wholesale). */
-export async function patchAnsu(actor, patch) {
-  await patchSubsystemFlag(actor, ANSU, patch);
+/**
+ * Apply a nested patch to the actor's Ansu state (arrays replaced wholesale).
+ *
+ * `log` (one entry `{type, data, note}` or a list) is appended to the history
+ * inside the same update, read fresh under the flag lock, so a step and its
+ * history rows cost one write. `update` adds other dot-path fields of the actor
+ * (Hit Points) to that same write. (0.8.0)
+ */
+export async function patchAnsu(actor, patch, { log, update } = {}) {
+  const entries = logEntries(log);
+  if (!entries.length) return patchSubsystemFlag(actor, ANSU, patch, update);
+  return withFlagLock(actor, () => writeWithLog(actor, readAnsu(actor), patch, entries, update));
 }
+
+/**
+ * Read-modify-write under the flag lock: `fn(state)` returns `{patch, log,
+ * update, result}` (or null to write nothing) and runs on the state as it is
+ * once every earlier write of this actor has landed. Returns `result`.
+ */
+export async function mutateAnsu(actor, fn) {
+  return withFlagLock(actor, async () => {
+    const st = readAnsu(actor);
+    const out = fn(st);
+    if (!out) return null;
+    await writeWithLog(actor, st, out.patch ?? {}, logEntries(out.log), out.update);
+    return out.result;
+  });
+}
+
+function writeWithLog(actor, st, patch, entries, update) {
+  if (entries.length) {
+    const base = Array.isArray(patch.log) ? patch.log : st.log;
+    patch = { ...patch, log: appendEntries(base, entries, LOG_CAP) };
+  }
+  return patchSubsystemFlag(actor, ANSU, patch, update);
+}
+
+/** One history row, in the shape appendLog has always written. */
+export const logEntry = (type, data = {}, note = "") => ({ type, data, note });
 
 /** Newest-N cap on the history log so a long campaign can't grow it without bound. */
 const LOG_CAP = 300;
 
 /** Append one entry to the history log (capped to the newest LOG_CAP). GM-side only. */
 export async function appendLog(actor, type, data = {}, note = "") {
-  const st = readAnsu(actor);
-  const log = [...st.log, { t: Date.now(), type, data, note }].slice(-LOG_CAP);
-  await patchAnsu(actor, { log });
+  await patchAnsu(actor, {}, { log: logEntry(type, data, note) });
+}
+
+/**
+ * A caller's pending write (`{patch, log, update}`) folded into the next one, so
+ * an outcome and the state change it causes land in one update. `extra` comes
+ * first: its log rows precede `log`. Pure.
+ */
+export function withExtra(extra, patch, log = []) {
+  return {
+    patch: mergePatch(extra?.patch ?? {}, patch),
+    log: [...logEntries(extra?.log), ...logEntries(log)],
+    update: extra?.update ? { ...extra.update } : undefined,
+  };
+}
+
+/** Write a caller's pending `{patch, log, update}` on its own (a step that ends early). */
+export async function flushExtra(actor, extra) {
+  if (!extra) return;
+  const entries = logEntries(extra.log);
+  const hasPatch = extra.patch && Object.keys(extra.patch).length > 0;
+  const hasUpdate = extra.update && Object.keys(extra.update).length > 0;
+  if (!hasPatch && !entries.length && !hasUpdate) return;
+  await patchAnsu(actor, extra.patch ?? {}, { log: entries, update: extra.update });
 }

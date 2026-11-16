@@ -6,7 +6,7 @@
 
 import { ANSU, MODULE_ID, SETTINGS } from "../../core/constants.mjs";
 import { registerSubsystem } from "../../core/subsystems.mjs";
-import { openAnsuPanel, refreshAnsuPanel } from "./apps/ansu-panel.mjs";
+import { openAnsuPanel, refreshAnsuPanel, registerPanelFollowHooks } from "./apps/ansu-panel.mjs";
 import { loadContent } from "./content.mjs";
 import { registerSyncHooks, syncAllAttuned } from "./sync.mjs";
 import { registerCommunionHooks, handleExpiry } from "./mechanics/communion.mjs";
@@ -44,7 +44,9 @@ const ANSU_SETTINGS = [
     onChange: resyncOnChange,
   },
   { key: SETTINGS.ANSU_ART_SWAP, scope: "world", type: "Boolean", default: true, config: true },
-  { key: SETTINGS.ANSU_TOKEN_ICONS, scope: "world", type: "Boolean", default: true, config: true },
+  // The toggle is part of the composed hash (0.8.0), so the resync reaches the
+  // markers already on the sheets, not just the ones built after the change.
+  { key: SETTINGS.ANSU_TOKEN_ICONS, scope: "world", type: "Boolean", default: true, config: true, onChange: resyncOnChange },
   // The persistent Attunement marker (badge effect) is optional — GM undecided.
   { key: SETTINGS.ANSU_MARKER, scope: "world", type: "Boolean", default: true, config: true, onChange: resyncOnChange },
 ];
@@ -82,5 +84,7 @@ registerSubsystem({
     registerConflictHooks();
     registerSeizureHooks();
     registerRestHooks();
+    registerPanelFollowHooks();
   },
 });
+

@@ -228,11 +228,15 @@ export async function rebuildValuesPage(actor) {
     };
     let entry = st.valuesJournalId ? game.journal.get(st.valuesJournalId) : null;
     if (entry) {
-      // Owners can change hands; the page follows the actor every rebuild.
-      await entry.update({ ownership });
+      // Owners can change hands; the page follows the actor every rebuild. A
+      // write that changes nothing is skipped (0.8.0): the page text update
+      // redrew the page for every owner who had it open, on every deed.
+      const cur = entry.ownership ?? {};
+      if (Object.entries(ownership).some(([k, v]) => cur[k] !== v)) await entry.update({ ownership });
       const first = entry.pages.contents[0];
-      if (first) await first.update({ "text.content": html });
-      else await entry.createEmbeddedDocuments("JournalEntryPage", [page]);
+      if (first) {
+        if (first.text?.content !== html) await first.update({ "text.content": html });
+      } else await entry.createEmbeddedDocuments("JournalEntryPage", [page]);
     } else {
       entry = await JournalEntry.create({
         name: game.i18n.format("SHARDS.Ansu.ValuesJournalName", { name: actor.name }),

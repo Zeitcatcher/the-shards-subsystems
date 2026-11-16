@@ -1,7 +1,7 @@
 {
   "id": "the-shards-subsystems",
   "title": "The Shards Subsystems",
-  "description": "GM tools for The Shards campaign (Pathfinder 2e). Includes Izir, a ten-level immersion tracker for the Nameless (powers with prices, temptation saves, the slide), and Ansu, a ten-level mastery track for murkhor bearers (Communion boons on a timer, Release saves, the Climb, and the Seizure override). One window, independent subsystems.",
+  "description": "GM tools for The Shards campaign (Pathfinder 2e). Includes Izir, a ten-level immersion tracker for the Nameless (powers with prices, temptation saves, the slide), and Ansu, a ten-level attunement track for murkhor bearers (loyalty and Wrath, the Call, Communion boons on a timer, release saves, conflicts of will and takeovers). One window, independent subsystems.",
   "version": "0.8.0",
   "authors": [
     {

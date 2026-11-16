@@ -18,8 +18,8 @@
 
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
-import { readAnsu, patchAnsu, appendLog, isAttuned } from "../state.mjs";
-import { durationRoundsFor, takeoverCap, wrathBand, MAX_LEVEL } from "../logic/model.mjs";
+import { readAnsu, patchAnsu, mutateAnsu, logEntry, isAttuned } from "../state.mjs";
+import { durationRoundsFor, takeoverCap, wrathBand, applyDeed, MAX_LEVEL } from "../logic/model.mjs";
 import { freshClockStart } from "../logic/timing.mjs";
 import {
   seizureSnapshot,
@@ -30,7 +30,12 @@ import {
   returnsOnCombatEnd,
 } from "../logic/seizure.mjs";
 import { syncActor, encounterOf } from "../sync.mjs";
-import { recordDeed, checkLevelUp } from "./deeds.mjs";
+import { foldDeeds } from "./deeds.mjs";
+import { loadDeeds } from "../content.mjs";
+import { maybeSwapForLevel } from "../art.mjs";
+import { rebuildValuesPage } from "../journal.mjs";
+
+const charLevelOf = (actor) => Math.max(0, Number(actor?.system?.details?.level?.value ?? actor?.level ?? 0) || 0);
 import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
@@ -122,8 +127,7 @@ export async function startSeizure(actor, { kind = "manual", turnsLeft = null, d
     },
   };
   if (kind === "agreed") patch.consentUsed = true;
-  await patchAnsu(actor, patch);
-  await appendLog(actor, "seizure", { on: true, kind });
+  await patchAnsu(actor, patch, { log: logEntry("seizure", { on: true, kind }) });
   await syncActor(actor);
 
   const name = actor.name;
@@ -208,7 +212,7 @@ async function returnInner(actor, { rolledOver = null, deed = true, via = "gm" }
     const returnPenalty = landing === "release" && snap.communion?.returnPenalty === 2 ? 2 : 0;
     communion = { mode: "none", rounds: null, startAt: null, returnPenalty };
   }
-  await patchAnsu(actor, {
+  const back = {
     level: snap.level,
     climb: snap.climb,
     terminal: snap.terminal,
@@ -218,13 +222,41 @@ async function returnInner(actor, { rolledOver = null, deed = true, via = "gm" }
     // A berserk's Will check card closes with the hold, however it ended. (review finding 8)
     ...(kind === "berserk" ? { pendingConflict: null } : {}),
     seizure: null,
+  };
+  // The takeover's deed, unless a reroll undoes it.
+  const deedId = deed !== false ? st.seizure.deed : null;
+  let deedDoc = null;
+  if (deedId) {
+    try {
+      deedDoc = (await loadDeeds()).byId.get(deedId) ?? null;
+      if (!deedDoc) console.warn(`${MODULE_ID} | unknown Ansu deed "${deedId}"`);
+    } catch (err) {
+      console.error(`${MODULE_ID} | ansu deeds could not load`, err);
+    }
+  }
+  // The return, the deed and the level-up held while seized land in ONE update
+  // (0.8.0), with the rows in the order they always had: seizure, deed, level.
+  const charLevel = charLevelOf(actor);
+  const done = await mutateAnsu(actor, (cur) => {
+    const landed = { ...cur, ...back, communion: { ...cur.communion, ...communion } };
+    const f = foldDeeds(landed, deedDoc ? [{ id: deedId, deed: deedDoc }] : [], { charLevel });
+    const log = [logEntry("seizure", { on: false, kind, via }), ...f.logs];
+    let state = f.state;
+    let leveled = f.leveled;
+    // No level-up while seized (review ruling 9): the check runs once, now.
+    const chk = applyDeed(state, {}, { charLevel });
+    if (chk.leveled) {
+      log.push(logEntry("level", { from: chk.level[0], to: chk.level[1] }));
+      state = chk.state;
+      leveled = true;
+    }
+    const bars = deedDoc || leveled ? { loyalty: state.loyalty, wrath: state.wrath, level: state.level } : {};
+    return { patch: { ...back, ...bars }, log, result: { deedApplied: Boolean(deedDoc), leveled, level: state.level } };
   });
-  await appendLog(actor, "seizure", { on: false, kind, via });
   await syncActor(actor);
   await postCard(actor, "SHARDS.Ansu.SeizureEnd", { name: actor.name }, { to: kind === "manual" ? "gm" : "owners" });
-  if (deed !== false && st.seizure.deed) await recordDeed(actor, st.seizure.deed);
-  // No level-up while seized (review ruling 9): the check runs once, now.
-  await checkLevelUp(actor);
+  if (done.leveled) await maybeSwapForLevel(actor, done.level);
+  if (done.deedApplied || done.leveled) await rebuildValuesPage(actor);
   if (landing === "release") {
     const { callRelease, suggestedDC } = await import("./release.mjs");
     await callRelease(actor, suggestedDC(readAnsu(actor)), game.i18n.localize("SHARDS.Ansu.TakeoverAgreedReason"));

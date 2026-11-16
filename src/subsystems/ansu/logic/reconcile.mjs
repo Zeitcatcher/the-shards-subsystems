@@ -401,6 +401,10 @@ export function composeAttunement(state, content, opts = {}) {
     gate: gateMax(opts.charLevel),
     // The DC setting on GM only hides the DCs this description quotes.
     hideDc: opts.showDc === "gm",
+    // Part of the composed identity (0.8.0): flipping the token-icon setting has
+    // to change the hash, or the markers already built kept their old icon.
+    // (Izir F9, ported)
+    tokenIcons: opts.tokenIcons !== false,
     ctx,
   };
   // releaseDc is hashed because the marker's DESCRIPTION quotes it: none of the
@@ -422,6 +426,7 @@ export function composeAttunement(state, content, opts = {}) {
       callDc: composed.callDc,
       gate: composed.gate,
       hideDc: composed.hideDc,
+      tokenIcons: composed.tokenIcons,
     }),
   );
   return composed;
@@ -500,10 +505,12 @@ export function composeCommunion(state, content, opts = {}) {
     // stamp (the seizure return's turn-end compensation). Deliberately OUT of the
     // hash below: it is a clock instruction consumed by one sync, not content.
     startAt: Number.isFinite(state.communion?.startAt) ? state.communion.startAt : null,
+    tokenIcons: opts.tokenIcons !== false,
     ctx,
   };
+  // tokenIcons is hashed for the same reason as the Attunement marker's (0.8.0).
   composed.hash = hashString(
-    stableStringify({ level, mode, rules: composedRules, boonLines, abilityLines }),
+    stableStringify({ level, mode, rules: composedRules, boonLines, abilityLines, tokenIcons: composed.tokenIcons }),
   );
   return composed;
 }

@@ -7,7 +7,7 @@
  */
 
 import { MODULE_ID } from "../../core/constants.mjs";
-import { readIzir, patchIzir, appendLog, withActorLock } from "./state.mjs";
+import { readIzir, patchIzir, logEntry, withActorLock } from "./state.mjs";
 import { loadContent } from "./content.mjs";
 import { syncActor } from "./sync.mjs";
 import { maybeSwapForLevel } from "./art.mjs";
@@ -27,8 +27,7 @@ async function setImmersionInner(actor, next, note) {
   const to = clampLevel(Math.min(next, MAX_LEVEL - 1));
   if (to === st.level) return;
   const slide = clampSlideForLevel(st.slide ?? 0, to);
-  await patchIzir(actor, { level: to, slide });
-  await appendLog(actor, "level", { from: st.level, to }, note);
+  await patchIzir(actor, { level: to, slide }, { log: logEntry("level", { from: st.level, to }, note) });
   await syncActor(actor);
   await maybeSwapForLevel(actor, to);
 }
@@ -46,20 +45,36 @@ export async function applySlideChange(actor, opts = {}) {
  * The body of applySlideChange, without the lock. Only for callers that already
  * hold it — taking it twice on one chain would wedge the queue.
  */
-export async function applySlideChangeInner(actor, { delta = 0, set, source = "gm", cause = null } = {}) {
-  const st = readIzir(actor);
+export async function applySlideChangeInner(actor, opts = {}) {
+  const plan = planSlideChange(readIzir(actor), opts);
+  if (!plan) return null;
+  if (!plan.patch) return plan.r;
+  await patchIzir(actor, plan.patch, { log: plan.log });
+  await finishSlideChange(actor, plan.r);
+  return plan.r;
+}
+
+/**
+ * The slide move as data: `{r, patch, log}`, or null when the slide is inactive.
+ * `patch` is null when nothing moves. Lets a caller fold the move into its own
+ * write (a temptation's record). (0.8.0)
+ */
+export function planSlideChange(st, { delta = 0, set, source = "gm", cause = null } = {}) {
   if (st.terminal || st.level < 1 || st.level >= MAX_LEVEL) return null;
-
   const r = applySlide(st.level, st.slide ?? 0, delta, set !== undefined ? { set } : {});
-  if (r.level === st.level && r.slide === (st.slide ?? 0)) return r;
-
-  await patchIzir(actor, { level: r.level, slide: r.slide });
+  if (r.level === st.level && r.slide === (st.slide ?? 0)) return { r, patch: null, log: [] };
   // `cause` ties these entries back to the roll that produced them, so a reroll can
   // find and retract exactly its own consequences instead of guessing by position.
-  await appendLog(actor, "slide", { from: st.slide ?? 0, to: r.slide, level: r.level, source, cause });
-
+  const log = [logEntry("slide", { from: st.slide ?? 0, to: r.slide, level: r.level, source, cause })];
   if (r.leveled) {
-    await appendLog(actor, "level", { from: st.level, to: r.level, cause }, game.i18n.localize("SHARDS.Izir.SlideNote"));
+    log.push(logEntry("level", { from: st.level, to: r.level, cause }, game.i18n.localize("SHARDS.Izir.SlideNote")));
+  }
+  return { r, patch: { level: r.level, slide: r.slide }, log };
+}
+
+/** After a slide move landed: a level-up syncs and swaps art; the notices. */
+export async function finishSlideChange(actor, r) {
+  if (r.leveled) {
     await syncActor(actor);
     await maybeSwapForLevel(actor, r.level);
     ui.notifications?.info(game.i18n.format("SHARDS.Izir.SlideLeveled", { name: actor.name, level: r.level }));
@@ -142,8 +157,11 @@ async function applyNineveh(actor) {
   // A pending temptation dies with the character; the panel hides the clear
   // button for a consumed actor, so an uncleared one left an hourglass dot on
   // the roster forever. (F20)
-  await patchIzir(actor, { level: 10, terminal: "nineveh", slide: 0, pendingTemptation: null });
-  await appendLog(actor, "transform", { path: "nineveh" });
+  await patchIzir(
+    actor,
+    { level: 10, terminal: "nineveh", slide: 0, pendingTemptation: null },
+    { log: logEntry("transform", { path: "nineveh" }) },
+  );
   await syncActor(actor);
   await maybeSwapForLevel(actor, 10);
   await postGuidance(actor, "nineveh");
@@ -157,8 +175,11 @@ async function applySubjugation(actor, content) {
   for (const fam of baneFamilies) {
     if (!existing.has(fam)) suppressed.push({ id: fam, reason: "subjugation", at: Date.now() });
   }
-  await patchIzir(actor, { level: 10, terminal: "subjugated", suppressed, slide: 0, pendingTemptation: null });
-  await appendLog(actor, "transform", { path: "subjugated" });
+  await patchIzir(
+    actor,
+    { level: 10, terminal: "subjugated", suppressed, slide: 0, pendingTemptation: null },
+    { log: logEntry("transform", { path: "subjugated" }) },
+  );
   await syncActor(actor);
   await maybeSwapForLevel(actor, 10);
   await postGuidance(actor, "subjugated");

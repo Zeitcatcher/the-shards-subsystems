@@ -6,7 +6,7 @@
  */
 
 import { MODULE_ID, SETTINGS } from "../../core/constants.mjs";
-import { readAnsu, patchAnsu, appendLog } from "./state.mjs";
+import { readAnsu, patchAnsu, logEntry } from "./state.mjs";
 import { pickThresholdForLevel, currentTokenSrc } from "./logic/art.mjs";
 
 const artSwapOn = () => game.settings.get(MODULE_ID, SETTINGS.ANSU_ART_SWAP) === true;
@@ -65,8 +65,7 @@ export async function applyThresholdArt(actor, threshold) {
   const token = slot.token || slot.portrait || currentTokenSrc(actor);
   await updateActorArt(actor, portrait, token);
   await updatePlacedTokens(actor, token);
-  await patchAnsu(actor, { art: { applied: String(threshold) } });
-  await appendLog(actor, "art", { threshold: String(threshold) });
+  await patchAnsu(actor, { art: { applied: String(threshold) } }, { log: logEntry("art", { threshold: String(threshold) }) });
   return true;
 }
 
@@ -77,8 +76,7 @@ export async function revertArt(actor) {
   if (!orig) return false;
   await updateActorArt(actor, orig.portrait, orig.token);
   await updatePlacedTokens(actor, orig.token);
-  await patchAnsu(actor, { art: { applied: null } });
-  await appendLog(actor, "art", { threshold: "revert" });
+  await patchAnsu(actor, { art: { applied: null } }, { log: logEntry("art", { threshold: "revert" }) });
   return true;
 }
 

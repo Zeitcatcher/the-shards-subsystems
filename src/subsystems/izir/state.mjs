@@ -11,6 +11,9 @@ import {
   readSubsystemFlag,
   patchSubsystemFlag,
   deleteSubsystemFlag,
+  withFlagLock,
+  logEntries,
+  appendEntries,
 } from "../../core/flags.mjs";
 import { NAMELESS_TRAIT } from "./traits.mjs";
 
@@ -125,10 +128,22 @@ export async function unmarkActor(actor) {
   await deleteSubsystemFlag(actor, IZIR);
 }
 
-/** Apply a nested patch to the actor's Izir state (arrays replaced wholesale). */
-export async function patchIzir(actor, patch) {
-  await patchSubsystemFlag(actor, IZIR, patch);
+/**
+ * Apply a nested patch to the actor's Izir state (arrays replaced wholesale).
+ * `log` (one entry `{type, data, note}` or a list) is appended to the history in
+ * the same update, read fresh under the flag lock: one write per step. (0.8.0)
+ */
+export async function patchIzir(actor, patch, { log } = {}) {
+  const entries = logEntries(log);
+  if (!entries.length) return patchSubsystemFlag(actor, IZIR, patch);
+  return withFlagLock(actor, () => {
+    const base = Array.isArray(patch.log) ? patch.log : readIzir(actor).log;
+    return patchSubsystemFlag(actor, IZIR, { ...patch, log: appendEntries(base, entries, LOG_CAP) });
+  });
 }
+
+/** One history row, in the shape appendLog has always written. */
+export const logEntry = (type, data = {}, note = "") => ({ type, data, note });
 
 /* ------------------------------------------------------------------ */
 /* Mutation lock                                                       */
@@ -170,7 +185,5 @@ export const LOG_CAP = 300;
 
 /** Append one entry to the history log (capped to the newest LOG_CAP). GM-side only. */
 export async function appendLog(actor, type, data = {}, note = "") {
-  const st = readIzir(actor);
-  const log = [...st.log, { t: Date.now(), type, data, note }].slice(-LOG_CAP);
-  await patchIzir(actor, { log });
+  await patchIzir(actor, {}, { log: logEntry(type, data, note) });
 }

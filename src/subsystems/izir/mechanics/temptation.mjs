@@ -9,9 +9,9 @@
 
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
-import { readIzir, patchIzir, appendLog, isMarked, withActorLock } from "../state.mjs";
+import { readIzir, patchIzir, logEntry, isMarked, withActorLock } from "../state.mjs";
 import { dcFor, slideDeltaFor, slideNeeded, rerollCorrection } from "../logic/model.mjs";
-import { applySlideChangeInner, rewindLevelSlide } from "../transform.mjs";
+import { applySlideChangeInner, planSlideChange, finishSlideChange, rewindLevelSlide } from "../transform.mjs";
 import { refreshIzirPanel } from "../apps/izir-panel.mjs";
 
 const dcBase = () => Number(game.settings.get(MODULE_ID, SETTINGS.IZIR_DC_BASE)) || 20;
@@ -190,22 +190,30 @@ async function recordInner(actor, pending, outcome, total) {
   // to it rather than trying to subtract the old result back out. (F2)
   const prev = { level: st.level, slide: st.slide ?? 0 };
 
-  // Clear the marker first (the C5 guard keys on it), then move the slide, then
-  // log what ACTUALLY happened. Logging the intended delta first was a lie
-  // whenever the slide refused it: a level-0 or capped bearer got a "+2" in the
-  // history and the exported journal while nothing moved. (F19)
-  await patchIzir(actor, { pendingTemptation: null });
-
-  let r = null;
-  if (delta > 0) r = await applySlideChangeInner(actor, { delta, source: "temptation", cause: pending.id });
+  // Clear the marker, move the slide and log what ACTUALLY happened, in one
+  // update (0.8.0) with the rows in their old order: slide, level, temptation.
+  // Logging the intended delta was a lie whenever the slide refused it: a
+  // level-0 or capped bearer got a "+2" in the history and the exported journal
+  // while nothing moved. (F19)
+  const plan = delta > 0 ? planSlideChange(st, { delta, source: "temptation", cause: pending.id }) : null;
+  const r = plan?.r ?? null;
   const moved = Boolean(r) && (r.level !== prev.level || r.slide !== prev.slide);
 
-  await appendLog(
+  await patchIzir(
     actor,
-    "temptation",
-    { id: pending.id, dc: pending.dc ?? null, outcome, total, slideDelta: moved ? delta : 0, applied: moved, prev },
-    pending.reason ?? "",
+    { pendingTemptation: null, ...(plan?.patch ?? {}) },
+    {
+      log: [
+        ...(plan?.log ?? []),
+        logEntry(
+          "temptation",
+          { id: pending.id, dc: pending.dc ?? null, outcome, total, slideDelta: moved ? delta : 0, applied: moved, prev },
+          pending.reason ?? "",
+        ),
+      ],
+    },
   );
+  if (plan?.patch) await finishSlideChange(actor, r);
 
   if (delta > 0) await whisperSlideReport(actor, delta, r, moved, prev);
 }

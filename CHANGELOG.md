@@ -38,6 +38,9 @@ After updating, every bearer reads as loyalty 5 and Wrath 0. Set both by hand on
 - Salbarine Chain replaces Hand of the Ansu at attunement 10. One action (manipulate) draws a chain from the bearer's Salbarium inlays that lasts until Communion ends. With it the bearer can Grapple, Trip, Disarm, Reposition or Shove at up to 60 feet, Interact at 60 feet, and Anchor to haul themselves to a point within 60 feet, across gaps and up walls. The chain has Hardness 15 and 60 Hit Points.
 - Trait cleanup: no Ansu ability carries magical any more. Invoke and Release lost concentrate, Call the Blade lost concentrate and magical. The release save is no longer mental; the conflict's Will save is.
 - Removed: the Climb and its two settings, the release-streak suggestions on the panel, Lingering (a failed release no longer leaves the boons on), the automatic seizures on a critically failed Call or release, and Hand of the Ansu.
+- Hovering a ladder row on the Ansu or the Izir panel shows that ability's full description, with its action cost, level and the selected character's numbers.
+- Fewer writes per roll. A Call, a release, a conflict outcome or a deed now saves the character once instead of three to seven times, so open sheets redraw once after a roll instead of flickering. Izir's temptation saves and history lines work the same way, and both panels redraw once per burst of changes.
+- Two quick clicks on a loyalty or Wrath button, or two deeds picked in quick order, both count. Turning the Ansu token icon off reaches markers already on the sheet. Attuning an NPC no longer writes traits from its rule elements into the statblock. The Ansu panel follows changes made elsewhere, such as a co-GM's clicks, new tokens and turn changes.
 
 ## 0.7.0
 

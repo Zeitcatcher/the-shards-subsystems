@@ -13,7 +13,7 @@
 
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
-import { readAnsu, patchAnsu, appendLog, isAttuned } from "../state.mjs";
+import { readAnsu, patchAnsu, logEntry, flushExtra, isAttuned } from "../state.mjs";
 import { conflictDC, wrathBand } from "../logic/model.mjs";
 import { acceptRerollCapture } from "../logic/timing.mjs";
 import {
@@ -27,6 +27,7 @@ import {
 } from "../logic/conflict.mjs";
 import { seizureKind } from "../logic/seizure.mjs";
 import { recordDeeds } from "./deeds.mjs";
+import { syncActor } from "../sync.mjs";
 import { startSeizure, returnFromSeizure, isSeized } from "./seizure.mjs";
 import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
@@ -73,10 +74,11 @@ export async function startConflict(actor, { want = "", severity = "minor" } = {
   const sev = SEVERITIES.includes(severity) ? severity : "minor";
   const dc = conflictDC(charLevelOf(actor), sev, st.wrath);
   const id = foundry.utils.randomID();
-  await patchAnsu(actor, {
-    pendingConflict: { id, dc, stage: "persuade", want: String(want ?? ""), severity: sev, createdAt: Date.now() },
-  });
-  await appendLog(actor, "conflict", { on: true, dc, severity: sev }, String(want ?? ""));
+  await patchAnsu(
+    actor,
+    { pendingConflict: { id, dc, stage: "persuade", want: String(want ?? ""), severity: sev, createdAt: Date.now() } },
+    { log: logEntry("conflict", { on: true, dc, severity: sev }, String(want ?? "")) },
+  );
 
   await whisperGM(actor, [
     game.i18n.format("SHARDS.Ansu.ConflictGMTitle", { name: actor.name }),
@@ -308,21 +310,25 @@ export async function recordConflictOutcome(actor, outcome, total = null, { stag
 async function recordInner(actor, st, pending, stage, outcome, total) {
   const result = conflictResult({ stage, outcome, wrath: st.wrath });
   if (!result) return;
-  await patchAnsu(actor, {
-    pendingConflict: null,
-    lastConflict: {
-      id: pending.id,
-      dc: pending.dc,
-      stage,
-      outcome,
-      wrath: st.wrath,
-      want: pending.want ?? "",
-      at: Date.now(),
+  // The record and its history row ride in the same update as the deeds it
+  // brings (0.8.0): one write for the outcome, however many deeds.
+  const record = {
+    patch: {
+      pendingConflict: null,
+      lastConflict: {
+        id: pending.id,
+        dc: pending.dc,
+        stage,
+        outcome,
+        wrath: st.wrath,
+        want: pending.want ?? "",
+        at: Date.now(),
+      },
+      rerollConflict: null,
     },
-    rerollConflict: null,
-  });
-  await appendLog(actor, "conflict", { id: pending.id, stage, dc: pending.dc, outcome, total }, pending.want ?? "");
-  await applyResult(actor, pending, result);
+    log: logEntry("conflict", { id: pending.id, stage, dc: pending.dc, outcome, total }, pending.want ?? ""),
+  };
+  await applyResult(actor, pending, result, record);
   if (stage !== "berserk" || result.handBack) {
     await whisperGM(
       actor,
@@ -336,18 +342,28 @@ async function recordInner(actor, st, pending, stage, outcome, total) {
   refreshAnsuPanel();
 }
 
-/** Deeds first (the takeover's snapshot carries them), then the takeover or the next card. */
-async function applyResult(actor, pending, result) {
-  if (result.deeds.length) await recordDeeds(actor, result.deeds, pending.want ?? "");
+/**
+ * Deeds first (the takeover's snapshot carries them), then the takeover or the
+ * next card. `record` is the outcome's own write; it lands with the deeds. A
+ * takeover syncs right after, so the deeds leave the sync to it.
+ */
+async function applyResult(actor, pending, result, record = null) {
+  if (result.deeds.length) {
+    await recordDeeds(actor, result.deeds, pending.want ?? "", { extra: record, sync: !result.takeover });
+  } else {
+    await flushExtra(actor, record);
+  }
   if (result.next === "will") await postWillStage(actor, pending);
   if (result.takeover) {
-    await startSeizure(actor, {
+    const started = await startSeizure(actor, {
       kind: result.takeover.kind,
       turnsLeft: result.takeover.turnsLeft,
       deed: result.takeover.deed,
       dc: pending.dc,
       conflictId: pending.id,
     });
+    // The deeds skipped their sync for this one; a takeover that did not start owes it.
+    if (!started && result.deeds.length) await syncActor(actor);
   }
   if (result.handBack) await returnFromSeizure(actor, { via: "will" });
 }
@@ -365,11 +381,14 @@ export async function recordConflictReroll(actor) {
   const last = st.lastConflict;
   if (!r || !last || r.id !== last.id) return;
   const step = conflictRerollStep({ stage: r.stage, prevOutcome: r.from, outcome: r.outcome, wrath: last.wrath });
-  await patchAnsu(actor, { rerollConflict: null, lastConflict: { outcome: r.outcome, at: Date.now() } });
-  await appendLog(actor, "conflict", { id: r.id, stage: r.stage, dc: last.dc, outcome: r.outcome, total: r.total, reroll: true });
+  const record = {
+    patch: { rerollConflict: null, lastConflict: { outcome: r.outcome, at: Date.now() } },
+    log: logEntry("conflict", { id: r.id, stage: r.stage, dc: last.dc, outcome: r.outcome, total: r.total, reroll: true }),
+  };
 
   let handFix = step.handFix;
-  if (step.addDeeds.length) await recordDeeds(actor, step.addDeeds, last.want ?? "");
+  if (step.addDeeds.length) await recordDeeds(actor, step.addDeeds, last.want ?? "", { extra: record });
+  else await flushExtra(actor, record);
   const now = readAnsu(actor);
   if (step.undoTakeover) {
     if (isSeized(now) && now.seizure?.conflictId === r.id) await returnFromSeizure(actor, { deed: false, via: "reroll" });

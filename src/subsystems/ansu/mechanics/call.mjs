@@ -16,7 +16,8 @@
 
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
-import { readAnsu, patchAnsu, isAttuned } from "../state.mjs";
+import { mergePatch } from "../../../core/flags.mjs";
+import { readAnsu, patchAnsu, flushExtra, isAttuned } from "../state.mjs";
 import {
   callDCFor,
   callAdjust,
@@ -260,21 +261,25 @@ async function recordCallOutcomeInner(actor, st, pending, outcome, total, force 
   const prevOutcome = force ? (st.rerollCall?.from ?? st.lastCall?.outcome ?? null) : null;
   // The record this outcome replaces, copied before the patch below rewrites it.
   const prevCall = st.lastCall ? { ...st.lastCall } : null;
-  const log = [
-    ...st.log,
-    {
-      t: Date.now(),
+  // The record and its history row. On the plain path they ride in the same
+  // update as the state change the outcome causes (0.8.0): one write per Call.
+  const record = {
+    patch: {
+      pendingCall: null,
+      lastCall: { id: pending.id, dc: pending.dc ?? null, outcome, at: Date.now() },
+      ...(force ? { rerollCall: null } : {}),
+    },
+    log: {
       type: "call",
       data: { id: pending.id, dc: pending.dc ?? null, outcome, total, ...(force ? { reroll: true } : {}) },
     },
-  ];
-  const patch = {
-    log,
-    pendingCall: null,
-    lastCall: { id: pending.id, dc: pending.dc ?? null, outcome, at: Date.now() },
   };
-  if (force) patch.rerollCall = null;
-  await patchAnsu(actor, patch);
+  // A correction writes its record first, as before: what follows reads it.
+  let extra = record;
+  if (force) {
+    await flushExtra(actor, record);
+    extra = null;
+  }
 
   const say = (key, extra = {}) =>
     whisperGM(
@@ -347,7 +352,7 @@ async function recordCallOutcomeInner(actor, st, pending, outcome, total, force 
           ? "SHARDS.Ansu.CallSuccess"
           : "SHARDS.Ansu.CallFail",
     );
-    await invokeCommunion(actor, note, stamp);
+    await invokeCommunion(actor, note, stamp, extra);
     const report =
       outcome === "criticalSuccess"
         ? "SHARDS.Ansu.CallCritReport"
@@ -362,12 +367,16 @@ async function recordCallOutcomeInner(actor, st, pending, outcome, total, force 
     // card goes up at once at the plain DC (no return penalty).
     const now = game.time?.worldTime ?? 0;
     const lockout = makeLockout(CALL_CF_LOCKOUT, now);
-    await patchAnsu(actor, {
-      lockout,
-      // A reroll after the release card resolved lifts only this stamp. (review finding 4)
-      lastCall: { lockoutUntil: lockout.until },
-      communion: { returnPenalty: 0 },
-    });
+    await patchAnsu(
+      actor,
+      mergePatch(extra?.patch ?? {}, {
+        lockout,
+        // A reroll after the release card resolved lifts only this stamp. (review finding 4)
+        lastCall: { lockoutUntil: lockout.until },
+        communion: { returnPenalty: 0 },
+      }),
+      { log: extra?.log },
+    );
     await whisperGM(actor, game.i18n.format("SHARDS.Ansu.CallCritFailReport", { name: actor.name }));
     // A body the Ansu already holds (a GM seizure) is the GM's to return; a
     // release card there would end a hold nobody released.
@@ -381,6 +390,8 @@ async function recordCallOutcomeInner(actor, st, pending, outcome, total, force 
     // read 0 of 1 forever. Inside a fight the round will tick. (0.6.6)
     const { inActiveCombat, syncActor } = await import("../sync.mjs");
     if (!inActiveCombat(actor)) await syncActor(actor);
+  } else {
+    await flushExtra(actor, extra);
   }
   refreshAnsuPanel();
 }

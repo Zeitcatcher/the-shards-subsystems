@@ -5,7 +5,7 @@
  */
 
 import { MODULE_ID, SETTINGS } from "../../core/constants.mjs";
-import { readIzir, patchIzir, appendLog } from "./state.mjs";
+import { readIzir, patchIzir, logEntry } from "./state.mjs";
 import { pickThresholdForLevel } from "./logic/art.mjs";
 
 const artSwapOn = () => game.settings.get(MODULE_ID, SETTINGS.IZIR_ART_SWAP) === true;
@@ -65,8 +65,7 @@ export async function applyThresholdArt(actor, threshold) {
   await updatePlacedTokens(actor, token);
   // Applying by hand lifts the hold a manual revert put on: the GM has said, in
   // the clearest way available, that they want the swap after all. (F25)
-  await patchIzir(actor, { art: { applied: String(threshold), hold: false } });
-  await appendLog(actor, "art", { threshold: String(threshold) });
+  await patchIzir(actor, { art: { applied: String(threshold), hold: false } }, { log: logEntry("art", { threshold: String(threshold) }) });
   return true;
 }
 
@@ -85,8 +84,7 @@ export async function revertArt(actor, { hold = false } = {}) {
   if (!orig) return false;
   await updateActorArt(actor, orig.portrait, orig.token);
   await updatePlacedTokens(actor, orig.token);
-  await patchIzir(actor, { art: { applied: null, original: null, hold } });
-  await appendLog(actor, "art", { threshold: "revert" });
+  await patchIzir(actor, { art: { applied: null, original: null, hold } }, { log: logEntry("art", { threshold: "revert" }) });
   return true;
 }
 

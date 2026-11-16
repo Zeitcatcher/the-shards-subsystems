@@ -10,10 +10,13 @@
 import { MODULE_ID, ANSU, IZIR, SETTINGS, TEMPLATES } from "../../../core/constants.mjs";
 import { readSubsystemFlag } from "../../../core/flags.mjs";
 import { renderSubsystemSwitcher, applyHandoffPosition } from "../../../core/switcher.mjs";
+import { debounce } from "../../../core/platform.mjs";
 import { bindLadderTooltips, enrichPlain, tipHtml, TipCache } from "../../../core/ladder-tooltip.mjs";
 import {
   readAnsu,
   patchAnsu,
+  mutateAnsu,
+  logEntry,
   appendLog,
   listAttunedActors,
   isAttuned,
@@ -285,13 +288,15 @@ async function onToggleSuppress(_event, target) {
   const actor = resolveActor(this._actorUuid);
   if (!actor) return;
   const family = target.dataset.family;
-  const st = readAnsu(actor);
-  const has = st.suppressed.some((s) => s.id === family);
-  const suppressed = has
-    ? st.suppressed.filter((s) => s.id !== family)
-    : [...st.suppressed, { id: family, reason: "", at: Date.now() }];
-  await patchAnsu(actor, { suppressed });
-  await appendLog(actor, "suppress", { id: family, on: !has });
+  // Read and written under the flag lock: two quick toggles on different
+  // families both land instead of one clobbering the other's list.
+  await mutateAnsu(actor, (st) => {
+    const has = st.suppressed.some((s) => s.id === family);
+    const suppressed = has
+      ? st.suppressed.filter((s) => s.id !== family)
+      : [...st.suppressed, { id: family, reason: "", at: Date.now() }];
+    return { patch: { suppressed }, log: logEntry("suppress", { id: family, on: !has }) };
+  });
   await syncActor(actor);
   this.render();
 }
@@ -305,9 +310,10 @@ async function onEditReason(_event, target) {
   if (!rec) return;
   const reason = await promptText(rec.reason ?? "", "SHARDS.Ansu.ReasonPrompt");
   if (reason === null) return;
-  const suppressed = st.suppressed.map((s) => (s.id === family ? { ...s, reason } : s));
-  await patchAnsu(actor, { suppressed });
-  await appendLog(actor, "suppress", { id: family, reason }, reason);
+  await mutateAnsu(actor, (cur) => ({
+    patch: { suppressed: cur.suppressed.map((s) => (s.id === family ? { ...s, reason } : s)) },
+    log: logEntry("suppress", { id: family, reason }, reason),
+  }));
   this.render();
 }
 
@@ -977,7 +983,36 @@ export function openAnsuPanel(actorUuid, opts = {}) {
   applyHandoffPosition(instance, opts);
 }
 
+// One redraw per burst (0.8.0): a roll writes the actor, syncs its items and
+// posts cards in quick order, and every step used to redraw the whole panel.
+const renderSoon = debounce(() => {
+  if (instance?.rendered) instance.render();
+}, 50);
+
 /** Re-render the panel if it's open (e.g. after an actor flag changes elsewhere). */
 export function refreshAnsuPanel() {
-  if (instance?.rendered) instance.render();
+  if (instance?.rendered) renderSoon();
+}
+
+/**
+ * Read-only, on EVERY client (0.8.0): the panel follows changes made elsewhere.
+ * A co-GM's panel used to sit on old numbers until they clicked something, a
+ * dropped or deleted token did not reach the roster, and the Communion rounds
+ * counter went stale across turns. The redraw is debounced, so a roll's burst
+ * of writes still redraws once. (Izir F27, F28)
+ */
+export function registerPanelFollowHooks() {
+  const flagPath = `flags.${MODULE_ID}.${ANSU}`;
+  const deletePath = `flags.${MODULE_ID}.-=${ANSU}`;
+  Hooks.on("updateActor", (_actor, changes) => {
+    if (foundry.utils.hasProperty(changes, flagPath) || foundry.utils.hasProperty(changes, deletePath)) {
+      refreshAnsuPanel();
+    }
+  });
+  for (const hook of ["createToken", "deleteToken", "deleteActor", "deleteCombat"]) {
+    Hooks.on(hook, () => refreshAnsuPanel());
+  }
+  Hooks.on("updateCombat", (_combat, changes) => {
+    if (changes?.round !== undefined || changes?.turn !== undefined) refreshAnsuPanel();
+  });
 }

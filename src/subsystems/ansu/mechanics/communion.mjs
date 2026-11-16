@@ -10,7 +10,7 @@
 
 import { MODULE_ID, ANSU } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
-import { readAnsu, patchAnsu, appendLog, isAttuned, listAttunedActors } from "../state.mjs";
+import { readAnsu, patchAnsu, mutateAnsu, logEntry, withExtra, flushExtra, isAttuned, listAttunedActors } from "../state.mjs";
 import { durationRoundsFor, invokeBlock, wrathBand } from "../logic/model.mjs";
 import {
   sweepHandlesExpiry,
@@ -65,26 +65,32 @@ export function remainingRounds(effect) {
  * `rounds` and `returnPenalty` are the Call's stamp (0.8): the length its degree
  * bought and the +2 a failed Call puts on the release. Left out (the GM's force
  * invoke), the Communion runs the tier's success length with no penalty.
+ *
+ * `extra` is the caller's own write (the Call's record and its history row):
+ * it lands in the same update as the Communion, or on its own when the invoke
+ * is refused. (0.8.0)
  */
-export async function invokeCommunion(actor, note = "", { rounds: stamped, returnPenalty = 0 } = {}) {
+export async function invokeCommunion(actor, note = "", { rounds: stamped, returnPenalty = 0 } = {}, extra = null) {
   const st = readAnsu(actor);
-  if (st.terminal === "taken") return;
+  if (st.terminal === "taken") return flushExtra(actor, extra);
   if (st.communion.mode !== "none") {
     ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.AlreadyActive"));
-    return;
+    return flushExtra(actor, extra);
   }
   if (!st.terminal && st.level < 1) {
     ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.NoAttunement"));
-    return;
+    return flushExtra(actor, extra);
   }
   const rounds =
     st.terminal === "subjugated" ? null : stamped !== undefined ? stamped : durationRoundsFor(st.level, 2);
   // startAt is the seizure return's one-shot clock compensation; a fresh Invoke
   // starts its countdown at the sync, so clear any leftover stamp. (0.6.6)
-  await patchAnsu(actor, {
-    communion: { mode: "active", rounds, startAt: null, returnPenalty: returnPenalty === 2 ? 2 : 0 },
-  });
-  await appendLog(actor, "communion", { on: true, rounds }, note);
+  const w = withExtra(
+    extra,
+    { communion: { mode: "active", rounds, startAt: null, returnPenalty: returnPenalty === 2 ? 2 : 0 } },
+    logEntry("communion", { on: true, rounds }, note),
+  );
+  await patchAnsu(actor, w.patch, { log: w.log, update: w.update });
   await syncActor(actor);
   refreshAnsuPanel();
 }
@@ -172,21 +178,33 @@ export async function requestInvoke(actor) {
  * `keepPending` is the expiry path: an open release card stays open through the
  * end instead of being nulled and restored, so a roll landing in between is
  * never dropped and a recorded one is never re-opened (review finding 6).
+ *
+ * `extra` is the caller's own write (the release record, its Hit Point cost):
+ * it lands in the same update, or on its own when no Communion runs. Returns
+ * whether a Communion ended. (0.8.0)
  */
-export async function endCommunion(actor, { via = "gm", note = "", keepPending = false } = {}) {
+export async function endCommunion(actor, { via = "gm", note = "", keepPending = false, extra = null } = {}) {
   const st = readAnsu(actor);
-  if (st.communion.mode === "none") return;
+  if (st.communion.mode === "none") {
+    await flushExtra(actor, extra);
+    return false;
+  }
   // Ending Communion clears any open release roll and any seizure blob, so a stale
   // pendingRelease can't wedge the next communion's automation and a seizure can't
   // be stranded with the panel Return button dead. (B6, B7)
-  await patchAnsu(actor, {
-    communion: { mode: "none", rounds: null, startAt: null },
-    ...(keepPending ? {} : { pendingRelease: null }),
-    seizure: null,
-  });
-  await appendLog(actor, "communion", { on: false, via }, note);
+  const w = withExtra(
+    extra,
+    {
+      communion: { mode: "none", rounds: null, startAt: null },
+      ...(keepPending ? {} : { pendingRelease: null }),
+      seizure: null,
+    },
+    logEntry("communion", { on: false, via }, note),
+  );
+  await patchAnsu(actor, w.patch, { log: w.log, update: w.update });
   await syncActor(actor);
   refreshAnsuPanel();
+  return true;
 }
 
 /**
@@ -198,8 +216,7 @@ export async function endCommunion(actor, { via = "gm", note = "", keepPending =
 export async function slipToLingering(actor, runOpts = {}) {
   const st = readAnsu(actor);
   if (st.communion.mode !== "active" && st.communion.mode !== "seized") return;
-  await patchAnsu(actor, { communion: { mode: "lingering", rounds: null, startAt: null } });
-  await appendLog(actor, "lingering", {});
+  await patchAnsu(actor, { communion: { mode: "lingering", rounds: null, startAt: null } }, { log: logEntry("lingering", {}) });
   await syncActor(actor, runOpts);
   refreshAnsuPanel();
 }
@@ -286,14 +303,15 @@ async function resolveExpiry(actor, removeEffects) {
   const key = actorKey(actor);
   if (!effect || !looksExpired(effect)) {
     seenExpired.delete(key);
-    return;
+    return false;
   }
   if (sweepHandlesExpiry(removeEffects, seenExpired.has(key))) {
     seenExpired.delete(key);
     await handleExpiry(actor);
-  } else {
-    seenExpired.add(key);
+    return true;
   }
+  seenExpired.add(key);
+  return false;
 }
 
 async function sweepCombat(combat) {
@@ -320,12 +338,14 @@ async function sweepCombat(combat) {
  * fires both hooks, and handling them here as well would spend the one sweep of
  * grace `sweepHandlesExpiry` gives pf2e's own removal to act first.
  */
-async function sweepExpiryOutsideCombat() {
+async function sweepExpiryOutsideCombat(actors = listAttunedActors()) {
   const removeEffects = game.pf2e?.settings?.automation?.removeEffects;
-  for (const actor of listAttunedActors()) {
+  let resolved = false;
+  for (const actor of actors) {
     if (encounterOf(actor)) continue;
-    await resolveExpiry(actor, removeEffects);
+    if (await resolveExpiry(actor, removeEffects)) resolved = true;
   }
+  return resolved;
 }
 
 /* ------------------------------------------------------------------ */
@@ -381,23 +401,24 @@ async function maybeStartCooldown(actor, entryId) {
   const minutes = entry?.actionData?.cooldownMinutes;
   if (!Number.isInteger(minutes)) return;
 
-  const st = readAnsu(actor);
   const now = game.time?.worldTime ?? 0;
-  const runningUntil = Number((st.cooldowns ?? []).find((c) => c?.id === entryId)?.until) || 0;
-  if (now < runningUntil) {
-    const left = Math.ceil((runningUntil - now) / 60);
+  // Read and written under the flag lock, with the Refuses row in the same write.
+  const left = await mutateAnsu(actor, (st) => {
+    const runningUntil = Number((st.cooldowns ?? []).find((c) => c?.id === entryId)?.until) || 0;
+    if (now < runningUntil) return { result: Math.ceil((runningUntil - now) / 60) };
+    const cooldowns = [
+      ...(st.cooldowns ?? []).filter((c) => c?.id !== entryId),
+      { id: entryId, until: now + minutes * 60 },
+    ];
+    // Blade's Return shares the cooldown, not the Refuses log line or wounded.
+    const log = entryId === "the-ansu-refuses" ? logEntry("refuses", { entryId, minutes }) : null;
+    return { patch: { cooldowns }, log, result: 0 };
+  });
+  if (left > 0) {
     await whisperGMCard(actor, game.i18n.format("SHARDS.Ansu.CooldownRunning", { name: entry.name, minutes: left }));
     return;
   }
-
-  const cooldowns = [
-    ...(st.cooldowns ?? []).filter((c) => c?.id !== entryId),
-    { id: entryId, until: now + minutes * 60 },
-  ];
-  await patchAnsu(actor, { cooldowns });
-  // Blade's Return shares the cooldown, not the Refuses log line or wounded.
   if (entryId === "the-ansu-refuses") {
-    await appendLog(actor, "refuses", { entryId, minutes });
     try {
       await actor.increaseCondition?.("wounded");
     } catch (err) {
@@ -419,10 +440,14 @@ async function whisperGMCard(actor, text) {
   });
 }
 
-/** Prune expired cooldowns and re-enable their Use buttons as world time moves. */
-async function sweepCooldowns() {
+/**
+ * Prune expired cooldowns and re-enable their Use buttons as world time moves.
+ * Returns whether any cooldown lapsed.
+ */
+async function sweepCooldowns(actors = listAttunedActors()) {
   const now = game.time?.worldTime ?? 0;
-  for (const actor of listAttunedActors()) {
+  let pruned = false;
+  for (const actor of actors) {
     const st = readAnsu(actor);
     const all = st.cooldowns ?? [];
     if (!all.length) continue;
@@ -430,8 +455,43 @@ async function sweepCooldowns() {
     if (kept.length === all.length) continue;
     await patchAnsu(actor, { cooldowns: kept });
     await syncActor(actor);
+    pruned = true;
   }
-  refreshAnsuPanel();
+  return pruned;
+}
+
+/** A Communion that is running against a clock (the terminals never expire). */
+const runningCommunion = (st) => st.communion?.mode === "active" && !st.terminal;
+
+/** A timed lockout still counting at world time `t` (the panel shows its seconds). */
+const timedLockoutAt = (st, t) =>
+  Boolean(st.lockout) && st.lockout.untilRest !== true && Number(st.lockout.until) > t;
+
+/**
+ * The world-time sweep (0.8.0): ONE walk of the attuned bearers, shared by the
+ * cooldown pruning and the out-of-combat expiry check, and nothing at all when
+ * no bearer has a cooldown, a lockout or a running Communion. The panel redraws
+ * only when a cooldown lapsed, an expiry resolved, or a countdown it shows (a
+ * timed lockout, a running Communion) moved with the clock. Before, every tick
+ * walked every actor and token twice and redrew the panel unconditionally.
+ * `delta` is the hook's own argument: how far the clock moved.
+ */
+export async function sweepWorldTime(delta = 0) {
+  const bearers = listAttunedActors().filter((a) => {
+    const st = readAnsu(a);
+    return (st.cooldowns ?? []).length > 0 || Boolean(st.lockout) || runningCommunion(st);
+  });
+  if (!bearers.length) return false;
+  const now = game.time?.worldTime ?? 0;
+  const before = now - (Number(delta) || 0);
+  const pruned = await sweepCooldowns(bearers);
+  const resolved = await sweepExpiryOutsideCombat(bearers);
+  const ticking = bearers.some((a) => {
+    const st = readAnsu(a);
+    return runningCommunion(st) || timedLockoutAt(st, before);
+  });
+  if (pruned || resolved || ticking) refreshAnsuPanel();
+  return pruned || resolved;
 }
 
 /**
@@ -498,10 +558,9 @@ export function registerCommunionHooks() {
 
   // Cooldowns run on world time (combat rounds advance it; so does the GM's clock),
   // and so does the Communion countdown once no turn change is coming.
-  Hooks.on("updateWorldTime", () => {
+  Hooks.on("updateWorldTime", (_worldTime, delta) => {
     if (!isPrimaryGM()) return;
-    sweepCooldowns().catch((err) => console.error(`${MODULE_ID} | ansu cooldown sweep`, err));
-    sweepExpiryOutsideCombat().catch((err) => console.error(`${MODULE_ID} | ansu world-time expiry sweep`, err));
+    sweepWorldTime(delta).catch((err) => console.error(`${MODULE_ID} | ansu world-time sweep`, err));
   });
 
   // A combat ending mid-Communion does NOT rewrite the effect: it keeps its rounds
@@ -526,6 +585,8 @@ export function registerCommunionHooks() {
   // Sweep once on load: a cooldown that lapsed while the world was closed should
   // re-enable its Use button without waiting for the next world-time tick. (F)
   if (isPrimaryGM()) {
-    sweepCooldowns().catch((err) => console.error(`${MODULE_ID} | ansu cooldown ready-sweep`, err));
+    sweepCooldowns()
+      .then((pruned) => pruned && refreshAnsuPanel())
+      .catch((err) => console.error(`${MODULE_ID} | ansu cooldown ready-sweep`, err));
   }
 }

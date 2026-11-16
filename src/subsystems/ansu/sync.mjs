@@ -143,7 +143,7 @@ export function buildAttunementSource(composed) {
       duration: { value: -1, unit: "unlimited", sustained: false, expiry: null },
       unidentified: false,
       level: { value: 1 },
-      tokenIcon: { show: tokenIconsOn() },
+      tokenIcon: { show: composed.tokenIcons ?? tokenIconsOn() },
       // min 0, not 1: pf2e DELETES a counter effect decremented below its
       // minimum, so right-clicking the marker at attunement 1 destroyed it and
       // the self-heal put it straight back at 1 — the badge flickered and the
@@ -211,7 +211,7 @@ export function buildCommunionSource(composed, { inCombat = false } = {}) {
       duration: communionDuration(composed, inCombat),
       unidentified: false,
       level: { value: 1 },
-      tokenIcon: { show: tokenIconsOn() },
+      tokenIcon: { show: composed.tokenIcons ?? tokenIconsOn() },
       badge: null,
       traits: { value: [], rarity: "common" },
       rules: composed.rules,
@@ -364,6 +364,7 @@ async function syncActorInner(actor, runOpts = {}) {
     dials: readDials(),
     marker: game.settings.get(MODULE_ID, SETTINGS.ANSU_MARKER) !== false,
     showDc: game.settings.get(MODULE_ID, SETTINGS.ANSU_SHOW_DC) || "gm",
+    tokenIcons: tokenIconsOn(),
     now: game.time?.worldTime ?? 0,
     // Rebuilding after an expiry delete: compose the Communion with its
     // create-time grants switched off, or pf2e re-grants the whole pool. (0.6.6)

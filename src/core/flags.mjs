@@ -8,6 +8,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
+import { createActorQueue } from "./platform.mjs";
 
 /** Read a subsystem's raw flag object (undefined if the actor isn't tracked). */
 export function readSubsystemFlag(actor, sub) {
@@ -36,11 +37,45 @@ function walk(obj, prefix, out) {
   }
 }
 
-/** Apply a nested patch to `flags[MODULE_ID][sub]` via a single dot-path update. */
-export async function patchSubsystemFlag(actor, sub, patch) {
-  const update = flattenForUpdate(patch, `flags.${MODULE_ID}.${sub}`);
+/**
+ * Apply a nested patch to `flags[MODULE_ID][sub]` via a single dot-path update.
+ * `extra` holds further dot-path fields of the same actor (Hit Points, say) that
+ * belong to the same step, so the step costs one write instead of two.
+ */
+export async function patchSubsystemFlag(actor, sub, patch, extra = null) {
+  const update = { ...(extra ?? {}), ...flattenForUpdate(patch, `flags.${MODULE_ID}.${sub}`) };
   if (Object.keys(update).length === 0) return;
   await actor.update(update);
+}
+
+/**
+ * The per-actor flag lock. Every write that reads the flag and writes back
+ * something built from it (a log append, a bar step, a list toggle) runs its
+ * read and its write inside this lock, so two quick clicks never both read the
+ * same starting point and lose one of the writes. It wraps only the read and the
+ * one update, never a caller's longer chain, so it cannot be taken twice on one
+ * chain.
+ */
+export const withFlagLock = createActorQueue();
+
+/** Normalize a log argument (one entry, a list, or nothing) to a list. */
+export function logEntries(log) {
+  if (!log) return [];
+  return (Array.isArray(log) ? log : [log]).filter(Boolean);
+}
+
+/**
+ * Stamp entries `{type, data, note}` with one timestamp and append them to `log`,
+ * keeping the newest `cap`. An entry without a `note` key is written without one
+ * (the Call and release rows never carried it). Pure.
+ */
+export function appendEntries(log, entries, cap, t = Date.now()) {
+  const rows = entries.map((e) => {
+    const row = { t, type: e.type, data: e.data ?? {} };
+    if (e.note !== undefined) row.note = e.note;
+    return row;
+  });
+  return [...(Array.isArray(log) ? log : []), ...rows].slice(-cap);
 }
 
 /**
@@ -61,4 +96,18 @@ export async function deleteSubsystemFlag(actor, sub) {
     return;
   }
   await actor?.update?.({ [`flags.${MODULE_ID}.-=${sub}`]: null });
+}
+
+/**
+ * Merge two nested patches; `b` wins on a clash, plain objects merge key by key,
+ * arrays and other values are replaced. Pure.
+ */
+export function mergePatch(a = {}, b = {}) {
+  const out = { ...(a ?? {}) };
+  for (const [k, v] of Object.entries(b ?? {})) {
+    const cur = out[k];
+    const plain = (x) => x && typeof x === "object" && !Array.isArray(x);
+    out[k] = plain(cur) && plain(v) ? mergePatch(cur, v) : v;
+  }
+  return out;
 }

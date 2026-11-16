@@ -11,7 +11,7 @@
 
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
-import { readAnsu, patchAnsu, isAttuned } from "../state.mjs";
+import { readAnsu, patchAnsu, flushExtra, isAttuned } from "../state.mjs";
 import { releaseDCFor, degreeOf, hpLoss, lockoutAfterRelease, makeLockout } from "../logic/model.mjs";
 import {
   acceptReleaseRoll,
@@ -243,44 +243,51 @@ async function recordReleaseOutcomeInner(actor, st, pending, outcome, total, for
   const prevOutcome = force ? (st.rerollRelease?.from ?? st.lastRelease?.outcome ?? null) : null;
   // A correction is costed at the level the first roll was made at.
   const level = force && Number.isInteger(st.lastRelease?.level) ? st.lastRelease.level : st.level;
-  const log = [
-    ...st.log,
-    {
-      t: Date.now(),
+  // The record and its history row. On the plain path they ride in the same
+  // update as the end of Communion, the Hit Point cost and the lockout (0.8.0).
+  const record = {
+    patch: {
+      pendingRelease: null,
+      lastRelease: { id: pending.id, dc: pending.dc ?? null, outcome, level, at: Date.now() },
+      // The failed Call's +2 is spent on this roll.
+      communion: { returnPenalty: 0 },
+      ...(force ? { rerollRelease: null } : {}),
+    },
+    log: {
       type: "release",
       data: { id: pending.id, dc: pending.dc ?? null, outcome, total, ...(force ? { reroll: true } : {}) },
       note: pending.reason ?? "",
     },
-  ];
-  const patch = {
-    log,
-    pendingRelease: null,
-    lastRelease: { id: pending.id, dc: pending.dc ?? null, outcome, level, at: Date.now() },
-    // The failed Call's +2 is spent on this roll.
-    communion: { returnPenalty: 0 },
   };
-  if (force) patch.rerollRelease = null;
-  await patchAnsu(actor, patch);
 
   if (force) {
+    await flushExtra(actor, record);
     await applyRerollCorrection(actor, prevOutcome, outcome, level);
     refreshAnsuPanel();
     return;
   }
 
-  const { endCommunion } = await import("./communion.mjs");
-  await endCommunion(actor, { via: "release" });
-
   const degree = degreeOf(outcome);
-  if (degree === null || degree >= 2) {
+  const costs = degree !== null && degree < 2;
+  let lost = 0;
+  if (costs) {
+    const hp = hitPointLoss(actor, hpLoss(level, degree));
+    lost = hp.lost;
+    if (hp.lost > 0) record.update = { "system.attributes.hp.value": hp.next };
+    if (degree === 0) {
+      const spec = lockoutAfterRelease(level);
+      if (spec) record.patch.lockout = makeLockout(spec, game.time?.worldTime ?? 0);
+    }
+  }
+
+  const { endCommunion } = await import("./communion.mjs");
+  await endCommunion(actor, { via: "release", extra: record });
+
+  if (!costs) {
     refreshAnsuPanel();
     return;
   }
-  const lost = await loseHitPoints(actor, hpLoss(level, degree));
-  if (degree === 0) {
-    await addFatigued(actor);
-    await stampReleaseLockout(actor, level);
-  }
+  if (degree === 0) await addFatigued(actor);
   await whisperOwners(
     actor,
     game.i18n.format(degree === 0 ? "SHARDS.Ansu.ReleaseCritFailReport" : "SHARDS.Ansu.ReleaseFailReport", {
@@ -317,11 +324,17 @@ async function applyRerollCorrection(actor, prevOutcome, outcome, level) {
  * was actually taken.
  */
 async function loseHitPoints(actor, amount) {
+  const { next, lost } = hitPointLoss(actor, amount);
+  if (lost > 0) await actor.update({ "system.attributes.hp.value": next });
+  return lost;
+}
+
+/** What loseHitPoints would write: `{next, lost}`, lost 0 when nothing moves. Pure. */
+function hitPointLoss(actor, amount) {
   const current = Number(actor.system?.attributes?.hp?.value);
-  if (!(amount > 0) || !Number.isFinite(current)) return 0;
+  if (!(amount > 0) || !Number.isFinite(current)) return { next: current, lost: 0 };
   const next = Math.max(Math.min(current, 1), current - amount);
-  if (next !== current) await actor.update({ "system.attributes.hp.value": next });
-  return current - next;
+  return { next, lost: current - next };
 }
 
 /** Fatigued through pf2e's own condition API, defensively. */

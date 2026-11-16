@@ -6,6 +6,7 @@
  * work. Every mutation goes flags → syncActor → re-render.
  */
 
+import { debounce } from "../../../core/platform.mjs";
 import { MODULE_ID, IZIR, SETTINGS, TEMPLATES } from "../../../core/constants.mjs";
 import { renderSubsystemSwitcher, applyHandoffPosition } from "../../../core/switcher.mjs";
 import { bindLadderTooltips, enrichPlain, tipHtml, TipCache } from "../../../core/ladder-tooltip.mjs";
@@ -14,6 +15,7 @@ import {
   readIzir,
   patchIzir,
   appendLog,
+  logEntry,
   listMarkedActors,
   isMarked,
   markActor,
@@ -197,8 +199,7 @@ async function onToggleSuppress(_event, target) {
     const suppressed = has
       ? st.suppressed.filter((x) => x.id !== family)
       : [...st.suppressed, { id: family, reason: "", at: Date.now() }];
-    await patchIzir(actor, { suppressed });
-    await appendLog(actor, "suppress", { id: family, on: !has });
+    await patchIzir(actor, { suppressed }, { log: logEntry("suppress", { id: family, on: !has }) });
   });
   await syncActor(actor);
   this.render();
@@ -215,11 +216,10 @@ async function onEditReason(_event, target) {
   await withActorLock(actor, async () => {
     const st = readIzir(actor);
     const suppressed = st.suppressed.map((x) => (x.id === family ? { ...x, reason } : x));
-    await patchIzir(actor, { suppressed });
     // Its own entry type. Rewording a reason used to write another "Suppressed X"
     // line, so a history with three of them and no restore between read as three
     // separate suppressions. (F22)
-    await appendLog(actor, "reason", { id: family }, reason);
+    await patchIzir(actor, { suppressed }, { log: logEntry("reason", { id: family }, reason) });
   });
   this.render();
 }
@@ -232,8 +232,7 @@ async function onToggleReveal(_event, target) {
     const st = readIzir(actor);
     const has = st.revealed.includes(family);
     const revealed = has ? st.revealed.filter((f) => f !== family) : [...st.revealed, family];
-    await patchIzir(actor, { revealed });
-    await appendLog(actor, "reveal", { id: family, on: !has });
+    await patchIzir(actor, { revealed }, { log: logEntry("reveal", { id: family, on: !has }) });
   });
   await syncActor(actor);
   this.render();
@@ -681,7 +680,13 @@ export function openIzirPanel(actorUuid, opts = {}) {
   applyHandoffPosition(instance, opts);
 }
 
+// One redraw per burst (0.8.0): a failed temptation with a level-up used to
+// redraw the panel about six times in a second, each walking every token.
+const renderSoon = debounce(() => {
+  if (instance?.rendered) instance.render();
+}, 50);
+
 /** Re-render the panel if it's open (e.g. after an actor flag changes elsewhere). */
 export function refreshIzirPanel() {
-  if (instance?.rendered) instance.render();
+  if (instance?.rendered) renderSoon();
 }
