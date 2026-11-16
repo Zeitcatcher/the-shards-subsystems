@@ -52,7 +52,7 @@ export function emptyAnsuState() {
       returnPenalty: 0, // 0 | 2, added to the next release DC
     },
     pendingRelease: null, // { id, dc, reason, createdAt }
-    pendingCall: null, // { id, dc, createdAt } — the Intimidation gate on Invoke
+    pendingCall: null, // { id, dc, createdAt } — the Athletics gate on Invoke
     // The last resolved roll of each kind, and a reroll of it waiting on the GM.
     // A hero point deletes the rolled card and posts a fresh one; the pending
     // marker is long gone by then, so the recorded outcome is what a reroll is

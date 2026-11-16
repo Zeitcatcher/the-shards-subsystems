@@ -187,6 +187,38 @@ export function rerollTransition({ mode, prevOutcome, outcome } = {}) {
 }
 
 /**
+ * The Call's own reroll table (0.8). Critical success, success and failure all
+ * grant Communion (they differ in length and in the return penalty); only a
+ * critical failure grants none, and it sets a lockout and posts the release.
+ *
+ * - `blocked`     the recorded outcome granted Communion and the correction
+ *                 does not, or the body is held: the GM is told instead.
+ * - `restamp`     both grant Communion and it is still running: write the new
+ *                 length and return penalty into the state. The live countdown
+ *                 is not re-sent (a running clock never is).
+ * - `liftLockout` the recorded critical failure is corrected into a grant: the
+ *                 lockout and the release card it posted go away.
+ * - `invoke`      ... and Communion starts now, from dormant.
+ *
+ * @param {{mode: string, prevOutcome: string|null, outcome: string|null}} input
+ */
+export function callRerollTransition({ mode, prevOutcome, outcome } = {}) {
+  const grants = (o) => o === "criticalSuccess" || o === "success" || o === "failure";
+  const plan = { blocked: false, restamp: false, liftLockout: false, invoke: false };
+  if (!outcome || !prevOutcome || outcome === prevOutcome) return plan;
+  if (mode === "seized") return { ...plan, blocked: true };
+  if (grants(prevOutcome) && !grants(outcome)) return { ...plan, blocked: true };
+  if (grants(prevOutcome) && grants(outcome)) {
+    if (mode !== "active") return { ...plan, blocked: true };
+    return { ...plan, restamp: true };
+  }
+  if (prevOutcome === "criticalFailure" && grants(outcome)) {
+    return { ...plan, liftLockout: true, invoke: (mode ?? "none") === "none" };
+  }
+  return plan;
+}
+
+/**
  * Has the Communion effect run out, as far as any readable signal says?
  *
  * `remainingDuration.expired` is pf2e's live computation against world time;

@@ -51,11 +51,11 @@ export function releaseDC(level, base = 20, step = 2, cap = 5) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Call DC — the Intimidation gate on Invoking (GM rev 3.3).            */
+/* Call DC — the Athletics gate on Invoking (GM rev 3.3).            */
 /* ------------------------------------------------------------------ */
 
 /**
- * Intimidation-check DC to Call the Ansu: base + step × attunement, UNCAPPED —
+ * Athletics-check DC to Call the Ansu: base + step × attunement, UNCAPPED —
  * unlike the Release DC it never freezes (22 → 38 at attunement 9). The power
  * is never owed; it answers strength. No check at Mastery (callers gate).
  */
@@ -380,6 +380,8 @@ export function applyDeed(state, deed, { charLevel } = {}) {
   let leveled = false;
   if (
     !state?.terminal &&
+    // Level 0 never rises through loyalty: the first attunement stays a GM action.
+    level0 >= 1 &&
     loy >= LOYALTY_MAX &&
     level0 < MAX_LEVEL - 1 &&
     level0 < gateMax(charLevel) &&
@@ -414,4 +416,30 @@ export function nightRest(state) {
     lockout,
     consentUsed: false,
   };
+}
+
+/** A Call outcome as a degree 0..3 (CF, F, S, CS), or null for anything else. */
+export function degreeOf(outcome) {
+  const i = ["criticalFailure", "failure", "success", "criticalSuccess"].indexOf(outcome);
+  return i < 0 ? null : i;
+}
+
+/** Is a stored lockout running at world time `now`? A rest lockout runs until a rest clears it. */
+export function lockoutActive(lockout, now) {
+  if (!lockout || typeof lockout !== "object") return false;
+  if (lockout.untilRest === true) return true;
+  const until = Number(lockout.until);
+  return Number.isFinite(until) && int(now, 0) < until;
+}
+
+/**
+ * Why an Invoke (the Call) may not start now, as a reason key, or null when it
+ * may. Checked in this order: seized, a Call already pending, locked out, Fatigued.
+ */
+export function invokeBlock({ seized = false, pendingCall = null, lockout = null, now = 0, fatigued = false } = {}) {
+  if (seized) return "seized";
+  if (pendingCall) return "pending";
+  if (lockoutActive(lockout, now)) return "lockout";
+  if (fatigued) return "fatigued";
+  return null;
 }

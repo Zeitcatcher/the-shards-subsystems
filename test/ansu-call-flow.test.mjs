@@ -5,10 +5,9 @@ import { describe, it, expect, beforeEach } from "vitest";
  *
  * Two defects live here. A roll from a SUPERSEDED card was thrown away with no
  * warning and no feedback, even though `requestInvoke` deliberately replaces a
- * stale pending Call and two live cards are therefore reachable (item 15). And a
- * critical failure told the GM twice, once with the wrong ending: `startSeizure`
- * whispered "then Lingering resumes" while `call.mjs` whispered "then Communion
- * continues under the player", one line apart (items 11 and 30).
+ * stale pending Call and two live cards are therefore reachable (item 15). Since
+ * 0.8 the outcomes stamp the Communion length, and a critical failure locks the
+ * Call out and posts the release instead of seizing the body.
  *
  * Globals go up before the dynamic import, the same way ansu-reroll.test.mjs
  * does it.
@@ -93,7 +92,7 @@ function bearer(state) {
   };
 }
 
-/** An Intimidation check message shaped the way pf2e posts one from the card. */
+/** An Athletics check message shaped the way pf2e posts one from the card. */
 const callMessage = (actor, { id, outcome, total = 12 }) => ({
   actor,
   speaker: {},
@@ -155,35 +154,156 @@ describe("a Call rolled from a superseded card", () => {
   });
 });
 
-describe("a critical failure on the Call", () => {
-  it("takes the body, snapshots the open card, and reports the landing once", async () => {
-    const actor = bearer({ pendingCall: { id: "fresh1", dc: 28, createdAt: Date.now() } });
+/** The NPC release path rolls Will through getStatistic; record what it was asked. */
+function withWill(actor) {
+  actor.rolled = [];
+  actor.getStatistic = (slug) => ({ roll: async (args) => actor.rolled.push({ slug, args }) });
+  return actor;
+}
+
+describe("a critical failure on the Call (0.8)", () => {
+  it("grants no Communion, locks the Call out for a minute, and posts the release at once", async () => {
+    const actor = withWill(bearer({ pendingCall: { id: "fresh1", dc: 28, createdAt: Date.now() } }));
     await recordCallOutcome(actor, "criticalFailure", 3);
 
-    expect(actor.flag.communion.mode).toBe("seized");
-    expect(actor.flag.seizure).toMatchObject({ auto: true, thenMode: "active" });
-    // The snapshot holds the state as it was BEFORE the Call was recorded.
-    expect(actor.flag.seizure.snapshot).toHaveProperty("pendingCall");
+    expect(actor.flag.communion.mode).toBe("none");
+    expect(actor.flag.communion.returnPenalty).toBe(0);
+    expect(actor.flag.lockout).toEqual({ until: 60, untilRest: false });
+    expect(actor.flag.seizure ?? null).toBeNull();
     expect(actor.flag.pendingCall).toBeNull();
-
-    const seizureCards = messages.filter((m) => m.includes("SeizureAutoStart"));
-    expect(seizureCards).toHaveLength(1);
-    expect(seizureCards[0]).toContain("SHARDS.Ansu.SeizureAutoStartActive");
-    // The old duplicate said the same thing with the wrong ending.
-    expect(messages.some((m) => m.includes("CallCritFailReport"))).toBe(false);
+    expect(actor.rolled.map((r) => r.slug)).toEqual(["will"]);
+    expect(messages.some((m) => m.includes("SeizureAutoStart"))).toBe(false);
+    expect(messages.filter((m) => m.includes("CallCritFailReport"))).toHaveLength(1);
+    expect(actor.flag.climb).toBe(2);
   });
 
-  it("reports nothing about a seizure when the Ansu already has the body", async () => {
-    const actor = bearer({
-      communion: { mode: "seized", rounds: null, startAt: null },
-      seizure: { snapshot: {}, at: Date.now(), auto: false, thenMode: "lingering" },
-      pendingCall: { id: "fresh1", dc: 28, createdAt: Date.now() },
-    });
+  it("leaves a body the Ansu already holds alone, and posts no release", async () => {
+    const actor = withWill(
+      bearer({
+        communion: { mode: "seized", rounds: null, startAt: null },
+        seizure: { snapshot: {}, at: Date.now(), auto: false, thenMode: "lingering" },
+        pendingCall: { id: "fresh1", dc: 28, createdAt: Date.now() },
+      }),
+    );
     await recordCallOutcome(actor, "criticalFailure", 3);
 
     expect(messages.some((m) => m.includes("SeizureAutoStart"))).toBe(false);
-    expect(messages.some((m) => m.includes("SHARDS.Ansu.CallCritFailHeld"))).toBe(true);
+    expect(actor.rolled).toHaveLength(0);
     // The manual hold is untouched: its snapshot is still the one that returns.
     expect(actor.flag.seizure.auto).toBe(false);
+    expect(actor.flag.communion.mode).toBe("seized");
+  });
+});
+
+describe("a granting Call stamps its length from the degree (0.8)", () => {
+  // The bearer is attunement 4 (Discipline): F 2, S 5, CS 10 rounds.
+  for (const [outcome, rounds, penalty] of [
+    ["criticalSuccess", 10, 0],
+    ["success", 5, 0],
+    ["failure", 2, 2],
+  ]) {
+    it(`${outcome}: Communion for ${rounds} rounds, return penalty ${penalty}, Climb untouched`, async () => {
+      const actor = bearer({ pendingCall: { id: "fresh1", dc: 28, createdAt: Date.now() } });
+      await recordCallOutcome(actor, outcome, 20);
+
+      expect(actor.flag.communion).toMatchObject({ mode: "active", rounds, returnPenalty: penalty });
+      expect(actor.flag.climb).toBe(2);
+      expect(actor.flag.lockout ?? null).toBeNull();
+      expect(messages.some((m) => m.includes("Seizure"))).toBe(false);
+    });
+  }
+});
+
+describe("recording a rerolled Call (0.8 table)", () => {
+  it("withdraws a critical failure's lockout and release card, then starts Communion", async () => {
+    const actor = bearer({
+      lockout: { until: 60, untilRest: false },
+      pendingRelease: { id: "rel1", dc: 24, createdAt: Date.now() },
+      lastCall: { id: "call1", dc: 28, outcome: "criticalFailure", at: Date.now() },
+      rerollCall: { id: "call1", from: "criticalFailure", outcome: "success", at: Date.now() },
+    });
+    await recordCallOutcome(actor, "success", 30, { force: true });
+
+    expect(actor.flag.lockout).toBeNull();
+    expect(actor.flag.pendingRelease).toBeNull();
+    expect(actor.flag.communion).toMatchObject({ mode: "active", rounds: 5, returnPenalty: 0 });
+    expect(messages.some((m) => m.includes("CallRerollLifted"))).toBe(true);
+  });
+
+  it("restamps a running Communion when one grant is corrected into another", async () => {
+    const actor = bearer({
+      communion: { mode: "active", rounds: 2, startAt: null, returnPenalty: 2 },
+      lastCall: { id: "call1", dc: 28, outcome: "failure", at: Date.now() },
+      rerollCall: { id: "call1", from: "failure", outcome: "criticalSuccess", at: Date.now() },
+    });
+    await recordCallOutcome(actor, "criticalSuccess", 38, { force: true });
+
+    expect(actor.flag.communion).toMatchObject({ mode: "active", rounds: 10, returnPenalty: 0 });
+    expect(messages.some((m) => m.includes("CallRerollRestamp"))).toBe(true);
+  });
+
+  it("will not take back a granted Communion", async () => {
+    const actor = bearer({
+      communion: { mode: "active", rounds: 5, startAt: null, returnPenalty: 0 },
+      lastCall: { id: "call1", dc: 28, outcome: "success", at: Date.now() },
+      rerollCall: { id: "call1", from: "success", outcome: "criticalFailure", at: Date.now() },
+    });
+    await recordCallOutcome(actor, "criticalFailure", 2, { force: true });
+
+    expect(actor.flag.communion).toMatchObject({ mode: "active", rounds: 5 });
+    expect(actor.flag.lockout ?? null).toBeNull();
+    expect(messages.some((m) => m.includes("RerollNoRestore"))).toBe(true);
+  });
+});
+
+describe("Invoke blocks (0.8)", () => {
+  const blocked = async (state, extra = {}) => {
+    const { requestInvoke } = await import("../src/subsystems/ansu/mechanics/communion.mjs");
+    const actor = Object.assign(bearer(state), extra);
+    await requestInvoke(actor);
+    return actor;
+  };
+
+  it("refuses a Fatigued bearer with a notice and posts no Call", async () => {
+    const actor = await blocked({}, { hasCondition: (slug) => slug === "fatigued" });
+    expect(actor.flag.pendingCall ?? null).toBeNull();
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.fatigued"))).toBe(true);
+  });
+
+  it("refuses while a lockout runs", async () => {
+    await blocked({ lockout: { until: 60, untilRest: false } });
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.lockout"))).toBe(true);
+  });
+
+  it("refuses while a Call is pending, and keeps that Call", async () => {
+    const actor = await blocked({ pendingCall: { id: "old1", dc: 28, createdAt: 1 } });
+    expect(actor.flag.pendingCall.id).toBe("old1");
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.pending"))).toBe(true);
+  });
+
+  it("refuses while the Ansu holds the body", async () => {
+    await blocked({ communion: { mode: "seized", rounds: null, startAt: null } });
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.seized"))).toBe(true);
+  });
+
+  it("at wrath 6 whispers the GM to call a conflict, and still posts the Call", async () => {
+    const { requestInvoke } = await import("../src/subsystems/ansu/mechanics/communion.mjs");
+    const actor = withWill(bearer({ wrath: 6 }));
+    await requestInvoke(actor);
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.WrathBreakingInvoke"))).toBe(true);
+    expect(actor.rolled.map((r) => r.slug)).toEqual(["athletics"]);
+    expect(actor.flag.pendingCall).toMatchObject({ id: "fresh1", dc: 28 });
+  });
+
+  it("names the loyalty band and its DC move on the Call card", async () => {
+    game.users.contents = [{ id: "p1", isGM: false }];
+    try {
+      const actor = await blocked({ loyalty: 0 }, { testUserPermission: () => true });
+      expect(actor.flag.pendingCall.dc).toBe(30);
+      const card = messages.find((m) => m.includes("@Check[athletics|"));
+      expect(card).toContain("SHARDS.Ansu.CallLoyaltyLine SHARDS.Ansu.LoyaltyBand.hostile +2");
+    } finally {
+      game.users.contents = [];
+    }
   });
 });

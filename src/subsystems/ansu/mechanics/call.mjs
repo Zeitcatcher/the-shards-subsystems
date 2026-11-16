@@ -1,14 +1,15 @@
 /**
- * The Call — the Intimidation gate on Invoking the Ansu (attunement 1–9).
+ * The Call: the Athletics gate on Invoking the Ansu (attunement 1-9).
  *
  * The power is never owed: to summon it the bearer must show strength. Invoke
- * posts a whispered chat card with an inline pf2e @Check (Intimidation vs the
- * Call DC — 20 + 2 × attunement, uncapped); one createChatMessage capture turns
- * the degree of success into state:
- *   crit success — the Ansu answers eagerly: Communion + 1 to the Climb
- *   success      — Communion begins
- *   failure      — the Ansu does not deign; the action is spent, retry allowed
- *   crit failure — the Ansu comes ANYWAY: 1-round Seizure, then Communion
+ * posts a whispered chat card with an inline pf2e @Check (Athletics vs the Call
+ * DC: 20 + 2 x attunement, moved by the loyalty band); one createChatMessage
+ * capture turns the degree of success into state (0.8):
+ *   crit success: Communion at the longest length for the tier
+ *   success:      Communion at the middle length
+ *   failure:      Communion at the shortest length, release DC +2
+ *   crit failure: no Communion, a 1-minute lockout, and the release card at once
+ * The length is stamped into `communion.rounds`; the sync reads that stamp.
  * Subjugated masters skip the Call entirely (free toggle); the GM's force-invoke
  * bypasses it when the story says so.
  */
@@ -16,11 +17,20 @@
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
 import { readAnsu, patchAnsu, isAttuned } from "../state.mjs";
-import { callDC } from "../logic/model.mjs";
+import {
+  callDCFor,
+  callAdjust,
+  loyaltyBand,
+  durationRoundsFor,
+  degreeOf,
+  makeLockout,
+  CALL_CF_LOCKOUT,
+} from "../logic/model.mjs";
+import { durationLabel } from "../logic/reconcile.mjs";
 import {
   acceptCallRoll,
   acceptRerollCapture,
-  rerollTransition,
+  callRerollTransition,
   CALL_OPTION,
   CALL_ID_PREFIX,
 } from "../logic/timing.mjs";
@@ -31,11 +41,23 @@ const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
 /** A degree of success in words, or a dash when there isn't one. */
 const outcomeLabel = (o) => (o ? game.i18n.localize(`SHARDS.Ansu.Outcome.${o}`) : "—");
 
-/** The default Call DC for an actor's current attunement (settings dials). */
+/** The default Call DC for an actor's attunement and loyalty (settings dials). */
 export function suggestedCallDC(state) {
   const base = Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_BASE));
   const step = Number(game.settings.get(MODULE_ID, SETTINGS.ANSU_CALL_STEP));
-  return callDC(state.level, Number.isFinite(base) ? base : 20, Number.isFinite(step) ? step : 2);
+  return callDCFor(state.level, state.loyalty, {
+    base: Number.isFinite(base) ? base : 20,
+    step: Number.isFinite(step) ? step : 2,
+  });
+}
+
+/** "Loyalty: wary, Call DC +0." The card's line naming the band and its DC move. */
+export function loyaltyLine(loyalty) {
+  const adj = callAdjust(loyalty);
+  return game.i18n.format("SHARDS.Ansu.CallLoyaltyLine", {
+    band: game.i18n.localize(`SHARDS.Ansu.LoyaltyBand.${loyaltyBand(loyalty)}`),
+    adjust: adj < 0 ? String(adj) : `+${adj}`,
+  });
 }
 
 /** Non-GM users who own this actor (players who can roll for it). */
@@ -63,35 +85,36 @@ export async function callTheCall(actor, dc) {
   refreshAnsuPanel();
 }
 
-/** PC path: a whispered card with an inline Intimidation check the player clicks. */
+/** PC path: a whispered card with an inline Athletics check the player clicks. */
 async function postCallCard(actor, id, dc, ownerIds) {
   const showDc = game.settings.get(MODULE_ID, SETTINGS.ANSU_SHOW_DC) || "gm";
   const name = game.i18n.localize("SHARDS.Ansu.CallTitle");
   // roller:self — without it pf2e rolls for whatever token the clicker has
   // selected and only falls back to the card's actor when nothing is (an enemy
-  // selected, and the GM rolls the enemy's Intimidation). The card is whispered
+  // selected, and the GM rolls the enemy's skill). The card is whispered
   // to owners plus GMs, all of whom can update the actor, so nobody hits pf2e's
   // plain-text downgrade at text-editor.ts:722. (0.6.6)
-  const check = `@Check[intimidation|dc:${dc}|name:${name}|showDC:${showDc}|roller:self|options:${CALL_OPTION},${CALL_ID_PREFIX}${id}]`;
+  const check = `@Check[athletics|dc:${dc}|name:${name}|showDC:${showDc}|roller:self|options:${CALL_OPTION},${CALL_ID_PREFIX}${id}]`;
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   const whisper = [...new Set([...ownerIds, ...gmIds])];
   const content = `<div class="ansu-card">
     <p class="ansu-card-title"><i class="fa-solid fa-hand-fist"></i> ${game.i18n.localize("SHARDS.Ansu.CallCardTitle")}</p>
     <p class="ansu-card-reason"><em>${esc(game.i18n.localize("SHARDS.Ansu.CallFlavor"))}</em></p>
+    <p class="ansu-card-loyalty">${esc(loyaltyLine(readAnsu(actor).loyalty))}</p>
     <p>${check}</p>
   </div>`;
   await ChatMessage.create({ content, whisper, speaker: ChatMessage.getSpeaker({ actor }) });
 }
 
-/** NPC path: GM rolls Intimidation directly; same tag → same capture. */
+/** NPC path: GM rolls Athletics directly; same tag → same capture. */
 async function rollNpcCall(actor, id, dc) {
-  const intimidation = actor.getStatistic?.("intimidation") ?? actor.skills?.intimidation;
-  if (!intimidation?.roll) {
-    ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.NoIntimidation"));
+  const athletics = actor.getStatistic?.("athletics") ?? actor.skills?.athletics;
+  if (!athletics?.roll) {
+    ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.NoAthletics"));
     await patchAnsu(actor, { pendingCall: null });
     return;
   }
-  await intimidation.roll({
+  await athletics.roll({
     dc: { value: dc },
     label: game.i18n.localize("SHARDS.Ansu.CallTitle"),
     extraRollOptions: [CALL_OPTION, `${CALL_ID_PREFIX}${id}`],
@@ -145,11 +168,11 @@ async function captureFromMessage(message) {
   // Match on the injected roll option: present on both the player's card click
   // and the GM's NPC roll. Off-card rolls use the panel's manual recorder, so
   // there is no fuzzy DC/time fallback that could capture an unrelated skill
-  // check (e.g. an Athletics check) at the same DC. (B2)
+  // check (e.g. a Climb check) at the same DC. (B2)
   // The card id decides which card was rolled, but a mismatch is no longer
-  // thrown away: requestInvoke deliberately REPLACES a stale pending Call, so
-  // two live cards are reachable and rolling the older one spent the action for
-  // nothing. Same rule the Release got in 0.6.5. (0.6.6)
+  // thrown away: before 0.8 requestInvoke REPLACED a stale pending Call, and a
+  // card posted then is still reachable; rolling it must not spend the action
+  // for nothing. Same rule the Release got in 0.6.5. (0.6.6)
   const { accept, idMatch, rolledId } = acceptCallRoll({ options: ctx.options ?? [], pendingId: pending.id });
   if (!accept) return;
   if (!idMatch) {
@@ -163,8 +186,9 @@ async function captureFromMessage(message) {
 
 /**
  * A reroll of the Call we already resolved. Nothing is applied: a recorded
- * critical failure has the body, a recorded success has a Communion the table
- * has been playing under. The GM gets a card and the panel gets a button.
+ * critical failure has its lockout and release card, a recorded grant has a
+ * Communion the table has been playing under. The GM gets a card and the panel
+ * gets a button.
  */
 async function noteReroll(actor, st, ctx, outcome, total) {
   const last = st.lastCall;
@@ -221,14 +245,18 @@ export async function recordCallOutcome(actor, outcome, total = null, { force = 
 
 const recording = new Set();
 
-/** The Call's own Climb rule: only an eager answer moves the bar. */
-const callClimbFor = (outcome) => (outcome === "criticalSuccess" ? 1 : 0);
+/** The rounds and return penalty a granting outcome stamps (0.8). */
+export function callStampFor(level, outcome) {
+  return {
+    rounds: durationRoundsFor(level, degreeOf(outcome)),
+    returnPenalty: outcome === "failure" ? 2 : 0,
+  };
+}
+
+const grants = (o) => o === "criticalSuccess" || o === "success" || o === "failure";
 
 async function recordCallOutcomeInner(actor, st, pending, outcome, total, force = false) {
   const prevOutcome = force ? (st.rerollCall?.from ?? st.lastCall?.outcome ?? null) : null;
-  // A correction owes only the DIFFERENCE in Climb, and never takes one back:
-  // the GM has the ± controls and may already have spent the level. (0.6.6)
-  const delta = Math.max(0, callClimbFor(outcome) - (force ? callClimbFor(prevOutcome) : 0));
   const log = [
     ...st.log,
     {
@@ -245,60 +273,90 @@ async function recordCallOutcomeInner(actor, st, pending, outcome, total, force 
   if (force) patch.rerollCall = null;
   await patchAnsu(actor, patch);
 
-  const { invokeCommunion } = await import("./communion.mjs");
+  const say = (key, extra = {}) =>
+    whisperGM(
+      actor,
+      game.i18n.format(key, {
+        name: actor.name,
+        from: outcomeLabel(prevOutcome),
+        to: outcomeLabel(outcome),
+        ...extra,
+      }),
+    );
 
   if (force) {
-    const step = rerollTransition({ mode: st.communion?.mode ?? "none", prevOutcome, outcome });
-    if (step.returnBody) {
-      // The recorded critical failure took the body, and the correction says it
-      // never happened: restore the pre-seizure snapshot (dormant, for a Call)
-      // rather than the seizure's landing state, then apply the new outcome from
-      // there. Landing in `thenMode` would hand a FAILED Call a live Communion,
-      // which is the one thing a failed Call must never buy. (0.6.6)
-      const { returnFromSeizure } = await import("./seizure.mjs");
-      await returnFromSeizure(actor, {});
-    }
+    // A correction never replays a resolved outcome blindly: callRerollTransition
+    // decides what the new degree may still change. No Climb moves either way.
+    const step = callRerollTransition({ mode: st.communion?.mode ?? "none", prevOutcome, outcome });
     if (step.blocked) {
-      await whisperGM(
-        actor,
-        game.i18n.format("SHARDS.Ansu.RerollNoRestore", {
-          name: actor.name,
-          from: outcomeLabel(prevOutcome),
-          to: outcomeLabel(outcome),
-        }),
-      );
+      await say("SHARDS.Ansu.RerollNoRestore");
+      refreshAnsuPanel();
+      return;
+    }
+    if (step.restamp) {
+      // The running countdown is not re-sent (a running clock never is); the
+      // stamp and the penalty move, and the GM hears the new length.
+      const stamp = callStampFor(st.level, outcome);
+      await patchAnsu(actor, { communion: stamp });
+      await say("SHARDS.Ansu.CallRerollRestamp", {
+        duration: durationLabel(stamp.rounds),
+        penalty: stamp.returnPenalty,
+      });
+      refreshAnsuPanel();
+      return;
+    }
+    if (!step.liftLockout) {
+      refreshAnsuPanel();
+      return;
+    }
+    // The recorded critical failure is withdrawn: its lockout and its release card go.
+    await patchAnsu(actor, { lockout: null, pendingRelease: null });
+    await say("SHARDS.Ansu.CallRerollLifted");
+    if (!step.invoke) {
       refreshAnsuPanel();
       return;
     }
   }
 
-  // A forced correction may have landed the bearer in Communion already (the
-  // returned body), and invokeCommunion warns rather than no-ops when it has.
-  const running = force && readAnsu(actor).communion?.mode !== "none";
-
-  if (outcome === "criticalSuccess") {
-    if (!running) await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.CallCrit"));
-    const { applyClimbChange } = await import("../transform.mjs");
-    if (delta > 0) await applyClimbChange(actor, { delta, source: "call" });
-    await whisperGM(actor, game.i18n.format("SHARDS.Ansu.CallCritReport", { name: actor.name }));
-  } else if (outcome === "success") {
-    if (!running) await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.CallSuccess"));
+  if (grants(outcome)) {
+    const { invokeCommunion } = await import("./communion.mjs");
+    const stamp = callStampFor(st.level, outcome);
+    const note = game.i18n.localize(
+      outcome === "criticalSuccess"
+        ? "SHARDS.Ansu.CallCrit"
+        : outcome === "success"
+          ? "SHARDS.Ansu.CallSuccess"
+          : "SHARDS.Ansu.CallFail",
+    );
+    await invokeCommunion(actor, note, stamp);
+    const report =
+      outcome === "criticalSuccess"
+        ? "SHARDS.Ansu.CallCritReport"
+        : outcome === "failure"
+          ? "SHARDS.Ansu.CallFailReport"
+          : null;
+    if (report) {
+      await whisperGM(actor, game.i18n.format(report, { name: actor.name, duration: durationLabel(stamp.rounds) }));
+    }
   } else if (outcome === "criticalFailure") {
-    // The Ansu comes anyway — 1-round Seizure, then Communion under the player.
-    // startSeizure names that landing in its own card, so there is no second one
-    // here; and a seizure that never started (the Ansu already has the body from
-    // a manual hold) must not be reported as though it did. (0.6.6)
-    const { startSeizure } = await import("./seizure.mjs");
-    const seized = await startSeizure(actor, { auto: true, thenMode: "active" });
-    if (!seized) await whisperGM(actor, game.i18n.format("SHARDS.Ansu.CallCritFailHeld", { name: actor.name }));
-  } else if (outcome === "failure") {
-    await whisperGM(actor, game.i18n.format("SHARDS.Ansu.CallFailReport", { name: actor.name }));
-    // This is the only outcome that never reaches a sync: the successes go
-    // through invokeCommunion and the critical failure through startSeizure. Out
-    // of combat no round ever ticks, so pf2e never refills the 1/round door pf2e
-    // itself decremented on Use, and the Invoke action read 0 of 1 forever.
-    // Inside a fight the round WILL tick, and refunding the use there would
-    // break "the action is spent, and you may try again next round". (0.6.6)
+    // No Communion and no seizure (0.8): a 1-minute lockout, and the release
+    // card goes up at once at the plain DC (no return penalty).
+    const now = game.time?.worldTime ?? 0;
+    await patchAnsu(actor, {
+      lockout: makeLockout(CALL_CF_LOCKOUT, now),
+      communion: { returnPenalty: 0 },
+    });
+    await whisperGM(actor, game.i18n.format("SHARDS.Ansu.CallCritFailReport", { name: actor.name }));
+    // A body the Ansu already holds (a GM seizure) is the GM's to return; a
+    // release card there would end a hold nobody released.
+    const latest = readAnsu(actor);
+    if (latest.communion?.mode !== "seized") {
+      const { callRelease, suggestedDC } = await import("./release.mjs");
+      await callRelease(actor, suggestedDC(latest), game.i18n.localize("SHARDS.Ansu.CallCritFailReason"));
+    }
+    // Nothing above reaches a sync. Out of combat no round ever ticks, so pf2e
+    // never refills the 1/round door it decremented on Use and the Invoke action
+    // read 0 of 1 forever. Inside a fight the round will tick. (0.6.6)
     const { inActiveCombat, syncActor } = await import("../sync.mjs");
     if (!inActiveCombat(actor)) await syncActor(actor);
   }

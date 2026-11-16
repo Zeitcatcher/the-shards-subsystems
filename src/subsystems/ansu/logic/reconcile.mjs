@@ -12,7 +12,7 @@
  * delete ops, updates in place.
  */
 
-import { clampLevel, tierForLevel, releaseDC, callDC, durationRounds, tempHpFor, resistFor, parryFor, tierDiceFor, MAX_LEVEL } from "./model.mjs";
+import { clampLevel, tierForLevel, releaseDC, callDCFor, durationRounds, tempHpFor, resistFor, parryFor, tierDiceFor, MAX_LEVEL } from "./model.mjs";
 
 export const ATTUNEMENT_ENTRY_ID = "ansu-attunement";
 export const COMMUNION_ENTRY_ID = "ansu-communion";
@@ -56,15 +56,29 @@ export function selectEntries(state, content, opts = {}) {
 /* Number injection                                                    */
 /* ------------------------------------------------------------------ */
 
-/** The injection context for a (character level, attunement) pair. */
-export function buildCtx(charLevel, level, dials = {}) {
+/**
+ * The Communion length the sync installs: the rounds the Call stamped into
+ * `communion.rounds` from its degree (0.8), not the tier. A state with no
+ * stamp (a Communion begun before 0.8) falls back to the tier length.
+ */
+export function stampedRounds(state, ctx) {
+  const r = Number(state?.communion?.rounds);
+  if (state?.communion?.rounds != null && Number.isFinite(r) && r >= 1) return Math.trunc(r);
+  return ctx?.durationRounds ?? null;
+}
+
+/**
+ * The injection context for a (character level, attunement) pair. `loyalty`
+ * moves the Call DC by its band (0.8); left out, it reads as the wary band (+0).
+ */
+export function buildCtx(charLevel, level, dials = {}, { loyalty = 5 } = {}) {
   const cl = Math.max(1, Math.trunc(charLevel) || 1);
   const l = clampLevel(level);
   return {
     charLevel: cl,
     level: l,
     releaseDc: releaseDC(l, dials.dcBase, dials.dcStep, dials.dcCap),
-    callDc: callDC(l, dials.callBase, dials.callStep),
+    callDc: callDCFor(l, loyalty, { base: dials?.callBase, step: dials?.callStep }),
     tempHp: tempHpFor(l),
     resist: resistFor(l),
     parry: parryFor(l),
@@ -292,7 +306,7 @@ export function composeAttunement(state, content, opts = {}) {
   const terminal = state.terminal ?? null;
   if (level < 1 && !terminal) return null;
 
-  const ctx = buildCtx(opts.charLevel, level, opts.dials);
+  const ctx = buildCtx(opts.charLevel, level, opts.dials, { loyalty: state.loyalty });
   const tier = terminal ?? tierForLevel(level).id;
 
   const rules = [
@@ -347,7 +361,7 @@ export function composeCommunion(state, content, opts = {}) {
   const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
   if (level < 1) return null;
 
-  const ctx = buildCtx(opts.charLevel, level, opts.dials);
+  const ctx = buildCtx(opts.charLevel, level, opts.dials, { loyalty: state.loyalty });
   const rules = [
     { key: "RollOption", domain: "all", option: "self:shards:ansu:communion" },
     { key: "RollOption", domain: "all", option: `self:shards:ansu:communion:${mode}` },
@@ -384,7 +398,7 @@ export function composeCommunion(state, content, opts = {}) {
     level,
     mode,
     permanent,
-    durationRounds: permanent ? null : ctx.durationRounds,
+    durationRounds: permanent ? null : stampedRounds(state, ctx),
     rules: composedRules,
     boonLines,
     abilityLines,
@@ -417,7 +431,7 @@ export function composeFeats(state, content, opts = {}) {
   const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
   if (level < 1 && !state.terminal) return [];
 
-  const ctx = buildCtx(opts.charLevel, level, opts.dials);
+  const ctx = buildCtx(opts.charLevel, level, opts.dials, { loyalty: state.loyalty });
   const { live } = selectEntries(state, content, { ...opts, unlockAll });
   return live
     .filter((e) => e.form === "feat")
@@ -447,7 +461,7 @@ export function composeActions(state, content, opts = {}) {
   const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
   if (level < 1 && !state.terminal) return [];
 
-  const ctx = buildCtx(opts.charLevel, level, opts.dials);
+  const ctx = buildCtx(opts.charLevel, level, opts.dials, { loyalty: state.loyalty });
 
   const dead = doorsDead(mode);
   const { live } = selectEntries(state, content, { ...opts, unlockAll });

@@ -481,7 +481,7 @@ function buildLadder(st, content, charLevel, dials) {
   const cache = new Map();
   const ctxFor = (rowLevel) => {
     const at = ladderCtxLevel({ rowLevel, level: st.level });
-    if (!cache.has(at)) cache.set(at, buildCtx(charLevel, at, dials));
+    if (!cache.has(at)) cache.set(at, buildCtx(charLevel, at, dials, { loyalty: st.loyalty }));
     return cache.get(at);
   };
   const groups = TIER_GROUPS.map((g) => ({

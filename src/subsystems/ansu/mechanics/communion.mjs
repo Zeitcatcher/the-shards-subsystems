@@ -12,7 +12,7 @@
 import { MODULE_ID, ANSU } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
 import { readAnsu, patchAnsu, appendLog, isAttuned, listAttunedActors } from "../state.mjs";
-import { durationRounds } from "../logic/model.mjs";
+import { durationRoundsFor, invokeBlock, wrathBand } from "../logic/model.mjs";
 import {
   sweepHandlesExpiry,
   turnEndReleaseDue,
@@ -62,8 +62,12 @@ export function remainingRounds(effect) {
 /**
  * Enter Communion directly (post-Call, subjugated free toggle, or GM force).
  * Per-communion counters need no reset: the actives are created fresh on invoke.
+ *
+ * `rounds` and `returnPenalty` are the Call's stamp (0.8): the length its degree
+ * bought and the +2 a failed Call puts on the release. Left out (the GM's force
+ * invoke), the Communion runs the tier's success length with no penalty.
  */
-export async function invokeCommunion(actor, note = "") {
+export async function invokeCommunion(actor, note = "", { rounds: stamped, returnPenalty = 0 } = {}) {
   const st = readAnsu(actor);
   if (st.terminal === "taken") return;
   if (st.communion.mode !== "none") {
@@ -74,24 +78,53 @@ export async function invokeCommunion(actor, note = "") {
     ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.NoAttunement"));
     return;
   }
-  const rounds = st.terminal === "subjugated" ? null : durationRounds(st.level);
+  const rounds =
+    st.terminal === "subjugated" ? null : stamped !== undefined ? stamped : durationRoundsFor(st.level, 2);
   // startAt is the seizure return's one-shot clock compensation; a fresh Invoke
   // starts its countdown at the sync, so clear any leftover stamp. (0.6.6)
-  await patchAnsu(actor, { communion: { mode: "active", rounds, startAt: null } });
+  await patchAnsu(actor, {
+    communion: { mode: "active", rounds, startAt: null, returnPenalty: returnPenalty === 2 ? 2 : 0 },
+  });
   await appendLog(actor, "communion", { on: true, rounds }, note);
   await syncActor(actor);
   refreshAnsuPanel();
 }
 
+/** Is the bearer Fatigued? pf2e's own condition lookup, defensively. */
+function isFatigued(actor) {
+  try {
+    if (typeof actor.hasCondition === "function") return Boolean(actor.hasCondition("fatigued"));
+  } catch {
+    /* fall through to the item scan */
+  }
+  return Boolean(actor.itemTypes?.condition?.some?.((c) => c.slug === "fatigued"));
+}
+
+/** A notice the bearer's owners and the GM all see (the click runs on the GM's client). */
+async function whisperOwnersCard(actor, text) {
+  const owners = (game.users?.contents ?? [])
+    .filter((u) => !u.isGM && actor.testUserPermission?.(u, "OWNER"))
+    .map((u) => u.id);
+  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+  await ChatMessage.create({
+    content: `<div class="ansu-card"><p>${foundry.utils.escapeHTML(String(text ?? ""))}</p></div>`,
+    whisper: [...new Set([...owners, ...gmIds])],
+    speaker: ChatMessage.getSpeaker({ actor }),
+  });
+}
+
 /**
  * The player-facing entrance: subjugated masters toggle straight in; everyone
- * else must win the Call first (Intimidation vs 20 + 2×attunement, uncapped).
- * The Call capture then drives invokeCommunion / the crit-fail seizure.
+ * else must win the Call first (Athletics vs 20 + 2 x attunement, moved by the
+ * loyalty band). The Call is refused, with a notice, while the bearer is
+ * seized, a Call is pending, a lockout runs, or the bearer is Fatigued (0.8).
+ * The Call capture then drives invokeCommunion or the critical failure.
  */
 export async function requestInvoke(actor) {
   const st = readAnsu(actor);
   if (st.terminal === "taken") return;
-  if (st.communion.mode !== "none") {
+  // A held body falls through to invokeBlock below, which names it.
+  if (st.communion.mode !== "none" && st.communion.mode !== "seized") {
     ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.AlreadyActive"));
     return;
   }
@@ -103,8 +136,25 @@ export async function requestInvoke(actor) {
     await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.InvokedByPlayer"));
     return;
   }
-  // A stale pending Call (unrolled card from an earlier scene) is replaced, not
-  // a lock — callTheCall posts a fresh card with a fresh id.
+  // A pending Call now blocks (0.8): roll it, or the GM clears it from the panel.
+  const block = invokeBlock({
+    seized: st.communion.mode === "seized",
+    pendingCall: st.pendingCall,
+    lockout: st.lockout,
+    now: game.time?.worldTime ?? 0,
+    fatigued: isFatigued(actor),
+  });
+  if (block) {
+    await whisperOwnersCard(actor, game.i18n.format(`SHARDS.Ansu.InvokeBlocked.${block}`, { name: actor.name }));
+    // Nothing happened, so the 1/round use pf2e took on the click comes back:
+    // the dormant Invoke's baked frequency is always its max.
+    await syncActor(actor);
+    refreshAnsuPanel();
+    return;
+  }
+  if (wrathBand(st.wrath) === "breaking") {
+    await whisperGMCard(actor, game.i18n.format("SHARDS.Ansu.WrathBreakingInvoke", { name: actor.name }));
+  }
   await callTheCall(actor, suggestedCallDC(st));
 }
 

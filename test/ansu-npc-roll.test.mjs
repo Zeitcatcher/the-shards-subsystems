@@ -56,11 +56,11 @@ describe("NPC rolls are whispered to the GM", () => {
     actor = npcBearer();
   });
 
-  it("the Call rolls Intimidation with messageMode gm", async () => {
+  it("the Call rolls Athletics with messageMode gm", async () => {
     await callTheCall(actor, 26);
     expect(actor.calls).toHaveLength(1);
     const { slug, args } = actor.calls[0];
-    expect(slug).toBe("intimidation");
+    expect(slug).toBe("athletics");
     expect(args.messageMode).toBe("gm");
     expect(args.dc).toEqual({ value: 26 });
     expect(args.extraRollOptions).toContain("shards-ansu-call");

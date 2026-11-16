@@ -110,7 +110,7 @@ describe("the inline checks roll as the card's own actor", () => {
   it("the Call card carries roller:self", async () => {
     await callTheCall(bearer(), 28);
     expect(messages).toHaveLength(1);
-    expect(messages[0].content).toContain("@Check[intimidation|");
+    expect(messages[0].content).toContain("@Check[athletics|");
     expect(messages[0].content).toContain("|roller:self|");
   });
 
@@ -168,7 +168,9 @@ describe("actor names reach chat escaped", () => {
   });
 });
 
-describe("a failed Call and the spent Invoke door", () => {
+// 0.8: a failure now grants a short Communion (which syncs), so the outcome
+// that reaches no sync of its own is the critical failure.
+describe("a critically failed Call and the spent Invoke door", () => {
   beforeEach(() => {
     messages.length = 0;
     game.combats.contents = [];
@@ -176,14 +178,14 @@ describe("a failed Call and the spent Invoke door", () => {
 
   it("resyncs out of combat, where no round will ever refill the frequency", async () => {
     const actor = bearer("Грог", PENDING_CALL);
-    await recordCallOutcome(actor, "failure", 9);
+    await recordCallOutcome(actor, "criticalFailure", 2);
     expect(actor.created.length).toBeGreaterThan(0);
   });
 
   it("leaves the use spent inside a fight: the round tick is pf2e's job", async () => {
     const actor = bearer("Грог", PENDING_CALL);
     game.combats.contents = [{ started: true, combatants: [{ actor }] }];
-    await recordCallOutcome(actor, "failure", 9);
+    await recordCallOutcome(actor, "criticalFailure", 2);
     expect(actor.created).toHaveLength(0);
   });
 });
