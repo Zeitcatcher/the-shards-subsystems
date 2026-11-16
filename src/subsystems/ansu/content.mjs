@@ -8,6 +8,9 @@
 
 import { MODULE_ID } from "../../core/constants.mjs";
 import { indexDeeds } from "./logic/deeds.mjs";
+import { ANSU_TOKENS } from "./logic/reconcile.mjs";
+
+const KNOWN_TOKENS = new Set(ANSU_TOKENS);
 
 const KINDS = new Set(["boon"]);
 const FORMS = new Set(["effect", "action", "strike", "feat"]);
@@ -132,6 +135,16 @@ export function validateContent(raw) {
       }
     }
     if (e.chipTag != null && typeof e.chipTag !== "string") problems.push(`${at}: chipTag must be a string`);
+    // Every {{token}} must be one injectNumbers bakes and the pack scrub covers;
+    // an unknown one would reach the sheet raw. (0.8)
+    for (const m of JSON.stringify(e).matchAll(/\{\{(\w+)\}\}/g)) {
+      if (!KNOWN_TOKENS.has(m[1])) problems.push(`${at}: unknown number token {{${m[1]}}}`);
+    }
+    // A frequency count is a whole number or the per-Communion recall token.
+    const fmax = e.actionData?.frequency?.max;
+    if (fmax != null && !Number.isInteger(fmax) && fmax !== "{{ansuRecalls}}") {
+      problems.push(`${at}: actionData.frequency.max must be an integer or {{ansuRecalls}}`);
+    }
     // Guarded on the already-validated types so a missing family reports once.
     if (typeof e.family === "string" && e.family && Number.isInteger(e.rank)) {
       const key = `${e.family}::${e.rank}`;

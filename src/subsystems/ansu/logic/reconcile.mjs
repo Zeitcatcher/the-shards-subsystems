@@ -12,7 +12,7 @@
  * delete ops, updates in place.
  */
 
-import { clampLevel, tierForLevel, releaseDCFor, callDCFor, durationRoundsFor, tempHpFor, resistFor, parryFor, tierDiceFor, takeoverCap, MAX_LEVEL, clampLoyalty, clampWrath, loyaltyBand, wrathBand, callAdjust, gateMax } from "./model.mjs";
+import { clampLevel, tierForLevel, releaseDCFor, callDCFor, durationRoundsFor, tempHpFor, resistFor, parryFor, tierDiceFor, takeoverCap, MAX_LEVEL, clampLoyalty, clampWrath, loyaltyBand, wrathBand, callAdjust, gateMax, recallRange, recalls, throwIncrement } from "./model.mjs";
 
 export const ATTUNEMENT_ENTRY_ID = "ansu-attunement";
 export const COMMUNION_ENTRY_ID = "ansu-communion";
@@ -88,6 +88,11 @@ export function buildCtx(charLevel, level, dials = {}, { loyalty = 5 } = {}) {
     // The success length of the duration table (0.8): what a forced Call and a
     // pre-0.8 Communion with no stamp run for, and what {{ansuDuration}} quotes.
     durationRounds: durationRoundsFor(l, 2),
+    // The bound blade (0.8): Call the Blade's range and uses per Communion
+    // (Infinity at level 10, +1 in the trust band), Throw the Blade's increment.
+    recallRange: recallRange(l),
+    recalls: recalls(l, loyalty),
+    throwInc: throwIncrement(l),
   };
 }
 
@@ -146,7 +151,11 @@ export function actionDataFor(entry, state) {
  * and minutes are what the table asks about anyway. (0.6.6)
  */
 export function frequencyTag(actionData) {
-  if (actionData?.perCommunion) return "1/communion";
+  if (actionData?.perCommunion) {
+    // Call the Blade's count is baked from {{ansuRecalls}}; an unbaked token reads as 1.
+    const n = Math.trunc(Number(actionData?.frequency?.max));
+    return `${Number.isFinite(n) && n > 0 ? n : 1}/communion`;
+  }
   if (actionData?.frequency?.per === "day") return "1/day";
   const mins = Math.trunc(Number(actionData?.cooldownMinutes));
   if (Number.isFinite(mins) && mins > 0) return `1 / ${mins} min`;
@@ -162,10 +171,24 @@ export function durationLabel(rounds) {
   return `${rounds} rounds`;
 }
 
+/** Uses per Communion as text: a count, or "unlimited" (level 10). */
+export function recallsLabel(n) {
+  return Number.isFinite(n) ? String(n) : "unlimited";
+}
+
+/** Every number token injectNumbers bakes; validateContent rejects any other {{ansu*}} token. */
+export const ANSU_TOKENS = Object.freeze([
+  "ansuReleaseDC", "ansuCallDC", "ansuTempHp", "ansuResist", "ansuParry", "ansuTierDice",
+  "ansuLevel", "ansuDuration", "ansuRecallRange", "ansuRecalls", "ansuThrowInc",
+]);
+
 /** Replace every {{ansu*}} number token with the baked value. */
 export function injectNumbers(text, ctx) {
   if (typeof text !== "string") return text;
   return text
+    .replaceAll("{{ansuRecallRange}}", String(ctx.recallRange ?? 0))
+    .replaceAll("{{ansuRecalls}}", recallsLabel(ctx.recalls ?? 0))
+    .replaceAll("{{ansuThrowInc}}", String(ctx.throwInc ?? 0))
     .replaceAll("{{ansuReleaseDC}}", String(ctx.releaseDc))
     .replaceAll("{{ansuCallDC}}", String(ctx.callDc))
     .replaceAll("{{ansuTempHp}}", String(ctx.tempHp))
@@ -189,6 +212,20 @@ function deepInject(value, ctx) {
     return out;
   }
   return value;
+}
+
+/**
+ * An entry's action block with its number tokens baked. A count that bakes to
+ * "unlimited" (Call the Blade at level 10) leaves no frequency at all, so the
+ * item carries no use counter and the tag shows none.
+ */
+export function bakeActionData(src, ctx) {
+  const out = deepInject(src ?? {}, ctx);
+  if (out.frequency && !Number.isFinite(out.frequency.max)) {
+    out.frequency = null;
+    out.perCommunion = false;
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------------ */
@@ -347,6 +384,8 @@ export function composeAttunement(state, content, opts = {}) {
     callDc: ctx.callDc,
     lengths: { cs: durationRoundsFor(level, 3), s: durationRoundsFor(level, 2), f: durationRoundsFor(level, 1) },
     gate: gateMax(opts.charLevel),
+    // The DC setting on GM only hides the DCs this description quotes.
+    hideDc: opts.showDc === "gm",
     ctx,
   };
   // releaseDc is hashed because the marker's DESCRIPTION quotes it: none of the
@@ -367,6 +406,7 @@ export function composeAttunement(state, content, opts = {}) {
       wrath: composed.wrath,
       callDc: composed.callDc,
       gate: composed.gate,
+      hideDc: composed.hideDc,
     }),
   );
   return composed;
@@ -420,7 +460,7 @@ export function composeCommunion(state, content, opts = {}) {
     } else if (e.form === "action") {
       // Same source block composeActions writes onto the sheet, so the effect's
       // ability list and the item itself can't quote two different costs.
-      const a = actionDataFor(e, state);
+      const a = bakeActionData(actionDataFor(e, state), ctx);
       abilityLines.push({ name: e.name, glyph: costGlyph(a), tag: frequencyTag(a) });
     }
   }
@@ -511,7 +551,7 @@ export function composeActions(state, content, opts = {}) {
       // A subjugated master's Invoke reads from terminalActionData; everyone else
       // from actionData. Every frequency read below uses the same block.
       const src = actionDataFor(e, state);
-      const actionData = deepInject(src, ctx);
+      const actionData = bakeActionData(src, ctx);
       // Action items carry their entry's rule elements too (Maker's Wrath /
       // Fair Battle toggle-damage), with number tokens baked like everywhere else.
       const rules = deepInject(Array.isArray(e.rules) ? e.rules : [], ctx);

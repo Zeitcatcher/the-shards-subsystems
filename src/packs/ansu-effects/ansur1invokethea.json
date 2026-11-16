@@ -8,7 +8,7 @@
   "sort": 1250,
   "system": {
     "description": {
-      "value": "<p>The power is never owed; it answers strength. Attempt an Athletics check against the Call DC (your Call DC): 20 + 2 × attunement, 2 higher when the Ansu is hostile, 1 higher when it is cold, and 1 lower when it trusts you. You can't Invoke while @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Fatigued}, while the Ansu holds your body, while it refuses you after a failed Call, or while a Call is still waiting for its roll.</p><ul><li><strong>Critical Success</strong> Communion begins for its longest length (10 rounds at Trial and Discipline, 100 rounds at Union).</li><li><strong>Success</strong> Communion begins (3 rounds at Trial, 5 at Discipline, 10 at Union).</li><li><strong>Failure</strong> The Ansu answers grudgingly. Communion begins for its shortest length (1 round at Trial, 2 at Discipline, 3 at Union), and the DC to send it back is 2 higher.</li><li><strong>Critical Failure</strong> No Communion. The Ansu won't answer another Call for 1 minute, and you attempt the save to send it back at once.</li></ul><hr /><p>Every Communion active materializes on your sheet alongside the buff and vanishes when it ends. Ending Communion, whether early or when it expires, takes a Will save against the Release DC (your Release DC). From attunement 2, a successful Invoke includes a free Stride (Bull's Footing). At Mastery the Call is no longer rolled.</p>"
+      "value": "<p><strong>Requirements</strong> You are not @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Fatigued}, no lockout is running, and the Ansu does not hold your body.</p><hr /><p>You draw the Ansu's strength into your body. Attempt an Athletics check against the Call DC (your Call DC): 20 + 2 × attunement, 2 higher when the Ansu is hostile, 1 higher when it is cold, and 1 lower when it trusts you.</p><ul><li><strong>Critical Success</strong> Communion begins for its longest length (10 rounds at Trial and Discipline, 100 rounds at Union).</li><li><strong>Success</strong> Communion begins (3 rounds at Trial, 5 at Discipline, 10 at Union).</li><li><strong>Failure</strong> The Ansu answers grudgingly. Communion begins for its shortest length (1 round at Trial, 2 at Discipline, 3 at Union), and the DC to send it back is 2 higher.</li><li><strong>Critical Failure</strong> No Communion. You attempt the release save at once, and the Ansu won't answer another Call for 1 minute.</li></ul><hr /><p>Every Communion active appears on your sheet with the buff and leaves when Communion ends. Ending Communion, early or when it runs out, takes a Fortitude save against the release DC (your Release DC, +2 after a failed Call). From attunement 2, a successful Invoke includes a free Stride (Bull's Footing). At Mastery the Call is no longer rolled.</p>"
     },
     "slug": "shards-ansu-invoke-the-ansu",
     "actionType": {
@@ -19,9 +19,7 @@
     },
     "category": null,
     "traits": {
-      "value": [
-        "concentrate"
-      ],
+      "value": [],
       "rarity": "common"
     },
     "frequency": {

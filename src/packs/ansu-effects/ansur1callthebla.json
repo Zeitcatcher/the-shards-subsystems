@@ -8,7 +8,7 @@
   "sort": 3250,
   "system": {
     "description": {
-      "value": "<p>You remember where your weapon is the way you remember where your hand is. One weapon you own flies to your open grasp from up to 60 feet away. Walls and physical barriers don't block the call, though sealed magical wards do. If a creature is holding it, the weapon strains but doesn't tear free.</p><p><em>(The Ansu once called a bearer's blade through the walls of a fighting pit. This is that, learned.)</em></p>"
+      "value": "<p><strong>Requirements</strong> You have a hand free.</p><hr /><p>The bound blade flies back to your hand from as far as 40 feet at attunement 3, rising to 300 feet at 10. On the way it smashes through thin barriers: wood, plaster, glass, a plank door. A stone or metal wall stops it. If a creature is holding the blade, it strains toward you but doesn't tear free.</p><p>Uses per Communion: 1 at attunement 3, rising to 4 at 9 and unlimited at 10; 1 more while the Ansu trusts you.</p><p><em>The Salbarium in the blade's core answers the bearer's will. That is a property of the metal, not a spell.</em></p>"
     },
     "slug": "shards-ansu-call-the-blade",
     "actionType": {
@@ -19,13 +19,13 @@
     },
     "category": null,
     "traits": {
-      "value": [
-        "concentrate",
-        "magical"
-      ],
+      "value": [],
       "rarity": "common"
     },
-    "frequency": null,
+    "frequency": {
+      "max": 1,
+      "per": "day"
+    },
     "rules": [],
     "publication": {
       "title": "The Shards",

@@ -6,7 +6,7 @@
  * No file reading here: callers hand in text or parsed documents.
  */
 
-import { tempHpFor, resistFor, parryFor, tierDiceFor } from "../src/subsystems/ansu/logic/model.mjs";
+import { tempHpFor, resistFor, parryFor, tierDiceFor, recallRange, recalls, throwIncrement } from "../src/subsystems/ansu/logic/model.mjs";
 
 const MODULE_ID = "the-shards-subsystems";
 
@@ -20,6 +20,11 @@ export const ANSU_RULE_TOKEN_FNS = Object.freeze({
   "{{ansuResist}}": resistFor,
   "{{ansuParry}}": parryFor,
   "{{ansuTierDice}}": tierDiceFor,
+  // The bound blade (0.8). A pack copy has no bearer, so the recall count is the
+  // wary band's (no trust bonus).
+  "{{ansuRecallRange}}": recallRange,
+  "{{ansuRecalls}}": (level) => recalls(level, 5),
+  "{{ansuThrowInc}}": throwIncrement,
 });
 
 /** Every rule token resolved at one entry's unlock attunement. */
@@ -108,6 +113,20 @@ export function ansuBakedNumberProblems(content, docs) {
           );
         }
       }
+    }
+  }
+  // A frequency count carried as a token (Call the Blade's uses per Communion)
+  // must ship as the number at the entry's own unlock attunement.
+  for (const entry of content?.entries ?? []) {
+    const max = entry?.actionData?.frequency?.max;
+    if (typeof max !== "string" || !max.includes("{{")) continue;
+    const doc = byEntryId.get(entry.id);
+    const expected = ansuScrubbedValue(max, ansuRuleTokenValues(entry));
+    const got = doc?.system?.frequency?.max;
+    if (got !== expected) {
+      problems.push(
+        `pack source for ${entry.id}: frequency.max is ${JSON.stringify(got)}, expected ${JSON.stringify(expected)} at attunement ${entry.level}`,
+      );
     }
   }
   return problems;

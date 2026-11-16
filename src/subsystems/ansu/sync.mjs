@@ -92,16 +92,21 @@ function attunementDescription(composed) {
       );
     }
     const lengths = composed.lengths;
+    // With "ansuShowDc" on GM only, the player's own effect names no DC (step E ruling).
+    const hide = composed.hideDc === true;
     parts.push(
       lengths
-        ? `<p>${f("SHARDS.Ansu.MarkerLengths", {
-            dc: composed.callDc,
+        ? `<p>${f(hide ? "SHARDS.Ansu.MarkerLengthsNoDc" : "SHARDS.Ansu.MarkerLengths", {
+            ...(hide ? {} : { dc: composed.callDc }),
             cs: durationLabel(lengths.cs),
             s: durationLabel(lengths.s),
             f: durationLabel(lengths.f),
-            release: composed.releaseDc,
+            ...(hide ? {} : { release: composed.releaseDc }),
           })}</p>`
-        : `<p>${f("SHARDS.Ansu.MarkerSummary", { duration: durationLabel(composed.durationRounds), dc: composed.releaseDc })}</p>`,
+        : `<p>${f(hide ? "SHARDS.Ansu.MarkerSummaryNoDc" : "SHARDS.Ansu.MarkerSummary", {
+            duration: durationLabel(composed.durationRounds),
+            ...(hide ? {} : { dc: composed.releaseDc }),
+          })}</p>`,
     );
     if (Number.isFinite(composed.gate)) {
       const key =
@@ -358,6 +363,7 @@ async function syncActorInner(actor, runOpts = {}) {
     charLevel: charLevelOf(actor),
     dials: readDials(),
     marker: game.settings.get(MODULE_ID, SETTINGS.ANSU_MARKER) !== false,
+    showDc: game.settings.get(MODULE_ID, SETTINGS.ANSU_SHOW_DC) || "gm",
     now: game.time?.worldTime ?? 0,
     // Rebuilding after an expiry delete: compose the Communion with its
     // create-time grants switched off, or pf2e re-grants the whole pool. (0.6.6)

@@ -10,8 +10,12 @@ import { valuesRows, deedLogLines, signed } from "./logic/panel.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
 
-/** Human, localized one-line description of a log entry's payload. */
-export function describeEntry(entry) {
+/**
+ * Human, localized one-line description of a log entry's payload. `deeds` (the
+ * loadDeeds index) turns a deed id into its label; without it, or for an id it
+ * lacks, the id shows.
+ */
+export function describeEntry(entry, deeds = null) {
   const d = entry.data ?? {};
   switch (entry.type) {
     case "mark":
@@ -47,7 +51,8 @@ export function describeEntry(entry) {
       const pair = (v) => (Array.isArray(v) ? v : ["?", "?"]);
       const [lf, lt] = pair(d.loyalty);
       const [wf, wt] = pair(d.wrath);
-      return game.i18n.format("SHARDS.Ansu.Log.deed", { deed: d.deed ?? "?", lf, lt, wf, wt });
+      const deed = deeds?.byId?.get?.(d.deed)?.label ?? d.deed ?? "?";
+      return game.i18n.format("SHARDS.Ansu.Log.deed", { deed, lf, lt, wf, wt });
     }
     case "conflict": {
       if (d.on) {
@@ -75,12 +80,21 @@ export function describeEntry(entry) {
   }
 }
 
-function renderLogHtml(actor, st) {
+/** The deed index, or null when it can't load (the log then shows ids). */
+export async function deedsOrNull() {
+  try {
+    return await loadDeeds();
+  } catch {
+    return null;
+  }
+}
+
+function renderLogHtml(actor, st, deeds = null) {
   const rows = [...st.log]
     .reverse()
     .map((e) => {
       const when = new Date(e.t).toLocaleString();
-      const desc = describeEntry(e);
+      const desc = describeEntry(e, deeds);
       const note = e.note ? ` — <em>${esc(e.note)}</em>` : "";
       return `<tr><td>${esc(when)}</td><td>${esc(desc)}${note}</td></tr>`;
     })
@@ -106,7 +120,7 @@ function pageData(html) {
 /** Create or update the actor's history journal and open it. */
 export async function exportLog(actor) {
   const st = readAnsu(actor);
-  const html = renderLogHtml(actor, st);
+  const html = renderLogHtml(actor, st, await deedsOrNull());
 
   let entry = st.journalId ? game.journal.get(st.journalId) : null;
   if (entry) {

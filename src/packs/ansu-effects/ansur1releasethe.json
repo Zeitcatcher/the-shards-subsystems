@@ -8,7 +8,7 @@
   "sort": 1250,
   "system": {
     "description": {
-      "value": "<p>You let the borrowed strength go. Attempt a Fortitude save against the release DC (your Release DC); after a failed Call the DC is 2 higher. The same save is posted on its own when Communion runs out.</p><ul><li><strong>Critical Success</strong> You let go cleanly. Communion ends.</li><li><strong>Success</strong> As critical success.</li><li><strong>Failure</strong> Communion ends and your muscles tear on the way down: you lose Hit Points equal to twice your attunement. This is not damage, so temporary Hit Points and resistances don't reduce it.</li><li><strong>Critical Failure</strong> Communion ends, you lose Hit Points equal to four times your attunement, you become @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Fatigued}, and the Ansu won't answer your Call until the lockout ends: your next night's rest at Trial, 1 hour at Discipline, 10 minutes at Union.</li></ul>"
+      "value": "<p><strong>Requirements</strong> Communion is active.</p><hr /><p>You let the borrowed strength go. Attempt a Fortitude save against the release DC (your Release DC, +2 after a failed Call). The same save is posted on its own when Communion runs out.</p><ul><li><strong>Critical Success</strong> You let go cleanly. Communion ends.</li><li><strong>Success</strong> As critical success.</li><li><strong>Failure</strong> Communion ends and your muscles tear on the way down: you lose Hit Points equal to twice your attunement. This is not damage, so temporary Hit Points and resistances don't reduce it, and it never takes you below 1 Hit Point.</li><li><strong>Critical Failure</strong> Communion ends, you lose Hit Points equal to four times your attunement (never below 1), you become @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Fatigued}, and the Ansu won't answer your Call until the lockout ends: your next night's rest at Trial, 1 hour at Discipline, 10 minutes at Union.</li></ul>"
     },
     "slug": "shards-ansu-release-the-ansu",
     "actionType": {
@@ -19,9 +19,7 @@
     },
     "category": null,
     "traits": {
-      "value": [
-        "concentrate"
-      ],
+      "value": [],
       "rarity": "common"
     },
     "frequency": {

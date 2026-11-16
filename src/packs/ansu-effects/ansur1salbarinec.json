@@ -1,0 +1,45 @@
+{
+  "_id": "ansur1salbarinec",
+  "_key": "!items!ansur1salbarinec",
+  "name": "Salbarine Chain",
+  "type": "action",
+  "img": "icons/magic/control/debuff-chains-ropes-blue.webp",
+  "folder": "ansufoldermaster",
+  "sort": 10250,
+  "system": {
+    "description": {
+      "value": "<p><strong>Requirements</strong> You have a hand free.</p><hr /><p>You pull the Salbarium from your inlays into a chain fixed to your wrist. It lasts until Communion ends or you drop it as a free action. While it lasts:</p><ul><li>You can @UUID[Compendium.pf2e.actionspf2e.Item.PMbdMWc2QroouFGD]{Grapple}, @UUID[Compendium.pf2e.actionspf2e.Item.ge56Lu1xXVFYUnLP]{Trip}, @UUID[Compendium.pf2e.actionspf2e.Item.Dt6B1slsBy8ipJu9]{Disarm}, @UUID[Compendium.pf2e.actionspf2e.Item.lOE4yjUnETTdaf2T]{Reposition} or @UUID[Compendium.pf2e.actionspf2e.Item.7blmbDrQFNfdT731]{Shove} a creature up to 60 feet away, with the usual Athletics check. A successful Grapple drags the creature 10 feet toward you (20 feet on a critical success).</li><li>You can @UUID[Compendium.pf2e.actionspf2e.Item.pvQ5rY2zrtPI614F]{Interact} at up to 60 feet: pull a lever, or snatch an unattended object of light Bulk.</li><li><strong>Anchor</strong> <span class=\"action-glyph\">1</span> You hook a solid point within 60 feet and haul yourself there. This is a @UUID[Compendium.pf2e.actionspf2e.Item.Bcxarzksqt9ezrs6]{Stride} that ignores gaps and difficult terrain and can run up a wall.</li></ul><p>The chain is an object (Hardness 15, 60 Hit Points) and needs a clear path.</p>"
+    },
+    "slug": "shards-ansu-salbarine-chain",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 1
+    },
+    "category": null,
+    "traits": {
+      "value": [
+        "manipulate"
+      ],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "ORC",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "salbarine-chain",
+        "family": "salbarine-chain",
+        "kind": "boon"
+      }
+    }
+  }
+}

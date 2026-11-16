@@ -24,9 +24,13 @@ describe("data/ansu/content.json", () => {
     expect(tens.length).toBeGreaterThan(0);
     expect(tens.every((e) => e.gate === "subjugated")).toBe(true);
   });
-  it("ships the rev-3 ladder: 21 entries, five GM-approved new actives", () => {
-    expect(raw.entries).toHaveLength(21);
-    for (const id of ["makers-wrath", "fair-battle", "salbarine-parry", "hurl-the-blade", "the-ansu-refuses"]) {
+  it("ships the 0.8 ladder: 23 entries, the rev-3 actives plus the blade and the chain", () => {
+    expect(raw.entries).toHaveLength(23);
+    expect(raw.entries.some((e) => e.id === "hand-of-the-ansu")).toBe(false);
+    for (const id of [
+      "makers-wrath", "fair-battle", "salbarine-parry", "hurl-the-blade", "the-ansu-refuses",
+      "throw-the-blade", "blades-return", "salbarine-chain",
+    ]) {
       expect(raw.entries.some((e) => e.id === id && e.form === "action")).toBe(true);
     }
   });
@@ -35,9 +39,10 @@ describe("data/ansu/content.json", () => {
     expect(always.map((e) => e.id).sort()).toEqual(["engineers-eye", "tongue-of-the-makers"]);
     expect(always.every((e) => e.form === "feat")).toBe(true);
   });
-  it("only Invoke stays on the sheet while dormant", () => {
-    const doors = raw.entries.filter((e) => e.actionData?.alwaysAvailable);
-    expect(doors.map((e) => e.id)).toEqual(["invoke-the-ansu"]);
+  it("only Invoke and Blade's Return stay on the sheet while dormant", () => {
+    const always = raw.entries.filter((e) => e.actionData?.alwaysAvailable);
+    expect(always.map((e) => e.id)).toEqual(["invoke-the-ansu", "blades-return"]);
+    expect(always.filter((e) => e.door).map((e) => e.id)).toEqual(["invoke-the-ansu"]);
   });
   it("Invoke carries the Call gate (Athletics, {{ansuCallDC}}, four outcomes)", () => {
     const invoke = raw.entries.find((e) => e.id === "invoke-the-ansu");
@@ -49,8 +54,46 @@ describe("data/ansu/content.json", () => {
   });
   it("per-communion actives carry the frequency the module resets", () => {
     const per = raw.entries.filter((e) => e.actionData?.perCommunion);
-    expect(per.map((e) => e.id)).toEqual(["roar-of-the-old-blood"]);
-    expect(per[0].actionData.frequency).toEqual({ max: 1, per: "day" });
+    expect(per.map((e) => e.id)).toEqual(["call-the-blade", "roar-of-the-old-blood"]);
+    expect(per[0].actionData.frequency).toEqual({ max: "{{ansuRecalls}}", per: "day" });
+    expect(per[1].actionData.frequency).toEqual({ max: 1, per: "day" });
+  });
+  it("no Ansu entry is magical; Invoke, Release and Call the Blade drop concentrate; Roar keeps its traits", () => {
+    for (const e of raw.entries) {
+      for (const key of ["actionData", "terminalActionData"]) {
+        expect(e[key]?.traits ?? [], `${e.id} ${key}`).not.toContain("magical");
+      }
+    }
+    for (const id of ["invoke-the-ansu", "release-the-ansu", "call-the-blade"]) {
+      const e = raw.entries.find((x) => x.id === id);
+      expect(e.actionData.traits, id).not.toContain("concentrate");
+    }
+    const roar = raw.entries.find((e) => e.id === "roar-of-the-old-blood");
+    expect(roar.actionData.traits).toEqual(["auditory", "concentrate", "emotion", "fear", "mental"]);
+  });
+  it("the bound blade: Throw at 3, Call with range and uses tokens, Hurl a level 6 passive, Blade's Return always on", () => {
+    const by = (id) => raw.entries.find((e) => e.id === id);
+    expect(by("throw-the-blade")).toMatchObject({ level: 3, form: "action", actionData: { actions: 2 } });
+    expect(by("throw-the-blade").description).toContain("{{ansuThrowInc}} feet");
+    expect(by("call-the-blade")).toMatchObject({ level: 3, actionData: { actions: 1 } });
+    expect(by("call-the-blade").description).toContain("{{ansuRecallRange}} feet");
+    expect(by("call-the-blade").description).toContain("{{ansuRecalls}}");
+    expect(by("hurl-the-blade")).toMatchObject({ level: 6, actionData: { actionType: "passive", actions: null } });
+    expect(by("hurl-the-blade").description).toContain("free action");
+    expect(by("blades-return")).toMatchObject({
+      level: 3,
+      actionData: { actions: 1, cooldownMinutes: 10, frequency: { max: 1, per: "PT10M" }, alwaysAvailable: true },
+    });
+    expect(by("blades-return").description).toContain("30 feet");
+    expect(by("salbarine-chain")).toMatchObject({ level: 10, gate: "subjugated", actionData: { actions: 1, traits: ["manipulate"] } });
+  });
+  it("shipped text names no campaign character and no old rule", () => {
+    const text = raw.entries.map((e) => `${e.name} ${e.description} ${e.chipTag ?? ""}`).join(" ");
+    for (const bad of ["Grog", "Athena", "Lingering", "Climb", "Will save", "Hand of the Ansu", "—"]) {
+      expect(text, bad).not.toContain(bad);
+    }
+    const release = raw.entries.find((e) => e.id === "release-the-ansu");
+    expect(release.description).toContain("{{ansuReleaseDC}}, +2 after a failed Call");
   });
   it("The Ansu Refuses runs the module-owned 10-minute cooldown", () => {
     const refuses = raw.entries.find((e) => e.id === "the-ansu-refuses");
@@ -88,7 +131,7 @@ describe("data/ansu/content.json", () => {
     expect(withOverride[0].terminalActionData).toEqual({
       actionType: "free",
       actions: null,
-      traits: ["concentrate"],
+      traits: [],
       frequency: { max: 1, per: "round" },
       alwaysAvailable: true,
     });
@@ -242,6 +285,12 @@ describe("validateContent rejects bad entries", () => {
 
   it("rejects a non-boolean alwaysAvailable", () => {
     only({ ...OK, form: "action", actionData: { alwaysAvailable: 1 } }, "actionData.alwaysAvailable must be a boolean");
+  });
+
+  it("rejects an unknown number token and a frequency count that is neither a number nor the recall token", () => {
+    only({ ...OK, description: "{{ansuNope}}" }, "unknown number token {{ansuNope}}");
+    only({ ...OK, form: "action", actionData: { frequency: { max: "two", per: "day" } } }, "frequency.max must be an integer");
+    expect(validateContent({ entries: [{ ...OK, form: "action", actionData: { frequency: { max: "{{ansuRecalls}}", per: "day" } } }] })).toEqual([]);
   });
 
   it("rejects a non-string chipTag", () => {

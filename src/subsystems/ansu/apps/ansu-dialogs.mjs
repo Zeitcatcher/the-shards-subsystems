@@ -7,7 +7,7 @@
 import { MODULE_ID, TEMPLATES } from "../../../core/constants.mjs";
 import { readAnsu, patchAnsu } from "../state.mjs";
 import { applyThresholdArt, revertArt } from "../art.mjs";
-import { exportLog, describeEntry } from "../journal.mjs";
+import { exportLog, describeEntry, deedsOrNull } from "../journal.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -123,13 +123,14 @@ export class AnsuHistoryDialog extends HandlebarsApplicationMixin(ApplicationV2)
     const actor = resolveActor(this.actorUuid);
     if (!actor) return { entries: [], hasEntries: false, name: "" };
     const st = readAnsu(actor);
+    const deeds = await deedsOrNull();
     return {
       name: actor.name,
       hasEntries: st.log.length > 0,
       entries: [...st.log].reverse().map((e) => ({
         when: new Date(e.t).toLocaleString(),
         type: e.type,
-        desc: describeEntry(e),
+        desc: describeEntry(e, deeds),
         note: e.note ?? "",
       })),
     };

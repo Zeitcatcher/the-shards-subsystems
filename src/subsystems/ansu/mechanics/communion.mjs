@@ -366,9 +366,9 @@ async function handleActionCard(message) {
 }
 
 /**
- * Cooldown actives (The Ansu Refuses): using the card starts the module-owned
- * world-time cooldown, auto-applies wounded +1, and whispers the GM. Staying at
- * 1 HP stays manual — the GM sets HP.
+ * Cooldown actives (The Ansu Refuses, Blade's Return): using the card starts the
+ * module-owned world-time cooldown. The Refuses alone also logs, auto-applies
+ * wounded +1 and whispers the GM. Staying at 1 HP stays manual: the GM sets HP.
  */
 async function maybeStartCooldown(actor, entryId) {
   const content = await loadContent().catch(() => null);
@@ -390,8 +390,9 @@ async function maybeStartCooldown(actor, entryId) {
     { id: entryId, until: now + minutes * 60 },
   ];
   await patchAnsu(actor, { cooldowns });
-  await appendLog(actor, "refuses", { entryId, minutes });
+  // Blade's Return shares the cooldown, not the Refuses log line or wounded.
   if (entryId === "the-ansu-refuses") {
+    await appendLog(actor, "refuses", { entryId, minutes });
     try {
       await actor.increaseCondition?.("wounded");
     } catch (err) {

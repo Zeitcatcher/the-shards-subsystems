@@ -73,7 +73,19 @@ describe("pack-checks helpers", () => {
       "{{ansuResist}}": resistFor(7),
       "{{ansuParry}}": parryFor(7),
       "{{ansuTierDice}}": tierDiceFor(7),
+      "{{ansuRecallRange}}": 100,
+      "{{ansuRecalls}}": 3,
+      "{{ansuThrowInc}}": 60,
     });
+  });
+
+  it("ships Call the Blade's uses per Communion as the level 3 count, no token", () => {
+    const entry = content.entries.find((e) => e.id === "call-the-blade");
+    expect(entry.actionData.frequency.max).toBe("{{ansuRecalls}}");
+    const doc = docs.find((d) => d.flags?.["the-shards-subsystems"]?.ansuPack?.entryId === "call-the-blade");
+    expect(doc.system.frequency).toEqual({ max: 1, per: "day" });
+    const wrong = docs.map((d) => (d === doc ? { ...d, system: { ...d.system, frequency: { max: 2, per: "day" } } } : d));
+    expect(ansuBakedNumberProblems(content, wrong).join(" ")).toContain("call-the-blade: frequency.max is 2, expected 1");
   });
 
   it("floors junk levels at attunement 1", () => {

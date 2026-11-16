@@ -1,0 +1,43 @@
+{
+  "_id": "ansur1throwthebl",
+  "_key": "!items!ansur1throwthebl",
+  "name": "Throw the Blade",
+  "type": "action",
+  "img": "icons/weapons/axes/axe-broad-black.webp",
+  "folder": "ansufoldertrial0",
+  "sort": 3250,
+  "system": {
+    "description": {
+      "value": "<p>You hurl the bound blade. Make a ranged @UUID[Compendium.pf2e.actionspf2e.Item.VjxZFuUXrCU94MWR]{Strike} with it that uses your melee attack modifier and adds your Strength modifier to damage. The range increment is 30 feet (40 at Discipline, 60 at Union, 80 at attunement 10), with the usual -2 penalty for each additional increment, up to six increments.</p><p>You can throw farther than you can recall. The blade stays where it lands until you Call the Blade or someone carries it back.</p>"
+    },
+    "slug": "shards-ansu-throw-the-blade",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 2
+    },
+    "category": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "frequency": null,
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "ORC",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "throw-the-blade",
+        "family": "throw-the-blade",
+        "kind": "boon"
+      }
+    }
+  }
+}

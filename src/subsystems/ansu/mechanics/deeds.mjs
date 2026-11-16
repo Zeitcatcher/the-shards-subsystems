@@ -56,9 +56,10 @@ export async function recordDeeds(actor, ids = [], note = "") {
 
 /**
  * The GM's +1 / -1 on a bar (0.8). Clamps, logs `{type: "adjust", data: {bar,
- * from, to}}` and resyncs (loyalty moves the Call DC the sheet quotes). No
- * level-up check: that belongs to deeds. Returns the new value, or null when
- * nothing moved.
+ * from, to}}` and resyncs (loyalty moves the Call DC the sheet quotes). A raise
+ * of loyalty runs the same level-up check as a deed (step E ruling): reaching 10
+ * under the gate with wrath 2 or less raises the level and resets the bars.
+ * Returns the new bar value, or null when nothing moved.
  */
 export async function adjustBar(actor, bar, delta) {
   if (bar !== "loyalty" && bar !== "wrath") return null;
@@ -66,6 +67,18 @@ export async function adjustBar(actor, bar, delta) {
   const from = bar === "loyalty" ? st.loyalty : st.wrath;
   const to = bar === "loyalty" ? clampLoyalty(from + delta) : clampWrath(from + delta);
   if (to === from) return null;
+  if (bar === "loyalty" && to > from) {
+    const r = applyDeed(st, { loyalty: to - from }, { charLevel: charLevelOf(actor) });
+    if (r.leveled) {
+      await patchAnsu(actor, { loyalty: r.state.loyalty, wrath: r.state.wrath, level: r.state.level });
+      await appendLog(actor, "adjust", { bar, from, to });
+      await appendLog(actor, "level", { from: r.level[0], to: r.level[1] });
+      await syncActor(actor);
+      await maybeSwapForLevel(actor, r.level[1]);
+      await rebuildValuesPage(actor);
+      return r.state.loyalty;
+    }
+  }
   await patchAnsu(actor, { [bar]: to });
   await appendLog(actor, "adjust", { bar, from, to });
   await syncActor(actor);

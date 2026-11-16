@@ -40,6 +40,8 @@ const ANSU_SETTINGS = [
       owner: "SHARDS.Settings.ansuShowDc.owner",
       all: "SHARDS.Settings.ansuShowDc.all",
     },
+    // The Attunement effect quotes DCs only when the setting lets players see them.
+    onChange: resyncOnChange,
   },
   { key: SETTINGS.ANSU_ART_SWAP, scope: "world", type: "Boolean", default: true, config: true },
   { key: SETTINGS.ANSU_TOKEN_ICONS, scope: "world", type: "Boolean", default: true, config: true },

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "_note": "Single source of truth for Ansu boons (there are no banes; the system's teeth are control, not prices). Names and descriptions are authored in English (GM directive). Number tokens: {{ansuReleaseDC}}, {{ansuTempHp}}, {{ansuResist}}, {{ansuParry}}, {{ansuTierDice}}, {{ansuLevel}}, {{ansuDuration}}, baked at compose time and recomputed on attunement or character-level change.",
+  "_note": "Single source of truth for Ansu boons (there are no banes; the system's teeth are control, not prices). Names and descriptions are authored in English (GM directive). Number tokens: {{ansuReleaseDC}}, {{ansuCallDC}}, {{ansuTempHp}}, {{ansuResist}}, {{ansuParry}}, {{ansuTierDice}}, {{ansuLevel}}, {{ansuDuration}}, {{ansuRecallRange}}, {{ansuRecalls}}, {{ansuThrowInc}}, baked at compose time and recomputed on attunement, loyalty or character-level change.",
   "_designNote": "GM-approved ladder rev 3.2 (2026-07-07). `form: feat` + `always: true` = Inheritance (permanent bonus feats in the Feats tab); everything else exists only during Communion (actives materialize on Invoke and vanish on release, except `alwaysAvailable`, the Invoke action itself). `perCommunion` frequency resets via item recreation; `cooldownMinutes` is a module-owned world-time cooldown that survives re-invokes. The metal is Salbarium (Сальбарий).",
   "tiers": [
     { "id": "trial", "levels": [1, 3], "labelKey": "SHARDS.Ansu.Tier.trial" },
@@ -18,21 +18,21 @@
       "form": "action",
       "door": true,
       "name": "Invoke the Ansu",
-      "description": "<p>The power is never owed; it answers strength. Attempt an Athletics check against the Call DC ({{ansuCallDC}}): 20 + 2 × attunement, 2 higher when the Ansu is hostile, 1 higher when it is cold, and 1 lower when it trusts you. You can't Invoke while @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Fatigued}, while the Ansu holds your body, while it refuses you after a failed Call, or while a Call is still waiting for its roll.</p><ul><li><strong>Critical Success</strong> Communion begins for its longest length (10 rounds at Trial and Discipline, 100 rounds at Union).</li><li><strong>Success</strong> Communion begins (3 rounds at Trial, 5 at Discipline, 10 at Union).</li><li><strong>Failure</strong> The Ansu answers grudgingly. Communion begins for its shortest length (1 round at Trial, 2 at Discipline, 3 at Union), and the DC to send it back is 2 higher.</li><li><strong>Critical Failure</strong> No Communion. The Ansu won't answer another Call for 1 minute, and you attempt the save to send it back at once.</li></ul><hr /><p>Every Communion active materializes on your sheet alongside the buff and vanishes when it ends. Ending Communion, whether early or when it expires, takes a Will save against the Release DC ({{ansuReleaseDC}}). From attunement 2, a successful Invoke includes a free Stride (Bull's Footing). At Mastery the Call is no longer rolled.</p>",
+      "description": "<p><strong>Requirements</strong> You are not @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Fatigued}, no lockout is running, and the Ansu does not hold your body.</p><hr /><p>You draw the Ansu's strength into your body. Attempt an Athletics check against the Call DC ({{ansuCallDC}}): 20 + 2 × attunement, 2 higher when the Ansu is hostile, 1 higher when it is cold, and 1 lower when it trusts you.</p><ul><li><strong>Critical Success</strong> Communion begins for its longest length (10 rounds at Trial and Discipline, 100 rounds at Union).</li><li><strong>Success</strong> Communion begins (3 rounds at Trial, 5 at Discipline, 10 at Union).</li><li><strong>Failure</strong> The Ansu answers grudgingly. Communion begins for its shortest length (1 round at Trial, 2 at Discipline, 3 at Union), and the DC to send it back is 2 higher.</li><li><strong>Critical Failure</strong> No Communion. You attempt the release save at once, and the Ansu won't answer another Call for 1 minute.</li></ul><hr /><p>Every Communion active appears on your sheet with the buff and leaves when Communion ends. Ending Communion, early or when it runs out, takes a Fortitude save against the release DC ({{ansuReleaseDC}}, +2 after a failed Call). From attunement 2, a successful Invoke includes a free Stride (Bull's Footing). At Mastery the Call is no longer rolled.</p>",
       "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
       "rules": [],
       "chipTag": "call check DC {{ansuCallDC}}",
       "actionData": {
         "actionType": "action",
         "actions": 1,
-        "traits": ["concentrate"],
+        "traits": [],
         "frequency": { "max": 1, "per": "round" },
         "alwaysAvailable": true
       },
       "terminalActionData": {
         "actionType": "free",
         "actions": null,
-        "traits": ["concentrate"],
+        "traits": [],
         "frequency": { "max": 1, "per": "round" },
         "alwaysAvailable": true
       }
@@ -46,14 +46,14 @@
       "form": "action",
       "door": true,
       "name": "Release the Ansu",
-      "description": "<p>You let the borrowed strength go. Attempt a Fortitude save against the release DC ({{ansuReleaseDC}}); after a failed Call the DC is 2 higher. The same save is posted on its own when Communion runs out.</p><ul><li><strong>Critical Success</strong> You let go cleanly. Communion ends.</li><li><strong>Success</strong> As critical success.</li><li><strong>Failure</strong> Communion ends and your muscles tear on the way down: you lose Hit Points equal to twice your attunement. This is not damage, so temporary Hit Points and resistances don't reduce it.</li><li><strong>Critical Failure</strong> Communion ends, you lose Hit Points equal to four times your attunement, you become @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Fatigued}, and the Ansu won't answer your Call until the lockout ends: your next night's rest at Trial, 1 hour at Discipline, 10 minutes at Union.</li></ul>",
+      "description": "<p><strong>Requirements</strong> Communion is active.</p><hr /><p>You let the borrowed strength go. Attempt a Fortitude save against the release DC ({{ansuReleaseDC}}, +2 after a failed Call). The same save is posted on its own when Communion runs out.</p><ul><li><strong>Critical Success</strong> You let go cleanly. Communion ends.</li><li><strong>Success</strong> As critical success.</li><li><strong>Failure</strong> Communion ends and your muscles tear on the way down: you lose Hit Points equal to twice your attunement. This is not damage, so temporary Hit Points and resistances don't reduce it, and it never takes you below 1 Hit Point.</li><li><strong>Critical Failure</strong> Communion ends, you lose Hit Points equal to four times your attunement (never below 1), you become @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Fatigued}, and the Ansu won't answer your Call until the lockout ends: your next night's rest at Trial, 1 hour at Discipline, 10 minutes at Union.</li></ul>",
       "img": "icons/magic/control/debuff-energy-hold-teal-blue.webp",
       "rules": [],
       "chipTag": "fortitude save",
       "actionData": {
         "actionType": "free",
         "actions": null,
-        "traits": ["concentrate"],
+        "traits": [],
         "frequency": { "max": 1, "per": "round" }
       }
     },
@@ -134,14 +134,55 @@
       "kind": "boon",
       "form": "action",
       "name": "Call the Blade",
-      "description": "<p>You remember where your weapon is the way you remember where your hand is. One weapon you own flies to your open grasp from up to 60 feet away. Walls and physical barriers don't block the call, though sealed magical wards do. If a creature is holding it, the weapon strains but doesn't tear free.</p><p><em>(The Ansu once called a bearer's blade through the walls of a fighting pit. This is that, learned.)</em></p>",
+      "description": "<p><strong>Requirements</strong> You have a hand free.</p><hr /><p>The bound blade flies back to your hand from as far as {{ansuRecallRange}} feet. On the way it smashes through thin barriers: wood, plaster, glass, a plank door. A stone or metal wall stops it. If a creature is holding the blade, it strains toward you but doesn't tear free.</p><p>Uses per Communion: {{ansuRecalls}}.</p><p><em>The Salbarium in the blade's core answers the bearer's will. That is a property of the metal, not a spell.</em></p>",
       "img": "icons/weapons/axes/axe-broad-engraved-black-grey.webp",
       "rules": [],
-      "chipTag": "weapon returns",
+      "chipTag": "{{ansuRecallRange}} ft · {{ansuRecalls}}/communion",
       "actionData": {
         "actionType": "action",
         "actions": 1,
-        "traits": ["concentrate", "magical"]
+        "traits": [],
+        "frequency": { "max": "{{ansuRecalls}}", "per": "day" },
+        "perCommunion": true
+      }
+    },
+    {
+      "id": "throw-the-blade",
+      "family": "throw-the-blade",
+      "rank": 1,
+      "level": 3,
+      "kind": "boon",
+      "form": "action",
+      "name": "Throw the Blade",
+      "description": "<p>You hurl the bound blade. Make a ranged @UUID[Compendium.pf2e.actionspf2e.Item.VjxZFuUXrCU94MWR]{Strike} with it that uses your melee attack modifier and adds your Strength modifier to damage. The range increment is {{ansuThrowInc}} feet, with the usual -2 penalty for each additional increment, up to six increments.</p><p>You can throw farther than you can recall. The blade stays where it lands until you Call the Blade or someone carries it back.</p>",
+      "img": "icons/weapons/axes/axe-broad-black.webp",
+      "rules": [],
+      "chipTag": "thrown, increment {{ansuThrowInc}} ft",
+      "actionData": {
+        "actionType": "action",
+        "actions": 2,
+        "traits": []
+      }
+    },
+    {
+      "id": "blades-return",
+      "family": "blades-return",
+      "rank": 1,
+      "level": 3,
+      "kind": "boon",
+      "form": "action",
+      "name": "Blade's Return",
+      "description": "<p><strong>Frequency</strong> once per 10 minutes</p><p><strong>Requirements</strong> You have a hand free.</p><hr /><p>The bound blade flies back to your hand from up to 30 feet away, even when Communion is not running. The bearer learned this much from the Ansu, and it stays.</p>",
+      "img": "icons/weapons/axes/axe-double-engraved.webp",
+      "rules": [],
+      "chipTag": "30 ft · 1 / 10 min · always",
+      "actionData": {
+        "actionType": "action",
+        "actions": 1,
+        "traits": [],
+        "frequency": { "max": 1, "per": "PT10M" },
+        "cooldownMinutes": 10,
+        "alwaysAvailable": true
       }
     },
     {
@@ -262,14 +303,14 @@
       "kind": "boon",
       "form": "action",
       "name": "Hurl the Blade",
-      "description": "<p>The blade leaves your hands the way a verdict leaves a judge. Throw your held melee weapon at an enemy within 30 feet as a ranged Strike using your melee attack modifier, with no penalty for the throw. On a critical hit, the blade punches through and the target takes 1d6 persistent bleed damage. However it lands, the weapon instantly flies back to your grasp: the Ansu never lets it go.</p>",
+      "description": "<p>Throw the Blade improves. When the thrown blade hits, you can Call the Blade as a free action; this still spends one of its uses. On a critical hit, the target also takes 1d6 persistent bleed damage.</p><p><em>At attunement 3 a throw and a catch cost three actions. From attunement 6 they cost two.</em></p>",
       "img": "icons/weapons/axes/axe-battle-black.webp",
       "rules": [],
-      "chipTag": "thrown 30 ft · returns",
+      "chipTag": "free catch on a hit · crit bleed",
       "actionData": {
-        "actionType": "action",
-        "actions": 2,
-        "traits": ["magical"]
+        "actionType": "passive",
+        "actions": null,
+        "traits": []
       }
     },
     {
@@ -374,22 +415,22 @@
       "rules": []
     },
     {
-      "id": "hand-of-the-ansu",
-      "family": "hand-of-the-ansu",
+      "id": "salbarine-chain",
+      "family": "salbarine-chain",
       "rank": 1,
       "level": 10,
       "kind": "boon",
       "form": "action",
       "gate": "subjugated",
-      "name": "Hand of the Ansu",
-      "description": "<p>The mind-summons perfected. You Interact with an object at a distance, up to 120 feet, through walls and barriers: seize it, drag it to your hand, shove it, turn a wheel, throw a bolt. Call the Blade now works anywhere in sight, and you can Disarm or Shove a creature at range with the telekinetic grip (Athletics against the target's Reflex DC to Disarm, or its Fortitude DC to Shove). Creatures holding an object otherwise keep their grip.</p>",
-      "img": "icons/magic/control/debuff-energy-hold-levitate-blue-yellow.webp",
+      "name": "Salbarine Chain",
+      "description": "<p><strong>Requirements</strong> You have a hand free.</p><hr /><p>You pull the Salbarium from your inlays into a chain fixed to your wrist. It lasts until Communion ends or you drop it as a free action. While it lasts:</p><ul><li>You can @UUID[Compendium.pf2e.actionspf2e.Item.PMbdMWc2QroouFGD]{Grapple}, @UUID[Compendium.pf2e.actionspf2e.Item.ge56Lu1xXVFYUnLP]{Trip}, @UUID[Compendium.pf2e.actionspf2e.Item.Dt6B1slsBy8ipJu9]{Disarm}, @UUID[Compendium.pf2e.actionspf2e.Item.lOE4yjUnETTdaf2T]{Reposition} or @UUID[Compendium.pf2e.actionspf2e.Item.7blmbDrQFNfdT731]{Shove} a creature up to 60 feet away, with the usual Athletics check. A successful Grapple drags the creature 10 feet toward you (20 feet on a critical success).</li><li>You can @UUID[Compendium.pf2e.actionspf2e.Item.pvQ5rY2zrtPI614F]{Interact} at up to 60 feet: pull a lever, or snatch an unattended object of light Bulk.</li><li><strong>Anchor</strong> <span class=\"action-glyph\">1</span> You hook a solid point within 60 feet and haul yourself there. This is a @UUID[Compendium.pf2e.actionspf2e.Item.Bcxarzksqt9ezrs6]{Stride} that ignores gaps and difficult terrain and can run up a wall.</li></ul><p>The chain is an object (Hardness 15, 60 Hit Points) and needs a clear path.</p>",
+      "img": "icons/magic/control/debuff-chains-ropes-blue.webp",
       "rules": [],
-      "chipTag": "capstone",
+      "chipTag": "60 ft chain · capstone",
       "actionData": {
         "actionType": "action",
         "actions": 1,
-        "traits": ["concentrate", "magical"]
+        "traits": ["manipulate"]
       }
     }
   ]

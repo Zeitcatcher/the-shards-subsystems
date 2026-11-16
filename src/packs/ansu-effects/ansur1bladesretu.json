@@ -1,0 +1,46 @@
+{
+  "_id": "ansur1bladesretu",
+  "_key": "!items!ansur1bladesretu",
+  "name": "Blade's Return",
+  "type": "action",
+  "img": "icons/weapons/axes/axe-double-engraved.webp",
+  "folder": "ansufoldertrial0",
+  "sort": 3250,
+  "system": {
+    "description": {
+      "value": "<p><strong>Frequency</strong> once per 10 minutes</p><p><strong>Requirements</strong> You have a hand free.</p><hr /><p>The bound blade flies back to your hand from up to 30 feet away, even when Communion is not running. The bearer learned this much from the Ansu, and it stays.</p>"
+    },
+    "slug": "shards-ansu-blades-return",
+    "actionType": {
+      "value": "action"
+    },
+    "actions": {
+      "value": 1
+    },
+    "category": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "frequency": {
+      "max": 1,
+      "per": "PT10M"
+    },
+    "rules": [],
+    "publication": {
+      "title": "The Shards",
+      "authors": "Zeitcatcher",
+      "license": "ORC",
+      "remaster": true
+    }
+  },
+  "flags": {
+    "the-shards-subsystems": {
+      "ansuPack": {
+        "entryId": "blades-return",
+        "family": "blades-return",
+        "kind": "boon"
+      }
+    }
+  }
+}

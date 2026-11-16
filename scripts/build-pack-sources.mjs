@@ -340,7 +340,12 @@ function ansuScrub(text) {
     .replaceAll("{{ansuTierDice}}d6", "1d6 per tier") // handle the die as a unit so it doesn't read "1-per-tierd6"
     .replaceAll("{{ansuTierDice}}", "1 per tier")
     .replaceAll("{{ansuLevel}}", "your attunement")
-    .replaceAll("{{ansuDuration}}", "1 round / 3 rounds / 1 minute by tier");
+    .replaceAll("{{ansuDuration}}", "3 rounds / 5 rounds / 1 minute by tier on a successful Call")
+    .replaceAll("{{ansuRecallRange}} feet", "40 feet at attunement 3, rising to 300 feet at 10")
+    .replaceAll("{{ansuRecallRange}}", "40 to 300 by attunement")
+    .replaceAll("{{ansuRecalls}}", "1 at attunement 3, rising to 4 at 9 and unlimited at 10; 1 more while the Ansu trusts you")
+    .replaceAll("{{ansuThrowInc}} feet", "30 feet (40 at Discipline, 60 at Union, 80 at attunement 10)")
+    .replaceAll("{{ansuThrowInc}}", "30 to 80 by tier");
 }
 
 /**
@@ -425,7 +430,7 @@ function ansuActionItem(entry) {
       actions: { value: a.actions ?? null },
       category: a.category ?? null,
       traits: { value: a.traits ?? [], rarity: "common" },
-      frequency: a.frequency ?? null,
+      frequency: ansuScrubFrequency(a.frequency, entry),
       rules: ansuScrubRules(entry.rules, entry), // scrub tokens so an action's REs can't ship raw {{…}} (F)
       publication: PUBLICATION,
     },
@@ -458,6 +463,12 @@ function ansuFeatItem(entry) {
     },
     flags: { [MODULE_ID]: { ansuPack: { entryId: entry.id, family: entry.family, kind: entry.kind } } },
   };
+}
+
+/** A frequency whose count is a token (Call the Blade) ships the count at the entry's unlock attunement. */
+function ansuScrubFrequency(frequency, entry) {
+  if (!frequency) return null;
+  return { ...frequency, max: ansuScrubbedValue(frequency.max, ansuRuleTokenValues(entry)) };
 }
 
 function ansuEntryItem(entry) {

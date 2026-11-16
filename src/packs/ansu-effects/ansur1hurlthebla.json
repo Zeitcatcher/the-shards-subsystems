@@ -8,20 +8,18 @@
   "sort": 6250,
   "system": {
     "description": {
-      "value": "<p>The blade leaves your hands the way a verdict leaves a judge. Throw your held melee weapon at an enemy within 30 feet as a ranged Strike using your melee attack modifier, with no penalty for the throw. On a critical hit, the blade punches through and the target takes 1d6 persistent bleed damage. However it lands, the weapon instantly flies back to your grasp: the Ansu never lets it go.</p>"
+      "value": "<p>Throw the Blade improves. When the thrown blade hits, you can Call the Blade as a free action; this still spends one of its uses. On a critical hit, the target also takes 1d6 persistent bleed damage.</p><p><em>At attunement 3 a throw and a catch cost three actions. From attunement 6 they cost two.</em></p>"
     },
     "slug": "shards-ansu-hurl-the-blade",
     "actionType": {
-      "value": "action"
+      "value": "passive"
     },
     "actions": {
-      "value": 2
+      "value": null
     },
     "category": null,
     "traits": {
-      "value": [
-        "magical"
-      ],
+      "value": [],
       "rarity": "common"
     },
     "frequency": null,
