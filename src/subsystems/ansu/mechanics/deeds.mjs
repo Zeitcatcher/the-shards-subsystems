@@ -14,6 +14,9 @@ import { maybeSwapForLevel } from "../art.mjs";
 import { rebuildValuesPage } from "../journal.mjs";
 import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
+/** The Ansu holds the body: level-ups wait for the return (review ruling 9). */
+const isHeld = (st) => st?.communion?.mode === "seized";
+
 const charLevelOf = (actor) => Math.max(0, Number(actor?.system?.details?.level?.value ?? actor?.level ?? 0) || 0);
 
 /**
@@ -34,7 +37,7 @@ export async function recordDeed(actor, deedId, note = "") {
     return null;
   }
   const st = readAnsu(actor);
-  const r = applyDeed(st, deed, { charLevel: charLevelOf(actor) });
+  const r = applyDeed(st, deed, { charLevel: charLevelOf(actor), holdLevel: isHeld(st) });
   await patchAnsu(actor, { loyalty: r.state.loyalty, wrath: r.state.wrath, level: r.state.level });
   await appendLog(actor, "deed", { deed: deedId, loyalty: r.loyalty, wrath: r.wrath, level: r.level }, note);
   if (r.leveled) {
@@ -45,6 +48,25 @@ export async function recordDeed(actor, deedId, note = "") {
   if (r.leveled) await maybeSwapForLevel(actor, r.level[1]);
   await rebuildValuesPage(actor);
   return r;
+}
+
+/**
+ * The level-up check on its own (review ruling 9): a takeover holds every
+ * level-up, and the return runs this once. Reaching loyalty 10 under the gate
+ * with wrath 2 or less raises the level and resets the bars, as a deed would.
+ * Returns true when the level rose.
+ */
+export async function checkLevelUp(actor) {
+  const st = readAnsu(actor);
+  if (isHeld(st)) return false;
+  const r = applyDeed(st, {}, { charLevel: charLevelOf(actor) });
+  if (!r.leveled) return false;
+  await patchAnsu(actor, { loyalty: r.state.loyalty, wrath: r.state.wrath, level: r.state.level });
+  await appendLog(actor, "level", { from: r.level[0], to: r.level[1] });
+  await syncActor(actor);
+  await maybeSwapForLevel(actor, r.level[1]);
+  await rebuildValuesPage(actor);
+  return true;
 }
 
 /** Apply several deeds in order (a conflict's critical failure is a takeover plus a deed). */
@@ -68,7 +90,7 @@ export async function adjustBar(actor, bar, delta) {
   const to = bar === "loyalty" ? clampLoyalty(from + delta) : clampWrath(from + delta);
   if (to === from) return null;
   if (bar === "loyalty" && to > from) {
-    const r = applyDeed(st, { loyalty: to - from }, { charLevel: charLevelOf(actor) });
+    const r = applyDeed(st, { loyalty: to - from }, { charLevel: charLevelOf(actor), holdLevel: isHeld(st) });
     if (r.leveled) {
       await patchAnsu(actor, { loyalty: r.state.loyalty, wrath: r.state.wrath, level: r.state.level });
       await appendLog(actor, "adjust", { bar, from, to });

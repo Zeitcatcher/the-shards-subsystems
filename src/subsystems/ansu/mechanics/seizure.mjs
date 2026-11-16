@@ -16,8 +16,8 @@
  * Out of combat nothing counts turns: the GM hands back with the panel button.
  */
 
-import { MODULE_ID } from "../../../core/constants.mjs";
-import { isPrimaryGM } from "../../../core/platform.mjs";
+import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
+import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
 import { readAnsu, patchAnsu, appendLog, isAttuned } from "../state.mjs";
 import { durationRoundsFor, takeoverCap, wrathBand, MAX_LEVEL } from "../logic/model.mjs";
 import { freshClockStart } from "../logic/timing.mjs";
@@ -30,7 +30,7 @@ import {
   returnsOnCombatEnd,
 } from "../logic/seizure.mjs";
 import { syncActor, encounterOf } from "../sync.mjs";
-import { recordDeed } from "./deeds.mjs";
+import { recordDeed, checkLevelUp } from "./deeds.mjs";
 import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
@@ -131,9 +131,14 @@ export async function startSeizure(actor, { kind = "manual", turnsLeft = null, d
   if (kind === "forced") {
     await postCard(actor, turnsLeft >= 2 ? "SHARDS.Ansu.TakeoverForcedAngry" : "SHARDS.Ansu.TakeoverForced", { name, cap }, { to: "owners" });
   } else if (kind === "berserk") {
+    // The card is public: the Will DC shows only when every player may see DCs.
+    const showDc = game.settings.get(MODULE_ID, SETTINGS.ANSU_SHOW_DC) === "all" && Number.isFinite(dc);
+    const check = showDc
+      ? game.i18n.format("SHARDS.Ansu.TakeoverBerserkCheckDc", { dc })
+      : game.i18n.localize("SHARDS.Ansu.TakeoverBerserkCheck");
     await postCard(actor, "SHARDS.Ansu.TakeoverBerserk", { name }, {
       to: "public",
-      body: game.i18n.format("SHARDS.Ansu.TakeoverBerserkBody", { name, dc: dc ?? "?", cap }),
+      body: game.i18n.format("SHARDS.Ansu.TakeoverBerserkBody", { name, check, cap }),
     });
   } else if (kind === "agreed") {
     await postCard(actor, "SHARDS.Ansu.TakeoverAgreed", { name, rounds: turnsLeft ?? "?", cap }, { to: "owners" });
@@ -158,12 +163,29 @@ export async function letAnsuIn(actor) {
  * Give the body back, landing by kind (seizureLanding): manual and forced
  * restore the snapshot; berserk lands dormant; agreed lands dormant and posts
  * the release card. Then the takeover's deed, unless `deed` is false (a reroll
- * undoing the takeover).
+ * undoing the takeover), and the level-up check that was held while seized.
+ *
+ * One return per bearer at a time: the panel hand-back, the unconscious hook,
+ * the turn-end check and the combat-end hook can all fire together, and only
+ * the first may apply the deed (review finding 7).
  *
  * `rolledOver` is only passed by the turn-end return, and it decides where a
  * restored Communion's countdown begins. The panel's hand-back leaves it null.
  */
-export async function returnFromSeizure(actor, { rolledOver = null, deed = true, via = "gm" } = {}) {
+export async function returnFromSeizure(actor, opts = {}) {
+  const key = actorKey(actor);
+  if (returning.has(key)) return;
+  returning.add(key);
+  try {
+    await returnInner(actor, opts);
+  } finally {
+    returning.delete(key);
+  }
+}
+
+const returning = new Set();
+
+async function returnInner(actor, { rolledOver = null, deed = true, via = "gm" } = {}) {
   const st = readAnsu(actor);
   if (!isSeized(st) || !st.seizure?.snapshot) return;
 
@@ -193,12 +215,16 @@ export async function returnFromSeizure(actor, { rolledOver = null, deed = true,
     communion,
     pendingRelease,
     pendingCall,
+    // A berserk's Will check card closes with the hold, however it ended. (review finding 8)
+    ...(kind === "berserk" ? { pendingConflict: null } : {}),
     seizure: null,
   });
   await appendLog(actor, "seizure", { on: false, kind, via });
   await syncActor(actor);
   await postCard(actor, "SHARDS.Ansu.SeizureEnd", { name: actor.name }, { to: kind === "manual" ? "gm" : "owners" });
   if (deed !== false && st.seizure.deed) await recordDeed(actor, st.seizure.deed);
+  // No level-up while seized (review ruling 9): the check runs once, now.
+  await checkLevelUp(actor);
   if (landing === "release") {
     const { callRelease, suggestedDC } = await import("./release.mjs");
     await callRelease(actor, suggestedDC(readAnsu(actor)), game.i18n.localize("SHARDS.Ansu.TakeoverAgreedReason"));

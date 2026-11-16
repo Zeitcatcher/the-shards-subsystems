@@ -116,8 +116,10 @@ async function whisperOwnersCard(actor, text) {
  * The player-facing entrance: subjugated masters toggle straight in; everyone
  * else must win the Call first (Athletics vs 20 + 2 x attunement, moved by the
  * loyalty band). The Call is refused, with a notice, while the bearer is
- * seized, a lockout runs, or the bearer is Fatigued (0.8). A pending Call does
- * not block: callTheCall replaces the stale card, as in v0.6.1.
+ * seized, a release card waits for its roll with no Communion running (its
+ * costs must be paid first; the panel recorder settles an unrolled card), a
+ * lockout runs, or the bearer is Fatigued (0.8). A pending Call does not
+ * block: callTheCall replaces the stale card, as in v0.6.1.
  * The Call capture then drives invokeCommunion or the critical failure.
  */
 export async function requestInvoke(actor) {
@@ -139,7 +141,7 @@ export async function requestInvoke(actor) {
   // A stale pending Call never blocks: the fresh Invoke replaces it (step B ruling).
   const block = invokeBlock({
     seized: st.communion.mode === "seized",
-    pendingCall: null,
+    pendingRelease: st.communion.mode === "none" ? (st.pendingRelease ?? null) : null,
     lockout: st.lockout,
     now: game.time?.worldTime ?? 0,
     fatigued: isFatigued(actor),
@@ -166,8 +168,12 @@ export async function requestInvoke(actor) {
  * "End (no save)" had to append a SECOND row to carry its override note, and
  * `describeEntry` ignores `via`, so the History dialog and the journal export
  * both showed "Communion ended" twice at the same timestamp. (0.6.6)
+ *
+ * `keepPending` is the expiry path: an open release card stays open through the
+ * end instead of being nulled and restored, so a roll landing in between is
+ * never dropped and a recorded one is never re-opened (review finding 6).
  */
-export async function endCommunion(actor, { via = "gm", note = "" } = {}) {
+export async function endCommunion(actor, { via = "gm", note = "", keepPending = false } = {}) {
   const st = readAnsu(actor);
   if (st.communion.mode === "none") return;
   // Ending Communion clears any open release roll and any seizure blob, so a stale
@@ -175,7 +181,7 @@ export async function endCommunion(actor, { via = "gm", note = "" } = {}) {
   // be stranded with the panel Return button dead. (B6, B7)
   await patchAnsu(actor, {
     communion: { mode: "none", rounds: null, startAt: null },
-    pendingRelease: null,
+    ...(keepPending ? {} : { pendingRelease: null }),
     seizure: null,
   });
   await appendLog(actor, "communion", { on: false, via }, note);
@@ -227,9 +233,8 @@ export async function handleExpiry(actor, _runOpts = {}) {
   try {
     const dc = suggestedDC(st);
     const open = st.pendingRelease;
-    await endCommunion(actor, { via: "expiry" });
-    if (open) await patchAnsu(actor, { pendingRelease: open });
-    else await callRelease(actor, dc, game.i18n.localize("SHARDS.Ansu.ExpiryReason"));
+    await endCommunion(actor, { via: "expiry", keepPending: Boolean(open) });
+    if (!open) await callRelease(actor, dc, game.i18n.localize("SHARDS.Ansu.ExpiryReason"));
   } finally {
     expiring.delete(key);
   }

@@ -236,7 +236,14 @@ async function captureFromMessage(message) {
     );
   }
   const stage = stageForRoll(ctx.type, pending.stage);
-  if (!stage) return; // a persuasion clicked after it already failed
+  if (!stage) {
+    // A persuasion after it already failed: a hero-point reroll of it is noted
+    // for the GM (review finding 5); a stray click is still ignored there.
+    if (ctx.type === "skill-check" && st.lastConflict?.stage === "persuade") {
+      await noteReroll(actor, st, ctx, outcome, total);
+    }
+    return;
+  }
   await recordConflictOutcome(actor, outcome, total, { stage });
 }
 

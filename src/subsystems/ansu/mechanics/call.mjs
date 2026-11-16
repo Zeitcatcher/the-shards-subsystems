@@ -231,7 +231,8 @@ export async function recordCallOutcome(actor, outcome, total = null, { force = 
     (force && st.lastCall ? { id: st.lastCall.id, dc: st.lastCall.dc ?? null, createdAt: st.lastCall.at } : null);
   if (!pending) return; // already recorded (auto-capture cleared it) — nothing to do
   // Guard a double-apply when auto-capture and the manual recorder fire for the
-  // same pending Call at once (a crit would otherwise Climb twice). (C5)
+  // same pending Call at once (a critical failure would otherwise lock out and
+  // post its release card twice). (C5)
   // The forced re-record is a second, separate pass over the same id. (0.6.6)
   const key = `${actorKey(actor)}:${pending.id}${force ? ":reroll" : ""}`;
   if (recording.has(key)) return;
@@ -257,6 +258,8 @@ const grants = (o) => o === "criticalSuccess" || o === "success" || o === "failu
 
 async function recordCallOutcomeInner(actor, st, pending, outcome, total, force = false) {
   const prevOutcome = force ? (st.rerollCall?.from ?? st.lastCall?.outcome ?? null) : null;
+  // The record this outcome replaces, copied before the patch below rewrites it.
+  const prevCall = st.lastCall ? { ...st.lastCall } : null;
   const log = [
     ...st.log,
     {
@@ -309,6 +312,22 @@ async function recordCallOutcomeInner(actor, st, pending, outcome, total, force 
       refreshAnsuPanel();
       return;
     }
+    // The release card the critical failure posted was already rolled: its costs
+    // (Hit Points, Fatigued, a tiered lockout) stand. Only the Call's own 60 s
+    // lockout may go, and no Communion starts; the GM settles the rest by hand.
+    // (review finding 4)
+    const released = Number(st.lastRelease?.at) >= Number(prevCall?.at);
+    if (released) {
+      const own =
+        st.lockout &&
+        st.lockout.untilRest !== true &&
+        Number.isFinite(Number(prevCall?.lockoutUntil)) &&
+        Number(st.lockout.until) === Number(prevCall.lockoutUntil);
+      if (own) await patchAnsu(actor, { lockout: null });
+      await say("SHARDS.Ansu.CallRerollHandFix");
+      refreshAnsuPanel();
+      return;
+    }
     // The recorded critical failure is withdrawn: its lockout and its release card go.
     await patchAnsu(actor, { lockout: null, pendingRelease: null });
     await say("SHARDS.Ansu.CallRerollLifted");
@@ -342,8 +361,11 @@ async function recordCallOutcomeInner(actor, st, pending, outcome, total, force 
     // No Communion and no seizure (0.8): a 1-minute lockout, and the release
     // card goes up at once at the plain DC (no return penalty).
     const now = game.time?.worldTime ?? 0;
+    const lockout = makeLockout(CALL_CF_LOCKOUT, now);
     await patchAnsu(actor, {
-      lockout: makeLockout(CALL_CF_LOCKOUT, now),
+      lockout,
+      // A reroll after the release card resolved lifts only this stamp. (review finding 4)
+      lastCall: { lockoutUntil: lockout.until },
       communion: { returnPenalty: 0 },
     });
     await whisperGM(actor, game.i18n.format("SHARDS.Ansu.CallCritFailReport", { name: actor.name }));

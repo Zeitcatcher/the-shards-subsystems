@@ -227,4 +227,18 @@ describe("Communion running out (0.8)", () => {
     expect(actor.rolled).toHaveLength(0);
     expect(readAnsu(actor).pendingRelease.id).toBe("rel1");
   });
+
+  it("never clears the open card on the way, so a roll landing mid-expiry still finds it", async () => {
+    const actor = bearer();
+    const update = actor.update;
+    const cleared = [];
+    actor.update = async (data) => {
+      if (Object.hasOwn(data, `${FLAG}.pendingRelease`) && data[`${FLAG}.pendingRelease`] === null) cleared.push(data);
+      return update(data);
+    };
+    await handleExpiry(actor);
+    expect(cleared).toHaveLength(0);
+    expect(actor.flag.communion.mode).toBe("none");
+    expect(readAnsu(actor).pendingRelease.id).toBe("rel1");
+  });
 });

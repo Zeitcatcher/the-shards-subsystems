@@ -52,6 +52,7 @@ const { startConflict, recordConflictOutcome, recordConflictReroll, registerConf
 const { startSeizure, returnFromSeizure, letAnsuIn, onSeizureTurnEnd, onSeizureCombatEnd, registerSeizureHooks } =
   await import("../src/subsystems/ansu/mechanics/seizure.mjs");
 const { durationRoundsFor, conflictDC } = await import("../src/subsystems/ansu/logic/model.mjs");
+const { recordDeed } = await import("../src/subsystems/ansu/mechanics/deeds.mjs");
 
 registerConflictHooks();
 registerSeizureHooks();
@@ -205,7 +206,9 @@ describe("the outcomes", () => {
     await recordConflictOutcome(actor, "criticalFailure");
     expect(actor.flag.seizure).toMatchObject({ kind: "berserk", deed: "berserk-end", dc: 22 });
     expect(actor.flag.loyalty).toBe(3);
-    expect(messages.find((m) => m.content.includes("TakeoverBerserk")).whisper).toBeNull(); // public
+    const berserkCard = messages.find((m) => m.content.includes("TakeoverBerserk"));
+    expect(berserkCard.whisper).toBeNull(); // public
+    expect(berserkCard.content).not.toMatch(/\b22\b/); // ansuShowDc is "gm": no DC on a public card
 
     await onSeizureTurnEnd(actor);
     expect(actor.flag.pendingConflict).toMatchObject({ stage: "berserk", dc: 22 });
@@ -221,6 +224,32 @@ describe("the outcomes", () => {
     expect(actor.flag.loyalty).toBe(2);
     expect(deeds(actor)).toEqual(["conflict-cf", "berserk-end"]);
     expect(actor.rolled.filter((r) => r.slug === "fortitude")).toHaveLength(0); // no release save
+  });
+});
+
+describe("the public berserk card and the DC setting", () => {
+  it("prints the Will DC only when ansuShowDc is \"all\"", async () => {
+    const get = game.settings.get;
+    game.settings.get = () => "all";
+    try {
+      const actor = bearer({ ...open("will"), wrath: 6, loyalty: 4 });
+      await recordConflictOutcome(actor, "criticalFailure");
+      expect(messages.find((m) => m.content.includes("TakeoverBerserk")).content).toMatch(/\b22\b/);
+    } finally {
+      game.settings.get = get;
+    }
+  });
+
+  it("leaves the DC out when ansuShowDc is \"owner\"", async () => {
+    const get = game.settings.get;
+    game.settings.get = () => "owner";
+    try {
+      const actor = bearer({ ...open("will"), wrath: 6, loyalty: 4 });
+      await recordConflictOutcome(actor, "criticalFailure");
+      expect(messages.find((m) => m.content.includes("TakeoverBerserk")).content).not.toMatch(/\b22\b/);
+    } finally {
+      game.settings.get = get;
+    }
   });
 });
 
@@ -246,6 +275,29 @@ describe("berserk endings", () => {
     await onSeizureTurnEnd(actor);
     expect(actor.rolled).toHaveLength(0);
     expect(actor.flag.seizure).toBeNull();
+  });
+
+  it("two returns racing each other apply the takeover's deed once", async () => {
+    const actor = berserk();
+    // A real update reaches the server before the flag moves: let the second
+    // return read the state while the first one's patch is still in flight.
+    const update = actor.update;
+    actor.update = async (data) => {
+      await new Promise((r) => setTimeout(r, 0));
+      return update(data);
+    };
+    await Promise.all([returnFromSeizure(actor, { via: "gm" }), returnFromSeizure(actor, { via: "unconscious" })]);
+    expect(actor.flag.loyalty).toBe(4); // berserk-end takes 1 loyalty, once
+    expect(actor.flag.wrath).toBe(2);
+    expect(deeds(actor)).toEqual(["berserk-end"]);
+    expect(messages.filter((m) => m.content.includes("SeizureEnd"))).toHaveLength(1);
+  });
+
+  it("closes its open Will check card when it ends some other way", async () => {
+    const actor = berserk();
+    actor.flag.pendingConflict = { id: "b1", dc: 22, stage: "berserk", want: "", severity: null, createdAt: 1 };
+    await returnFromSeizure(actor);
+    expect(actor.flag.pendingConflict).toBeNull();
   });
 
   it("survives a combat ending; only the GM's hand-back ends it out of combat", async () => {
@@ -287,6 +339,22 @@ describe("letting the Ansu in", () => {
   });
 });
 
+describe("a level-up earned while the Ansu holds the body", () => {
+  it("waits for the return, then lands once and stays", async () => {
+    const actor = bearer({ loyalty: 9, wrath: 0, communion: { mode: "active", rounds: 3, startAt: null, returnPenalty: 0 } });
+    actor.system.details.level.value = 10; // gate 5, so attunement 4 may rise
+    await startSeizure(actor);
+    await recordDeed(actor, "argument");
+    expect(actor.flag.level).toBe(4); // no level-up while seized
+    expect(actor.flag.loyalty).toBe(10);
+    await returnFromSeizure(actor);
+    expect(actor.flag.level).toBe(5);
+    expect(actor.flag.loyalty).toBe(5);
+    expect(actor.flag.wrath).toBe(0);
+    expect(actor.flag.log.filter((e) => e.type === "level")).toHaveLength(1);
+  });
+});
+
 describe("a manual GM hold", () => {
   it("never returns on its own and comes back whole", async () => {
     const actor = bearer({ communion: { mode: "active", rounds: 3, startAt: null, returnPenalty: 0 } });
@@ -325,6 +393,18 @@ describe("capture and reroll", () => {
     expect(actor.flag.pendingConflict).toMatchObject({ stage: "will" });
     await fire(msg(actor, "saving-throw", "success"));
     expect(deeds(actor)).toEqual(["forced-back"]);
+  });
+
+  it("a hero-point reroll of a failed persuasion is noted, and once recorded withdraws the Will stage", async () => {
+    const actor = bearer(open("persuade"));
+    await recordConflictOutcome(actor, "failure", 10);
+    expect(actor.flag.pendingConflict).toMatchObject({ id: "c1", stage: "will" });
+    await fire(msg(actor, "skill-check", "success", ["check:reroll"]));
+    expect(actor.flag.rerollConflict).toMatchObject({ id: "c1", stage: "persuade", from: "failure", outcome: "success" });
+    expect(actor.flag.pendingConflict).toMatchObject({ stage: "will" }); // nothing moves until the GM records it
+    await recordConflictReroll(actor);
+    expect(actor.flag.pendingConflict).toBeNull();
+    expect(deeds(actor)).toEqual(["argument"]);
   });
 
   it("a hero-point reroll from failure to success, once recorded, hands the body back with no vented deed", async () => {

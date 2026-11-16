@@ -264,11 +264,12 @@ export function throwIncrement(level) {
  * before the deed is 0. Both clamp. Then the level-up check: loyalty 10, level
  * below 9 and below gateMax(charLevel), wrath 2 or less, no terminal: level + 1,
  * loyalty 5, wrath 0. Level 9 never rises here (the fork stays a GM action).
+ * `holdLevel` skips the check: a takeover holds the level-up until the return.
  *
  * Pure: returns `{state, leveled, loyalty:[from,to], wrath:[from,to], level:[from,to]}`
  * and never mutates the input.
  */
-export function applyDeed(state, deed, { charLevel } = {}) {
+export function applyDeed(state, deed, { charLevel, holdLevel = false } = {}) {
   const level0 = clampLevel(state?.level);
   const loy0 = clampLoyalty(state?.loyalty);
   const wr0 = clampWrath(state?.wrath);
@@ -282,6 +283,8 @@ export function applyDeed(state, deed, { charLevel } = {}) {
   let leveled = false;
   if (
     !state?.terminal &&
+    // A takeover holds the level-up until the body returns (review ruling 9).
+    !holdLevel &&
     // Level 0 never rises through loyalty: the first attunement stays a GM action.
     level0 >= 1 &&
     loy >= LOYALTY_MAX &&
@@ -336,11 +339,14 @@ export function lockoutActive(lockout, now) {
 
 /**
  * Why an Invoke (the Call) may not start now, as a reason key, or null when it
- * may. Checked in this order: seized, a Call already pending, locked out, Fatigued.
+ * may. Checked in this order: seized, a release card still waiting for its roll,
+ * locked out, Fatigued. A pending Call never blocks (step B ruling): the fresh
+ * Invoke replaces it. The caller passes `pendingRelease` only while no
+ * Communion runs (review ruling 1).
  */
-export function invokeBlock({ seized = false, pendingCall = null, lockout = null, now = 0, fatigued = false } = {}) {
+export function invokeBlock({ seized = false, pendingRelease = null, lockout = null, now = 0, fatigued = false } = {}) {
   if (seized) return "seized";
-  if (pendingCall) return "pending";
+  if (pendingRelease) return "release";
   if (lockoutActive(lockout, now)) return "lockout";
   if (fatigued) return "fatigued";
   return null;

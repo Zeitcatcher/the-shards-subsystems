@@ -169,6 +169,7 @@ describe("a critical failure on the Call (0.8)", () => {
     expect(actor.flag.communion.mode).toBe("none");
     expect(actor.flag.communion.returnPenalty).toBe(0);
     expect(actor.flag.lockout).toEqual({ until: 60, untilRest: false });
+    expect(actor.flag.lastCall.lockoutUntil).toBe(60);
     expect(actor.flag.seizure ?? null).toBeNull();
     expect(actor.flag.pendingCall).toBeNull();
     expect(actor.rolled.map((r) => r.slug)).toEqual(["fortitude"]);
@@ -215,6 +216,35 @@ describe("a granting Call stamps its length from the degree (0.8)", () => {
 });
 
 describe("recording a rerolled Call (0.8 table)", () => {
+  it("after the release card was rolled to a critical failure, keeps that lockout and starts no Communion", async () => {
+    const actor = bearer({
+      lockout: { until: 3600, untilRest: false },
+      lastCall: { id: "call1", dc: 28, outcome: "criticalFailure", at: 1000, lockoutUntil: 60 },
+      lastRelease: { id: "rel1", dc: 24, outcome: "criticalFailure", level: 4, at: 2000 },
+      rerollCall: { id: "call1", from: "criticalFailure", outcome: "success", at: 3000 },
+    });
+    await recordCallOutcome(actor, "success", 30, { force: true });
+
+    expect(actor.flag.lockout).toEqual({ until: 3600, untilRest: false });
+    expect(actor.flag.communion.mode).toBe("none");
+    expect(messages.some((m) => m.includes("CallRerollHandFix"))).toBe(true);
+    expect(messages.some((m) => m.includes("CallRerollLifted"))).toBe(false);
+  });
+
+  it("after the release card was rolled to a success, lifts only the Call's own lockout and starts no Communion", async () => {
+    const actor = bearer({
+      lockout: { until: 60, untilRest: false },
+      lastCall: { id: "call1", dc: 28, outcome: "criticalFailure", at: 1000, lockoutUntil: 60 },
+      lastRelease: { id: "rel1", dc: 24, outcome: "success", level: 4, at: 2000 },
+      rerollCall: { id: "call1", from: "criticalFailure", outcome: "success", at: 3000 },
+    });
+    await recordCallOutcome(actor, "success", 30, { force: true });
+
+    expect(actor.flag.lockout).toBeNull();
+    expect(actor.flag.communion.mode).toBe("none");
+    expect(messages.some((m) => m.includes("CallRerollHandFix"))).toBe(true);
+  });
+
   it("withdraws a critical failure's lockout and release card, then starts Communion", async () => {
     const actor = bearer({
       lockout: { until: 60, untilRest: false },
@@ -271,8 +301,20 @@ describe("Invoke blocks (0.8)", () => {
   });
 
   it("refuses while a lockout runs", async () => {
-    await blocked({ lockout: { until: 60, untilRest: false } });
+    const actor = await blocked({ lockout: { until: 60, untilRest: false } }, withWill({}));
     expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.lockout"))).toBe(true);
+    expect(actor.flag.pendingCall ?? null).toBeNull();
+    expect(messages.some((m) => m.includes("@Check[athletics"))).toBe(false);
+    expect(actor.rolled).toHaveLength(0);
+  });
+
+  it("refuses while a release card waits for its roll and no Communion runs", async () => {
+    const actor = await blocked({ pendingRelease: { id: "rel1", dc: 24, createdAt: 1 } }, withWill({}));
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.release"))).toBe(true);
+    expect(actor.flag.pendingCall ?? null).toBeNull();
+    expect(actor.flag.pendingRelease).toMatchObject({ id: "rel1" });
+    expect(actor.flag.communion.mode).toBe("none");
+    expect(actor.rolled).toHaveLength(0);
   });
 
   it("does not refuse over a stale pending Call: the fresh Invoke replaces it", async () => {
@@ -282,8 +324,11 @@ describe("Invoke blocks (0.8)", () => {
   });
 
   it("refuses while the Ansu holds the body", async () => {
-    await blocked({ communion: { mode: "seized", rounds: null, startAt: null } });
+    const actor = await blocked({ communion: { mode: "seized", rounds: null, startAt: null } }, withWill({}));
     expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.seized"))).toBe(true);
+    expect(actor.flag.pendingCall ?? null).toBeNull();
+    expect(messages.some((m) => m.includes("@Check[athletics"))).toBe(false);
+    expect(actor.rolled).toHaveLength(0);
   });
 
   it("at wrath 6 whispers the GM to call a conflict, and still posts the Call", async () => {

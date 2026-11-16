@@ -159,6 +159,32 @@ function bearer(flagState) {
   return actor;
 }
 
+describe("the Invoke and Release items and the DC setting", () => {
+  const st = state({ level: 5, communion: { mode: "active", rounds: 5 } });
+  const pick = (showDc) => {
+    const acts = composeActions(st, CONTENT, { charLevel: 10, showDc });
+    return { invoke: acts.find((a) => a.entryId === "invoke-the-ansu"), release: acts.find((a) => a.entryId === "release-the-ansu") };
+  };
+  it("quote both DCs when players may see them", () => {
+    const { invoke, release } = pick("all");
+    expect(invoke.description).toMatch(/Call DC \(\d+\)/);
+    expect(invoke.description).toMatch(/release DC \(\d+, \+2 after a failed Call\)/);
+    expect(release.description).toMatch(/release DC \(\d+, \+2 after a failed Call\)/);
+  });
+  it("name the DCs in words when ansuShowDc is GM only, and re-hash", () => {
+    const shown = pick("all");
+    const { invoke, release } = pick("gm");
+    for (const d of [invoke.description, release.description]) {
+      expect(d).not.toMatch(/DC \(\d+/);
+      expect(d).not.toContain("{{");
+      expect(d).toContain("the release DC (+2 after a failed Call)");
+    }
+    expect(invoke.description).toContain("against the Call DC: 20 + 2");
+    expect(invoke.hash).not.toBe(shown.invoke.hash);
+    expect(release.hash).not.toBe(shown.release.hash);
+  });
+});
+
 describe("a manual +1 to loyalty 10", () => {
   it("runs the deed's level-up check", async () => {
     const actor = bearer({ level: 4, loyalty: 9, wrath: 1 });

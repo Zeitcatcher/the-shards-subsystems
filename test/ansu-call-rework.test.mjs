@@ -35,7 +35,8 @@ describe("invokeBlock", () => {
   });
   it("names each block, seized first", () => {
     expect(invokeBlock({ seized: true, fatigued: true })).toBe("seized");
-    expect(invokeBlock({ pendingCall: { id: "x" }, fatigued: true })).toBe("pending");
+    expect(invokeBlock({ pendingRelease: { id: "x" }, fatigued: true })).toBe("release");
+    expect(invokeBlock({ pendingCall: { id: "x" } })).toBeNull();
     expect(invokeBlock({ lockout: { until: 60, untilRest: false }, now: 10, fatigued: true })).toBe("lockout");
     expect(invokeBlock({ fatigued: true })).toBe("fatigued");
   });

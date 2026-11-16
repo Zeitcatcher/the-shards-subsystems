@@ -25,11 +25,34 @@ describe("data/ansu/deeds.json", () => {
   it("shipped labels carry no campaign names", () => {
     for (const d of raw.deeds) expect(d.label).not.toMatch(/Grog|Athena/i);
   });
-  it("every deed applies through applyDeed", () => {
+  it("every deed applies through applyDeed, loyalty and wrath both", () => {
+    const clampW = (w) => Math.max(0, Math.min(6, w));
     for (const d of raw.deeds) {
       const r = applyDeed({ level: 3, loyalty: 5, wrath: 3 }, d, { charLevel: 8 });
-      expect(r.state.loyalty).toBe(5 + d.loyalty);
+      expect(r.state.loyalty, d.id).toBe(5 + d.loyalty);
+      const wrath = Number.isFinite(d.wrathSet) ? d.wrathSet : clampW(3 + d.wrath);
+      expect(r.state.wrath, d.id).toBe(wrath);
     }
+  });
+  it("wrathSet sets wrath outright: task to 0, berserk-end to 2", () => {
+    const { byId } = indexDeeds(raw);
+    expect(applyDeed({ level: 3, loyalty: 5, wrath: 5 }, byId.get("task"), { charLevel: 8 }).state.wrath).toBe(0);
+    expect(applyDeed({ level: 3, loyalty: 5, wrath: 6 }, byId.get("berserk-end"), { charLevel: 8 }).state.wrath).toBe(2);
+    expect(applyDeed({ level: 3, loyalty: 5, wrath: 0 }, byId.get("berserk-end"), { charLevel: 8 }).state.wrath).toBe(2);
+  });
+  it("night skips its wrath -1 at loyalty 0 only", () => {
+    const { byId } = indexDeeds(raw);
+    const night = byId.get("night");
+    expect(applyDeed({ level: 3, loyalty: 0, wrath: 3 }, night, { charLevel: 8 }).state.wrath).toBe(3);
+    expect(applyDeed({ level: 3, loyalty: 1, wrath: 3 }, night, { charLevel: 8 }).state.wrath).toBe(2);
+  });
+  it("holdLevel keeps the level while the Ansu holds the body", () => {
+    const st = { level: 3, loyalty: 9, wrath: 0 };
+    const argument = indexDeeds(raw).byId.get("argument");
+    expect(applyDeed(st, argument, { charLevel: 8 }).leveled).toBe(true);
+    const held = applyDeed(st, argument, { charLevel: 8, holdLevel: true });
+    expect(held.leveled).toBe(false);
+    expect(held.state).toMatchObject({ level: 3, loyalty: 10, wrath: 0 });
   });
 });
 

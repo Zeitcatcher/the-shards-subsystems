@@ -182,6 +182,21 @@ export const ANSU_TOKENS = Object.freeze([
   "ansuLevel", "ansuDuration", "ansuRecallRange", "ansuRecalls", "ansuThrowInc",
 ]);
 
+/**
+ * With "ansuShowDc" on GM only, the Call and release DC tokens in a sheet text
+ * become words before the numbers are baked (review finding 2). The tokens'
+ * parentheses go with them, so "the Call DC ({{ansuCallDC}})" reads "the Call DC".
+ */
+export function hideDcTokens(text) {
+  if (typeof text !== "string") return text;
+  return text
+    .replaceAll(" ({{ansuCallDC}})", "")
+    .replaceAll("({{ansuReleaseDC}}, ", "(")
+    .replaceAll(" ({{ansuReleaseDC}})", "")
+    .replaceAll("{{ansuCallDC}}", "the Call DC")
+    .replaceAll("{{ansuReleaseDC}}", "the release DC");
+}
+
 /** Replace every {{ansu*}} number token with the baked value. */
 export function injectNumbers(text, ctx) {
   if (typeof text !== "string") return text;
@@ -540,6 +555,8 @@ export function composeActions(state, content, opts = {}) {
   const ctx = buildCtx(opts.charLevel, level, opts.dials, { loyalty: state.loyalty });
 
   const dead = doorsDead(mode);
+  // The DC setting on GM only: Invoke and Release name their DCs in words.
+  const hideDc = opts.showDc === "gm";
   const { live } = selectEntries(state, content, { ...opts, unlockAll, levelCap: level });
   return live
     .filter((e) => e.form === "action")
@@ -547,7 +564,8 @@ export function composeActions(state, content, opts = {}) {
     // diffAll turns the drop into a delete, so an existing sheet cleans itself.
     .filter((e) => !(dead && e.door === true))
     .map((e) => {
-      const description = injectNumbers(e.description ?? "", ctx);
+      const raw = hideDc ? hideDcTokens(e.description ?? "") : (e.description ?? "");
+      const description = injectNumbers(raw, ctx);
       // A subjugated master's Invoke reads from terminalActionData; everyone else
       // from actionData. Every frequency read below uses the same block.
       const src = actionDataFor(e, state);
@@ -566,7 +584,10 @@ export function composeActions(state, content, opts = {}) {
         actionData.frequencyValue = src.frequency.max ?? null;
       }
       const data = { entryId: e.id, family: e.family, name: e.name, img: e.img, description, actionData, rules, entry: e };
-      return { ...data, hash: hashString(stableStringify({ name: e.name, img: e.img, description, actionData, rules })) };
+      return {
+        ...data,
+        hash: hashString(stableStringify({ name: e.name, img: e.img, description, actionData, rules, hideDc })),
+      };
     });
 }
 
