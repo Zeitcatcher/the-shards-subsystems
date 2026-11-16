@@ -287,8 +287,17 @@
 .the-shards-subsystems .ansu-stat.hot .n {
   color: #8a6417;
 }
-.the-shards-subsystems .ansu-stat.climb-n .n {
+.the-shards-subsystems .ansu-stat.loy-n .n {
   color: #3e8e7e;
+}
+.the-shards-subsystems .ansu-stat.loy-n.band-cold .n,
+.the-shards-subsystems .ansu-stat.loy-n.band-hostile .n,
+.the-shards-subsystems .ansu-stat.wr-n.band-angry .n,
+.the-shards-subsystems .ansu-stat.wr-n.band-breaking .n {
+  color: #a11;
+}
+.the-shards-subsystems .ansu-stat.wr-n .n {
+  color: #8f2f27;
 }
 
 /* ---------- Communion control bar ---------- */
@@ -381,6 +390,62 @@
   box-shadow: 0 0 8px rgba(143, 47, 39, 0.5);
 }
 
+/* ---------- release flags and the takeover actions (0.8) ---------- */
+.the-shards-subsystems .ansu-flags {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.the-shards-subsystems .ansu-flag {
+  font-size: var(--font-size-10, 0.66rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+  white-space: nowrap;
+}
+.the-shards-subsystems .ansu-flag.bad {
+  color: #8f2f27;
+  border-color: #a5473f;
+  background: rgba(165, 71, 63, 0.1);
+}
+.the-shards-subsystems .ansu-conflict-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.the-shards-subsystems .ansu-act {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 0.76rem);
+  font-weight: 600;
+  padding: 0.25rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid #b5892a;
+  color: #8a6417;
+  background: rgba(181, 137, 42, 0.07);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.the-shards-subsystems .ansu-act:hover:not(:disabled) {
+  background: rgba(181, 137, 42, 0.18);
+}
+.the-shards-subsystems .ansu-act.warn {
+  border-color: #8f2f27;
+  color: #8f2f27;
+  background: rgba(143, 47, 39, 0.07);
+}
+.the-shards-subsystems .ansu-act.warn:hover:not(:disabled) {
+  background: rgba(143, 47, 39, 0.16);
+}
+.the-shards-subsystems .ansu-act:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* ---------- stepper ---------- */
 .the-shards-subsystems .ansu-stepper {
   display: flex;
@@ -447,8 +512,8 @@
   box-shadow: 0 0 6px rgba(62, 142, 126, 0.45);
 }
 
-/* ---------- the Climb ---------- */
-.the-shards-subsystems .ansu-climb {
+/* ---------- loyalty and wrath (0.8) ---------- */
+.the-shards-subsystems .ansu-bars {
   border: 1px solid rgba(62, 142, 126, 0.45);
   background: rgba(62, 142, 126, 0.05);
   border-radius: 5px;
@@ -457,41 +522,91 @@
   flex-direction: column;
   gap: 0.3rem;
 }
-.the-shards-subsystems .ansu-climb.full {
-  box-shadow: inset 0 0 0 1px rgba(62, 142, 126, 0.6);
-}
-.the-shards-subsystems .ansu-climb.pulse {
-  animation: ansu-pulse 0.8s ease-in-out 2;
-}
 @keyframes ansu-pulse {
   50% { box-shadow: 0 0 0 2px rgba(62, 142, 126, 0.6); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .the-shards-subsystems .ansu-climb.pulse,
   .the-shards-subsystems .ansu-comm.pulse { animation: none; box-shadow: 0 0 0 2px rgba(62, 142, 126, 0.6); }
 }
-.the-shards-subsystems .ansu-climb-row {
+.the-shards-subsystems .ansu-bar-row {
   display: flex;
   align-items: center;
   gap: 0.55rem;
   flex-wrap: wrap;
 }
-.the-shards-subsystems .ansu-climb-title {
+.the-shards-subsystems .ansu-bar-row.wrath {
+  margin-top: 0.25rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(143, 47, 39, 0.3);
+}
+.the-shards-subsystems .ansu-bar-title {
   font-size: var(--font-size-10, 0.66rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #2e6e61;
   font-weight: 600;
   white-space: nowrap;
+  min-width: 4.5em;
 }
-.the-shards-subsystems .ansu-climb-count {
+.the-shards-subsystems .ansu-bar-row.wrath .ansu-bar-title {
+  color: #8f2f27;
+}
+.the-shards-subsystems .ansu-bar-count {
   font-size: var(--font-size-13, 0.85rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  min-width: 3.2em;
 }
-.the-shards-subsystems .ansu-climb-count small {
+.the-shards-subsystems .ansu-bar-count small {
   opacity: 0.6;
   font-weight: 400;
+}
+.the-shards-subsystems .ansu-bar-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  font-size: var(--font-size-11, 0.72rem);
+  opacity: 0.85;
+}
+.the-shards-subsystems .ansu-bar-meta b.band-hostile,
+.the-shards-subsystems .ansu-bar-meta b.band-cold,
+.the-shards-subsystems .ansu-bar-meta b.band-angry,
+.the-shards-subsystems .ansu-bar-meta b.band-breaking {
+  color: #a11;
+}
+.the-shards-subsystems .ansu-bar-meta b.band-trust,
+.the-shards-subsystems .ansu-bar-meta b.band-calm {
+  color: #2e6e61;
+}
+.the-shards-subsystems .ansu-bar-meta .ansu-ghost {
+  width: auto;
+  flex: 0 0 auto;
+}
+.the-shards-subsystems .ansu-bar-rule {
+  opacity: 0.75;
+  font-style: italic;
+}
+.the-shards-subsystems .ansu-deed-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--color-border-light-tertiary, #c9c7b8);
+}
+.the-shards-subsystems .ansu-deed-row select {
+  flex: 1 1 45%;
+  min-width: 0;
+}
+.the-shards-subsystems .ansu-deed-row input[type="text"] {
+  flex: 1 1 30%;
+  min-width: 0;
+}
+.the-shards-subsystems .ansu-deed-row button {
+  width: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .the-shards-subsystems .ansu-segbar {
   display: flex;
@@ -507,17 +622,28 @@
   background: rgba(0, 0, 0, 0.08);
   border: 1px solid var(--color-border-light-tertiary, #c9c7b8);
   border-radius: 2px;
-  cursor: pointer;
 }
-.the-shards-subsystems .ansu-seg:hover {
-  border-color: #3e8e7e;
-}
+/* Loyalty segments take their band colour: hostile and cold red, wary amber,
+   trust green. Wrath reads calm amber, angry and breaking red. */
 .the-shards-subsystems .ansu-seg.f {
   background: linear-gradient(180deg, #5aa895, #3a7d6e);
   border-color: #3e8e7e;
 }
-.the-shards-subsystems .ansu-seg.gap {
-  margin-left: 5px;
+.the-shards-subsystems .ansu-seg.f.band-hostile,
+.the-shards-subsystems .ansu-seg.f.band-cold,
+.the-shards-subsystems .ansu-seg.f.band-angry {
+  background: linear-gradient(180deg, #c0584e, #8f2f27);
+  border-color: #8f2f27;
+}
+.the-shards-subsystems .ansu-seg.f.band-wary,
+.the-shards-subsystems .ansu-seg.f.band-calm {
+  background: linear-gradient(180deg, #d3a94a, #b5892a);
+  border-color: #b5892a;
+}
+.the-shards-subsystems .ansu-seg.f.band-breaking {
+  background: linear-gradient(180deg, #c22, #811);
+  border-color: #a11;
+  box-shadow: 0 0 6px rgba(170, 17, 17, 0.5);
 }
 .the-shards-subsystems .ansu-mini {
   width: 22px;
@@ -530,11 +656,6 @@
   place-items: center;
   padding: 0;
 }
-.the-shards-subsystems .ansu-climb-legend {
-  font-size: var(--font-size-10, 0.66rem);
-  opacity: 0.6;
-}
-
 /* ---------- terminal banner ---------- */
 .the-shards-subsystems .ansu-terminal-banner {
   text-align: center;
@@ -826,21 +947,6 @@
 .the-shards-subsystems .ansu-pill.outcome-success { background: #5c8a60; }
 .the-shards-subsystems .ansu-pill.outcome-failure { background: #a06a34; }
 .the-shards-subsystems .ansu-pill.outcome-criticalFailure { background: #a03b32; }
-
-.the-shards-subsystems .ansu-sugg {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  width: auto;
-  flex: 0 0 auto;
-  font-size: var(--font-size-11, 0.72rem);
-  color: #8a6417;
-  border: 1px dashed #b5892a;
-  background: rgba(181, 137, 42, 0.07);
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  line-height: 1.5;
-}
 
 /* ---------- footer ---------- */
 .the-shards-subsystems .ansu-footer {

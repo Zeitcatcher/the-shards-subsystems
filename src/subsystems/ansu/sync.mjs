@@ -54,8 +54,6 @@ export function readDials() {
     dcCap: dial(SETTINGS.ANSU_DC_CAP, 5),
     callBase: dial(SETTINGS.ANSU_CALL_BASE, 20),
     callStep: dial(SETTINGS.ANSU_CALL_STEP, 2),
-    climbBase: dial(SETTINGS.ANSU_CLIMB_BASE, 2),
-    climbStep: dial(SETTINGS.ANSU_CLIMB_STEP, 1),
   };
 }
 
@@ -69,6 +67,7 @@ function tagFlags(entryId, hash, extra = {}) {
 
 function attunementDescription(composed) {
   const t = (k) => game.i18n.localize(k);
+  const f = (k, d) => game.i18n.format(k, d);
   const tierName = game.i18n.localize(`SHARDS.Ansu.Tier.${composed.tier}`);
   const parts = [];
   parts.push(`<p><em>${t("SHARDS.Ansu.Attunement")} ${composed.level}: ${tierName}.</em></p>`);
@@ -77,12 +76,42 @@ function attunementDescription(composed) {
   } else if (composed.terminal === "subjugated") {
     parts.push(`<p>${t("SHARDS.Ansu.TerminalSubjugated")}</p>`);
   } else {
+    // The player's view (0.8): where loyalty and wrath stand, what they do, and
+    // what the next level asks. A composed object from before 0.8 skips it.
+    if (Number.isFinite(composed.loyalty)) {
+      const adj = composed.callAdjust ?? 0;
+      parts.push(
+        `<p>${f("SHARDS.Ansu.MarkerLoyalty", {
+          value: composed.loyalty,
+          band: t(`SHARDS.Ansu.LoyaltyBand.${composed.loyaltyBand}`),
+          adjust: adj < 0 ? `${adj}` : `+${adj}`,
+        })}<br>${f("SHARDS.Ansu.MarkerWrath", {
+          value: composed.wrath ?? 0,
+          band: t(`SHARDS.Ansu.WrathBand.${composed.wrathBand ?? "calm"}`),
+        })}</p>`,
+      );
+    }
+    const lengths = composed.lengths;
     parts.push(
-      `<p>${game.i18n.format("SHARDS.Ansu.MarkerSummary", {
-        duration: durationLabel(composed.durationRounds),
-        dc: composed.releaseDc,
-      })}</p>`,
+      lengths
+        ? `<p>${f("SHARDS.Ansu.MarkerLengths", {
+            dc: composed.callDc,
+            cs: durationLabel(lengths.cs),
+            s: durationLabel(lengths.s),
+            f: durationLabel(lengths.f),
+            release: composed.releaseDc,
+          })}</p>`
+        : `<p>${f("SHARDS.Ansu.MarkerSummary", { duration: durationLabel(composed.durationRounds), dc: composed.releaseDc })}</p>`,
     );
+    if (Number.isFinite(composed.gate)) {
+      const key =
+        composed.level >= MAX_LEVEL - 1
+          ? "SHARDS.Ansu.MarkerNextNinth"
+          : composed.level >= composed.gate
+            ? "SHARDS.Ansu.MarkerNextGated"
+            : "SHARDS.Ansu.MarkerNext";
+      parts.push(`<p>${f(key, { gate: composed.gate })}</p>`);
+    }
   }
   if (composed.inheritanceLines.length) {
     parts.push(`<h3>${t("SHARDS.Ansu.Inheritance")}</h3>`);

@@ -369,15 +369,3 @@ export async function dismissReleaseReroll(actor) {
   await patchAnsu(actor, { rerollRelease: null });
   refreshAnsuPanel();
 }
-
-/** Chip action: whisper the Ansu's urge to the player + GM (Lingering flavor). */
-export async function postUrge(actor) {
-  const owners = playerOwners(actor);
-  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
-  const whisper = [...new Set([...owners, ...gmIds])];
-  await ChatMessage.create({
-    content: `<div class="ansu-card"><p class="ansu-card-title"><i class="fa-solid fa-hand-fist"></i> ${game.i18n.localize("SHARDS.Ansu.UrgeTitle")}</p><p><em>${game.i18n.localize("SHARDS.Ansu.UrgeText")}</em></p></div>`,
-    whisper,
-    speaker: ChatMessage.getSpeaker({ actor }),
-  });
-}

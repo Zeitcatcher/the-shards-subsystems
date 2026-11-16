@@ -90,7 +90,7 @@ export async function invokeCommunion(actor, note = "", { rounds: stamped, retur
 }
 
 /** Is the bearer Fatigued? pf2e's own condition lookup, defensively. */
-function isFatigued(actor) {
+export function isFatigued(actor) {
   try {
     if (typeof actor.hasCondition === "function") return Boolean(actor.hasCondition("fatigued"));
   } catch {

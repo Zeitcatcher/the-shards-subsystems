@@ -14,10 +14,11 @@ import { registerReleaseHooks } from "./mechanics/release.mjs";
 import { registerCallHooks } from "./mechanics/call.mjs";
 import { registerConflictHooks } from "./mechanics/conflict.mjs";
 import { registerSeizureHooks } from "./mechanics/seizure.mjs";
+import { registerRestHooks } from "./mechanics/deeds.mjs";
 import { setAttunement } from "./transform.mjs";
 import { registerAnsuTraits } from "./traits.mjs";
 
-// Release-DC and Climb dials feed numbers BAKED into effects: re-sync on change.
+// Release-DC and Call dials feed numbers BAKED into effects: re-sync on change.
 const resyncOnChange = () => {
   syncAllAttuned().catch((err) => console.error(`${MODULE_ID} | ansu dial resync`, err));
   refreshAnsuPanel();
@@ -40,9 +41,6 @@ const ANSU_SETTINGS = [
       all: "SHARDS.Settings.ansuShowDc.all",
     },
   },
-  { key: SETTINGS.ANSU_CLIMB_BASE, scope: "world", type: "Number", default: 2, config: true, onChange: () => refreshAnsuPanel() },
-  { key: SETTINGS.ANSU_CLIMB_STEP, scope: "world", type: "Number", default: 1, config: true, onChange: () => refreshAnsuPanel() },
-  { key: SETTINGS.ANSU_SUGGESTIONS, scope: "world", type: "Boolean", default: true, config: true },
   { key: SETTINGS.ANSU_ART_SWAP, scope: "world", type: "Boolean", default: true, config: true },
   { key: SETTINGS.ANSU_TOKEN_ICONS, scope: "world", type: "Boolean", default: true, config: true },
   // The persistent Attunement marker (badge effect) is optional — GM undecided.
@@ -81,5 +79,6 @@ registerSubsystem({
     registerCallHooks();
     registerConflictHooks();
     registerSeizureHooks();
+    registerRestHooks();
   },
 });

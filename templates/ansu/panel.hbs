@@ -49,11 +49,12 @@
 
     <div class="ansu-stats">
       <div class="ansu-stat"><span class="l">{{localize "SHARDS.Ansu.Attunement"}}</span><span class="n">{{detail.level}} <small>/ {{detail.maxLevel}}</small></span></div>
-      <div class="ansu-stat"><span class="l">{{localize "SHARDS.Ansu.StatDuration"}}</span><span class="n">{{detail.duration}}</span></div>
+      <div class="ansu-stat" {{#if detail.durationHint}}data-tooltip="{{detail.durationHint}}"{{/if}}><span class="l">{{localize "SHARDS.Ansu.StatDuration"}}</span><span class="n">{{detail.duration}}</span></div>
       <div class="ansu-stat hot"><span class="l">{{localize "SHARDS.Ansu.CallDC"}}</span><span class="n">{{detail.callDc}}</span></div>
       <div class="ansu-stat hot"><span class="l">{{localize "SHARDS.Ansu.ReleaseDC"}}</span><span class="n">{{detail.releaseDc}}</span></div>
-      {{#if climb}}
-      <div class="ansu-stat climb-n"><span class="l">{{localize "SHARDS.Ansu.ClimbTitle"}}</span><span class="n">{{climb.value}} <small>/ {{climb.needed}}</small></span></div>
+      {{#if bars}}
+      <div class="ansu-stat loy-n band-{{bars.loyalty.band}}"><span class="l">{{localize "SHARDS.Ansu.LoyaltyTitle"}}</span><span class="n">{{bars.loyalty.value}} <small>/ {{bars.loyalty.max}}</small></span></div>
+      <div class="ansu-stat wr-n band-{{bars.wrath.band}}"><span class="l">{{localize "SHARDS.Ansu.WrathTitle"}}</span><span class="n">{{bars.wrath.value}} <small>/ {{bars.wrath.max}}</small></span></div>
       {{/if}}
       <div class="ansu-stat"><span class="l">{{localize "SHARDS.Ansu.Suppressed"}}</span><span class="n">{{detail.suppressedCount}}</span></div>
     </div>
@@ -84,6 +85,9 @@
         {{#if comm.finalRound}}{{localize "SHARDS.Ansu.FinalRound"}}{{else}}{{localize "SHARDS.Ansu.RoundsLeft"}} {{comm.rounds}}{{/if}}
       </span>
       {{/if}}
+      {{#if comm.stampedLabel}}
+      <span class="ansu-rounds" data-tooltip="{{localize 'SHARDS.Ansu.StampedHint'}}"><i class="fa-solid fa-hourglass-half"></i> {{comm.stampedLabel}}</span>
+      {{/if}}
       {{#if comm.canEndNoSave}}
       <button type="button" class="ansu-ghost ansu-endnosave" data-action="endNoSave"
         data-tooltip="{{localize 'SHARDS.Ansu.EndNoSaveHint'}}"><i class="fa-solid fa-hand"></i></button>
@@ -98,10 +102,18 @@
       {{/if}}
     </div>
 
+    {{#if comm.hasFlags}}
+    <div class="ansu-flags">
+      {{#if comm.pendingPenalty}}<span class="ansu-flag bad" data-tooltip="{{localize 'SHARDS.Ansu.ReturnPenaltyHint'}}"><i class="fa-solid fa-arrow-up"></i> {{localize "SHARDS.Ansu.ReturnPenalty"}}</span>{{/if}}
+      {{#if comm.fatigued}}<span class="ansu-flag bad"><i class="fa-solid fa-person-falling"></i> {{localize "SHARDS.Ansu.FatiguedFlag"}}</span>{{/if}}
+      {{#if comm.lockout}}<span class="ansu-flag bad" data-tooltip="{{localize 'SHARDS.Ansu.LockoutHint'}}"><i class="fa-solid fa-lock"></i> {{localize "SHARDS.Ansu.LockoutFlag"}} {{comm.lockout}}</span>{{/if}}
+    </div>
+    {{/if}}
+
     <div class="ansu-conflict-row">
-      <button type="button" class="ansu-ghost" data-action="conflict" {{#unless comm.canConflict}}disabled{{/unless}}
+      <button type="button" class="ansu-act warn" data-action="conflict" {{#unless comm.canConflict}}disabled{{/unless}}
         data-tooltip="{{localize 'SHARDS.Ansu.ConflictHint'}}"><i class="fa-solid fa-scale-unbalanced"></i> {{localize "SHARDS.Ansu.ConflictButton"}}</button>
-      <button type="button" class="ansu-ghost" data-action="letIn" {{#unless comm.canLetIn}}disabled{{/unless}}
+      <button type="button" class="ansu-act" data-action="letIn" {{#unless comm.canLetIn}}disabled{{/unless}}
         data-tooltip="{{localize 'SHARDS.Ansu.LetInHint'}}"><i class="fa-solid fa-door-open"></i> {{localize "SHARDS.Ansu.LetInButton"}}</button>
       {{#if comm.seizeKind}}
       <span class="ansu-state st-seized">{{comm.seizeKindLabel}}{{#if comm.seizeTurnsLeft}} · {{localize "SHARDS.Ansu.TurnEndsLeft"}} {{comm.seizeTurnsLeft}}{{/if}}</span>
@@ -174,7 +186,7 @@
       <span class="ansu-step-note">{{localize "SHARDS.Ansu.BadgeHint"}}</span>
       <span class="ansu-spacer"></span>
       {{#unless detail.terminal}}
-      <button type="button" class="ansu-tenth {{#if climb.full}}ready{{/if}}" data-action="fork"
+      <button type="button" class="ansu-tenth {{#if bars.loyalty.full}}ready{{/if}}" data-action="fork"
         {{#unless detail.atNinth}}disabled{{/unless}}
         data-tooltip="{{#unless detail.atNinth}}{{localize 'SHARDS.Ansu.TenthLocked'}}{{/unless}}">
         <i class="fa-solid fa-crown"></i> {{localize "SHARDS.Ansu.ForkTitle"}}…
@@ -182,21 +194,49 @@
       {{/unless}}
     </div>
 
-    {{#if climb}}
-    <div class="ansu-climb {{#if climb.full}}full{{/if}}">
-      <div class="ansu-climb-row">
-        <span class="ansu-climb-title">{{localize "SHARDS.Ansu.ClimbTitle"}} — {{localize "SHARDS.Ansu.ClimbTo"}} {{climb.nextLevel}}</span>
-        <span class="ansu-climb-count">{{climb.value}} <small>/ {{climb.needed}}</small></span>
-        <div class="ansu-segbar">
-          {{#each climb.segments}}
-          <button type="button" class="ansu-seg {{#if this.filled}}f{{/if}} {{#if this.gap}}gap{{/if}}"
-            data-action="climbSet" data-value="{{this.value}}" aria-label="set climb to {{this.value}}"></button>
-          {{/each}}
+    {{#if bars}}
+    <div class="ansu-bars">
+      <div class="ansu-bar-row loyalty">
+        <span class="ansu-bar-title">{{localize "SHARDS.Ansu.LoyaltyTitle"}}</span>
+        <span class="ansu-bar-count">{{bars.loyalty.value}} <small>/ {{bars.loyalty.max}}</small></span>
+        <div class="ansu-segbar" role="meter" aria-valuemin="0" aria-valuemax="{{bars.loyalty.max}}" aria-valuenow="{{bars.loyalty.value}}">
+          {{#each bars.loyalty.segments}}<span class="ansu-seg band-{{this.band}} {{#if this.filled}}f{{/if}}"></span>{{/each}}
         </div>
-        <button type="button" class="ansu-mini" data-action="climbMinus" aria-label="-1">−</button>
-        <button type="button" class="ansu-mini" data-action="climbPlus" aria-label="+1">+</button>
+        <button type="button" class="ansu-mini" data-action="loyaltyMinus" aria-label="-1">−</button>
+        <button type="button" class="ansu-mini" data-action="loyaltyPlus" aria-label="+1">+</button>
       </div>
-      <div class="ansu-climb-legend">{{localize "SHARDS.Ansu.ClimbLegend"}}</div>
+      <div class="ansu-bar-meta">
+        <span>{{localize "SHARDS.Ansu.BandLabel"}} <b class="band-{{bars.loyalty.band}}">{{bars.loyalty.bandLabel}}</b></span>
+        <span>{{localize "SHARDS.Ansu.CallAdjustLabel"}} <b>{{bars.loyalty.adjustText}}</b></span>
+        <span class="ansu-bar-rule">{{bars.nextLevelText}}</span>
+      </div>
+
+      <div class="ansu-bar-row wrath">
+        <span class="ansu-bar-title">{{localize "SHARDS.Ansu.WrathTitle"}}</span>
+        <span class="ansu-bar-count">{{bars.wrath.value}} <small>/ {{bars.wrath.max}}</small></span>
+        <div class="ansu-segbar" role="meter" aria-valuemin="0" aria-valuemax="{{bars.wrath.max}}" aria-valuenow="{{bars.wrath.value}}">
+          {{#each bars.wrath.segments}}<span class="ansu-seg band-{{this.band}} {{#if this.filled}}f{{/if}}"></span>{{/each}}
+        </div>
+        <button type="button" class="ansu-mini" data-action="wrathMinus" aria-label="-1">−</button>
+        <button type="button" class="ansu-mini" data-action="wrathPlus" aria-label="+1">+</button>
+      </div>
+      <div class="ansu-bar-meta">
+        <span>{{localize "SHARDS.Ansu.WrathStateLabel"}} <b class="band-{{bars.wrath.band}}">{{bars.wrath.bandLabel}}</b></span>
+        <span>{{localize "SHARDS.Ansu.ConflictBumpLabel"}} <b>{{bars.wrath.bumpText}}</b></span>
+        <span class="ansu-spacer"></span>
+        <button type="button" class="ansu-ghost" data-action="nightRest" data-tooltip="{{localize 'SHARDS.Ansu.NightRestHint'}}">
+          <i class="fa-solid fa-bed"></i> {{localize "SHARDS.Ansu.NightRest"}}</button>
+      </div>
+
+      <div class="ansu-deed-row">
+        <select name="deed" aria-label="{{localize 'SHARDS.Ansu.DeedPick'}}">
+          <option value="">{{localize "SHARDS.Ansu.DeedPick"}}</option>
+          {{#each bars.deeds}}<option value="{{this.id}}">{{this.label}}</option>{{/each}}
+        </select>
+        <input type="text" name="deedNote" placeholder="{{localize 'SHARDS.Ansu.DeedNoteHint'}}">
+        <button type="button" class="ansu-primary" data-action="recordDeed"><i class="fa-solid fa-feather"></i> {{localize "SHARDS.Ansu.DeedRecord"}}</button>
+        <button type="button" class="ansu-ghost" data-action="openValues" data-tooltip="{{localize 'SHARDS.Ansu.ValuesOpenHint'}}"><i class="fa-solid fa-book-open"></i></button>
+      </div>
     </div>
     {{/if}}
 
@@ -322,20 +362,9 @@
       <div class="ansu-release-row">
         <span class="ansu-lbl">{{localize "SHARDS.Ansu.RecentRolls"}}</span>
         {{#each release.recent}}
-        <span class="ansu-pill outcome-{{this.outcome}}">{{this.label}} <small>{{this.climb}}</small></span>
-        {{/each}}
-        {{#each release.chips}}
-        <button type="button" class="ansu-sugg" data-action="chip" data-chip="{{this.chip}}">✦ {{this.label}}</button>
+        <span class="ansu-pill outcome-{{this.outcome}}">{{this.label}}</span>
         {{/each}}
       </div>
-      {{else}}
-      {{#if release.chips.length}}
-      <div class="ansu-release-row">
-        {{#each release.chips}}
-        <button type="button" class="ansu-sugg" data-action="chip" data-chip="{{this.chip}}">✦ {{this.label}}</button>
-        {{/each}}
-      </div>
-      {{/if}}
       {{/if}}
     </div>
     {{/unless}}

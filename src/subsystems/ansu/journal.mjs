@@ -5,6 +5,8 @@
  */
 
 import { readAnsu, patchAnsu } from "./state.mjs";
+import { loadDeeds } from "./content.mjs";
+import { valuesRows, deedLogLines, signed } from "./logic/panel.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
 
@@ -57,6 +59,10 @@ export function describeEntry(entry) {
       const outcome = d.outcome ? game.i18n.localize(`SHARDS.Ansu.Outcome.${d.outcome}`) : "?";
       const stage = game.i18n.localize(`SHARDS.Ansu.ConflictStage.${d.stage ?? "will"}`);
       return game.i18n.format("SHARDS.Ansu.Log.conflict", { stage, dc: d.dc ?? "?", outcome });
+    }
+    case "adjust": {
+      const bar = game.i18n.localize(d.bar === "wrath" ? "SHARDS.Ansu.WrathTitle" : "SHARDS.Ansu.LoyaltyTitle");
+      return game.i18n.format("SHARDS.Ansu.Log.adjust", { bar, from: d.from ?? "?", to: d.to ?? "?" });
     }
     case "transform":
       return game.i18n.format("SHARDS.Ansu.Log.transform", {
@@ -117,4 +123,113 @@ export async function exportLog(actor) {
   entry.sheet?.render(true);
   ui.notifications?.info(game.i18n.localize("SHARDS.Ansu.JournalExported"));
   return entry;
+}
+
+/* ------------------------------------------------------------------ */
+/* "What the Ansu values": the bearer's own page (0.8)                  */
+/* ------------------------------------------------------------------ */
+
+/** A deed's effect in words: "+1 loyalty, Wrath -1", "Wrath to 0". */
+export function deedEffectText(eff) {
+  const parts = [];
+  if (eff.loyalty) parts.push(game.i18n.format("SHARDS.Ansu.DeedEffectLoyalty", { n: signed(eff.loyalty) }));
+  if (eff.wrathSet !== null && eff.wrathSet !== undefined) {
+    parts.push(game.i18n.format("SHARDS.Ansu.DeedEffectWrathSet", { n: eff.wrathSet }));
+  } else if (eff.wrath) {
+    parts.push(game.i18n.format("SHARDS.Ansu.DeedEffectWrath", { n: signed(eff.wrath) }));
+  }
+  return parts.join(", ") || "-";
+}
+
+/** What a logged deed actually moved, in words ("+1 loyalty, Wrath -1"). */
+function moveText(line) {
+  const parts = [];
+  if (line.loyalty && line.loyalty[0] !== line.loyalty[1]) {
+    parts.push(game.i18n.format("SHARDS.Ansu.DeedEffectLoyalty", { n: signed(line.loyalty[1] - line.loyalty[0]) }));
+  }
+  if (line.wrath && line.wrath[0] !== line.wrath[1]) {
+    parts.push(game.i18n.format("SHARDS.Ansu.DeedEffectWrath", { n: signed(line.wrath[1] - line.wrath[0]) }));
+  }
+  return parts.join(", ");
+}
+
+/** The values page HTML: the deed table and the last ten deed lines. */
+export function renderValuesHtml(deeds, log) {
+  const TONE = { good: "cs", warn: "f", bad: "cf" };
+  const rows = valuesRows(deeds.deeds)
+    .map(
+      (g) =>
+        `<tr class="ansu-values-${TONE[g.tone]}"><td><strong>${esc(deedEffectText(g))}</strong></td><td>${g.labels
+          .map((l) => `${esc(l)}.`)
+          .join(" ")}</td></tr>`,
+    )
+    .join("\n");
+  const lines = deedLogLines(log, deeds.byId, 10)
+    .map((l) => {
+      const move = moveText(l);
+      const note = l.note ? ` <em>(${esc(l.note)})</em>` : "";
+      return `<li>${esc(l.label)}${move ? `: ${esc(move)}` : ""}${note}</li>`;
+    })
+    .join("\n");
+  const recent = lines
+    ? `<ul>\n${lines}\n</ul>`
+    : `<p><em>${esc(game.i18n.localize("SHARDS.Ansu.ValuesNone"))}</em></p>`;
+  return `<p>${esc(game.i18n.localize("SHARDS.Ansu.ValuesIntro"))}</p>
+<table>
+  <tbody>
+${rows}
+  </tbody>
+</table>
+<h3>${esc(game.i18n.localize("SHARDS.Ansu.ValuesRecent"))}</h3>
+${recent}`;
+}
+
+/** The actor's player owners get Observer on the page; everyone else none. */
+export function valuesOwnership(actor) {
+  const LV = globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS ?? { NONE: 0, OBSERVER: 2, OWNER: 3 };
+  const ownership = { default: LV.NONE };
+  for (const u of game.users?.contents ?? Array.from(game.users ?? [])) {
+    if (u.isGM) continue;
+    if (actor.testUserPermission?.(u, "OWNER")) ownership[u.id] = LV.OBSERVER;
+  }
+  return ownership;
+}
+
+/**
+ * Create or rebuild the bearer's "What the Ansu values" journal page: the deed
+ * table and the last ten deed lines, readable by the actor's owners. GM side;
+ * a no-op where there is no journal (tests, a player client).
+ */
+export async function rebuildValuesPage(actor) {
+  if (!game.user?.isGM || typeof JournalEntry === "undefined" || !game.journal) return null;
+  try {
+    const deeds = await loadDeeds();
+    const st = readAnsu(actor);
+    const html = renderValuesHtml(deeds, st.log);
+    const ownership = valuesOwnership(actor);
+    const page = {
+      name: game.i18n.localize("SHARDS.Ansu.ValuesPageName"),
+      type: "text",
+      text: { content: html, format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML },
+    };
+    let entry = st.valuesJournalId ? game.journal.get(st.valuesJournalId) : null;
+    if (entry) {
+      // Owners can change hands; the page follows the actor every rebuild.
+      await entry.update({ ownership });
+      const first = entry.pages.contents[0];
+      if (first) await first.update({ "text.content": html });
+      else await entry.createEmbeddedDocuments("JournalEntryPage", [page]);
+    } else {
+      entry = await JournalEntry.create({
+        name: game.i18n.format("SHARDS.Ansu.ValuesJournalName", { name: actor.name }),
+        ownership,
+        pages: [page],
+      });
+      if (entry) await patchAnsu(actor, { valuesJournalId: entry.id });
+    }
+    return entry;
+  } catch (err) {
+    console.error("the-shards-subsystems | ansu values page", err);
+    return null;
+  }
 }

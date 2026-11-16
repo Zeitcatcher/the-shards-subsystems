@@ -1,8 +1,7 @@
 /**
- * Pure Ansu model: tiers, level clamping, the Release DC (GM formula B: grows to
- * attunement 5, frozen after), communion durations by tier, and the Climb (progress
- * toward the next attunement — the inverse of Izir's slide: it fills on CONTROL,
- * not on failure). No Foundry imports — vitest-covered.
+ * Pure Ansu model: tiers, level clamping, the Call and release DCs, Communion
+ * lengths by Call degree, loyalty and wrath, deeds and the night's rest. The
+ * Climb is gone (rework step E). No Foundry imports, vitest-covered.
  */
 
 export const MAX_LEVEL = 10;
@@ -34,57 +33,6 @@ export function tierForLevel(level) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Release DC — formula B, frozen from the cap onward.                  */
-/* ------------------------------------------------------------------ */
-
-/**
- * Will-save DC to end Communion: base + step × min(attunement, cap).
- * Defaults (GM decision, rev 3): 20 + 2 × min(N, 5) → 22 / 24 / 26 / 28 / 30.
- * Level 0 is treated as 1; at attunement 10 no save is ever rolled (callers gate).
- */
-export function releaseDC(level, base = 20, step = 2, cap = 5) {
-  const b = Number.isFinite(Math.trunc(Number(base))) ? Math.trunc(Number(base)) : 20;
-  const s = Number.isFinite(Math.trunc(Number(step))) ? Math.trunc(Number(step)) : 2;
-  const c = Math.max(1, Math.trunc(Number(cap)) || 5);
-  const n = Math.max(1, clampLevel(level));
-  return Math.max(1, b + s * Math.min(n, c));
-}
-
-/* ------------------------------------------------------------------ */
-/* Call DC — the Athletics gate on Invoking (GM rev 3.3).            */
-/* ------------------------------------------------------------------ */
-
-/**
- * Athletics-check DC to Call the Ansu: base + step × attunement, UNCAPPED —
- * unlike the Release DC it never freezes (22 → 38 at attunement 9). The power
- * is never owed; it answers strength. No check at Mastery (callers gate).
- */
-export function callDC(level, base = 20, step = 2) {
-  const b = Number.isFinite(Math.trunc(Number(base))) ? Math.trunc(Number(base)) : 20;
-  const s = Number.isFinite(Math.trunc(Number(step))) ? Math.trunc(Number(step)) : 2;
-  const n = Math.max(1, clampLevel(level));
-  return Math.max(1, b + s * n);
-}
-
-/* ------------------------------------------------------------------ */
-/* Communion duration by tier.                                          */
-/* ------------------------------------------------------------------ */
-
-/**
- * Rounds of Communion per invocation: 1 (Trial) / 3 (Discipline) / 10 = one minute
- * (Union). Returns null at 10 (permanent — Mastery has no duration) and 0 at
- * attunement 0 (no Communion to invoke yet).
- */
-export function durationRounds(level) {
-  const l = clampLevel(level);
-  if (l < 1) return 0;
-  if (l <= 3) return 1;
-  if (l <= 6) return 3;
-  if (l <= 9) return 10;
-  return null;
-}
-
-/* ------------------------------------------------------------------ */
 /* Numbers baked into rule elements.                                    */
 /* ------------------------------------------------------------------ */
 
@@ -111,26 +59,6 @@ export function tierDiceFor(level) {
   return 3;
 }
 
-/* ------------------------------------------------------------------ */
-/* The Climb — progress toward the next attunement level.               */
-/* ------------------------------------------------------------------ */
-
-/** Points needed to rise from `level` to `level + 1`: base + step × level (2 + N). */
-export function climbNeeded(level, base = 2, step = 1) {
-  const l = clampLevel(level);
-  if (l < 1 || l >= MAX_LEVEL) return 0;
-  const b = Number.isFinite(Math.trunc(Number(base))) ? Math.trunc(Number(base)) : 2;
-  const s = Number.isFinite(Math.trunc(Number(step))) ? Math.trunc(Number(step)) : 1;
-  return Math.max(1, b + s * l);
-}
-
-/** Climb delta for a release outcome: clean +1, critical +2 — failures hold. */
-export function climbDeltaFor(outcome) {
-  if (outcome === "criticalSuccess") return 2;
-  if (outcome === "success") return 1;
-  return 0;
-}
-
 /**
  * May the Tenth Step fork be opened for this state?
  *
@@ -146,43 +74,8 @@ export function forkAllowed({ terminal, level } = {}) {
   return clampLevel(level) >= MAX_LEVEL - 1;
 }
 
-/**
- * Apply a climb delta (or an absolute set via `{ set }`): overflow carries the
- * level upward; a full bar at attunement 9 does NOT enter 10 — it caps and raises
- * `atTenth` so the GM chooses the fork (Mastery / Taken). Level 0 has no climb.
- *
- * @param {number} level      current attunement (0..10)
- * @param {number} climb      current climb points
- * @param {number} delta      points to add (may be negative)
- * @param {object} [opts]     { set: absoluteValue } overrides delta; { base, step } dials
- * @returns {{level:number, climb:number, leveled:boolean, atTenth:boolean}}
- */
-export function applyClimb(level, climb, delta, opts = {}) {
-  let l = clampLevel(level);
-  if (l < 1 || l >= MAX_LEVEL) return { level: l, climb: 0, leveled: false, atTenth: false };
-
-  const needed = (lvl) => climbNeeded(lvl, opts.base, opts.step);
-  let c = Number.isFinite(opts.set) ? Math.trunc(opts.set) : (Math.trunc(Number(climb)) || 0) + Math.trunc(Number(delta) || 0);
-  c = Math.max(0, c);
-
-  let leveled = false;
-  while (l < MAX_LEVEL - 1 && c >= needed(l)) {
-    c -= needed(l);
-    l += 1;
-    leveled = true;
-  }
-
-  let atTenth = false;
-  if (l === MAX_LEVEL - 1 && c >= needed(l)) {
-    c = needed(l); // cap: the fork is a GM decision, never automatic
-    atTenth = true;
-  }
-  return { level: l, climb: c, leveled, atTenth };
-}
-
 /* ================================================================== */
 /* Rework 0.8 (step A): loyalty, wrath, degrees, lockouts, the blade.   */
-/* The Climb functions above stay until step E.                         */
 /* ================================================================== */
 
 /** Loyalty scale bounds (default 5) and wrath bounds (default 0). */
@@ -241,21 +134,30 @@ export function callAdjust(loyalty) {
   return CALL_ADJUST[loyaltyBand(loyalty)];
 }
 
-/**
- * Call DC with loyalty: callDC(level) + callAdjust(loyalty), so the defaults give
- * 20 + 2 x level + adjust. The dials (ansuCallBase / ansuCallStep) pass through.
- * Named apart from callDC so the 0.7 callers keep their positional dials.
- */
-export function callDCFor(level, loyalty, { base = 20, step = 2 } = {}) {
-  return Math.max(1, callDC(level, base, step) + callAdjust(loyalty));
+function dialInt(v, fallback) {
+  const n = Math.trunc(Number(v));
+  return Number.isFinite(n) ? n : fallback;
 }
 
 /**
- * Release DC with the return penalty: releaseDC(level) + returnPenalty (0 or 2),
- * so the defaults give 20 + 2 x min(level, 5) + penalty. The dials pass through.
+ * Call DC: base + step x level (uncapped) + callAdjust(loyalty), so the defaults
+ * give 20 + 2 x level + adjust. Level 0 counts as 1. The dials (ansuCallBase /
+ * ansuCallStep) pass through; junk dials fall back to 20 / 2.
+ */
+export function callDCFor(level, loyalty, { base = 20, step = 2 } = {}) {
+  const n = Math.max(1, clampLevel(level));
+  return Math.max(1, dialInt(base, 20) + dialInt(step, 2) * n + callAdjust(loyalty));
+}
+
+/**
+ * Release DC: base + step x min(level, cap) + returnPenalty (0 or 2), so the
+ * defaults give 20 + 2 x min(level, 5) + penalty. Level 0 counts as 1. The
+ * dials (ansuDcBase / ansuDcStep / ansuDcCap) pass through.
  */
 export function releaseDCFor(level, returnPenalty = 0, { base = 20, step = 2, cap = 5 } = {}) {
-  return Math.max(1, releaseDC(level, base, step, cap) + Math.max(0, int(returnPenalty, 0)));
+  const c = Math.max(1, Math.trunc(Number(cap)) || 5);
+  const n = Math.max(1, clampLevel(level));
+  return Math.max(1, dialInt(base, 20) + dialInt(step, 2) * Math.min(n, c) + Math.max(0, int(returnPenalty, 0)));
 }
 
 /** Wrath band: 0-2 calm, 3-5 angry, 6 breaking. */

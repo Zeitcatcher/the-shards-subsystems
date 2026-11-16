@@ -105,7 +105,7 @@ describe("numbers (rev 3)", () => {
     expect(ctx.resist).toBe(2);
     expect(ctx.parry).toBe(8);
     expect(ctx.tierDice).toBe(2);
-    expect(ctx.durationRounds).toBe(3);
+    expect(ctx.durationRounds).toBe(5); // the success length at Discipline (0.8 table)
   });
   it("injects {{ansuCallDC}}", () => {
     expect(injectNumbers("Call DC {{ansuCallDC}}", buildCtx(4, 6))).toBe("Call DC 32");
@@ -115,7 +115,7 @@ describe("numbers (rev 3)", () => {
     expect(injectNumbers(
       "DC {{ansuReleaseDC}}, {{ansuTempHp}} THP, res {{ansuResist}}, parry {{ansuParry}}, {{ansuTierDice}}d6, att {{ansuLevel}}, {{ansuDuration}}",
       ctx,
-    )).toBe("DC 30, 15 THP, res 3, parry 10, 2d6, att 5, 3 rounds");
+    )).toBe("DC 30, 15 THP, res 3, parry 10, 2d6, att 5, 5 rounds");
   });
   it("durationLabel names the bands", () => {
     expect(durationLabel(1)).toBe("1 round");

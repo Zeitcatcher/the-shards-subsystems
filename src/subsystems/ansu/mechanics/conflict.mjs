@@ -104,7 +104,10 @@ function inlineCheck(stat, dc, id, label) {
   const showDc = game.settings.get(MODULE_ID, SETTINGS.ANSU_SHOW_DC) || "gm";
   // roller:self, as on the Call and release cards: the clicker's selected token
   // must never roll in the bearer's place. (0.6.6)
-  return `@Check[${stat}|dc:${dc}|name:${label}|showDC:${showDc}|roller:self|options:${CONFLICT_OPTION},${CONFLICT_ID_PREFIX}${id}]`;
+  // The Will save is a battle of minds and carries the mental trait (ruling
+  // after step D); Diplomacy and Intimidation keep their own traits.
+  const traits = stat === "will" ? "|traits:mental" : "";
+  return `@Check[${stat}|dc:${dc}${traits}|name:${label}|showDC:${showDc}|roller:self|options:${CONFLICT_OPTION},${CONFLICT_ID_PREFIX}${id}]`;
 }
 
 /**
@@ -147,6 +150,7 @@ async function rollNpc(actor, id, dc) {
   await will.roll({
     dc: { value: dc },
     label: game.i18n.localize("SHARDS.Ansu.ConflictTitle"),
+    traits: ["mental"],
     extraRollOptions: [CONFLICT_OPTION, `${CONFLICT_ID_PREFIX}${id}`],
     messageMode: "gm", // not rollMode (0.6.6)
   });

@@ -12,7 +12,7 @@
  * delete ops, updates in place.
  */
 
-import { clampLevel, tierForLevel, releaseDC, callDCFor, durationRounds, tempHpFor, resistFor, parryFor, tierDiceFor, takeoverCap, MAX_LEVEL } from "./model.mjs";
+import { clampLevel, tierForLevel, releaseDCFor, callDCFor, durationRoundsFor, tempHpFor, resistFor, parryFor, tierDiceFor, takeoverCap, MAX_LEVEL, clampLoyalty, clampWrath, loyaltyBand, wrathBand, callAdjust, gateMax } from "./model.mjs";
 
 export const ATTUNEMENT_ENTRY_ID = "ansu-attunement";
 export const COMMUNION_ENTRY_ID = "ansu-communion";
@@ -79,13 +79,15 @@ export function buildCtx(charLevel, level, dials = {}, { loyalty = 5 } = {}) {
   return {
     charLevel: cl,
     level: l,
-    releaseDc: releaseDC(l, dials.dcBase, dials.dcStep, dials.dcCap),
+    releaseDc: releaseDCFor(l, 0, { base: dials?.dcBase, step: dials?.dcStep, cap: dials?.dcCap }),
     callDc: callDCFor(l, loyalty, { base: dials?.callBase, step: dials?.callStep }),
     tempHp: tempHpFor(l),
     resist: resistFor(l),
     parry: parryFor(l),
     tierDice: tierDiceFor(l),
-    durationRounds: durationRounds(l),
+    // The success length of the duration table (0.8): what a forced Call and a
+    // pre-0.8 Communion with no stamp run for, and what {{ansuDuration}} quotes.
+    durationRounds: durationRoundsFor(l, 2),
   };
 }
 
@@ -335,6 +337,16 @@ export function composeAttunement(state, content, opts = {}) {
     inheritanceLines,
     releaseDc: ctx.releaseDc,
     durationRounds: ctx.durationRounds,
+    // The player's view (0.8): loyalty, wrath, their bands, the Call DC and the
+    // Communion lengths by Call degree, and the next-level gate.
+    loyalty: clampLoyalty(state.loyalty),
+    loyaltyBand: loyaltyBand(state.loyalty),
+    callAdjust: callAdjust(state.loyalty),
+    wrath: clampWrath(state.wrath),
+    wrathBand: wrathBand(state.wrath),
+    callDc: ctx.callDc,
+    lengths: { cs: durationRoundsFor(level, 3), s: durationRoundsFor(level, 2), f: durationRoundsFor(level, 1) },
+    gate: gateMax(opts.charLevel),
     ctx,
   };
   // releaseDc is hashed because the marker's DESCRIPTION quotes it: none of the
@@ -343,7 +355,19 @@ export function composeAttunement(state, content, opts = {}) {
   // number next to action items that had already refreshed. durationRounds needs
   // no seat — it is a pure function of `level`, which is hashed. (0.6.6)
   composed.hash = hashString(
-    stableStringify({ level, tier, terminal, rules, inheritanceLines, releaseDc: ctx.releaseDc }),
+    stableStringify({
+      level,
+      tier,
+      terminal,
+      rules,
+      inheritanceLines,
+      releaseDc: ctx.releaseDc,
+      // The description quotes these from 0.8, so a deed or a rest must reach it.
+      loyalty: composed.loyalty,
+      wrath: composed.wrath,
+      callDc: composed.callDc,
+      gate: composed.gate,
+    }),
   );
   return composed;
 }

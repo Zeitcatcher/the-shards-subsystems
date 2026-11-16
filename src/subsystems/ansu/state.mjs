@@ -38,7 +38,7 @@ export function emptyAnsuState() {
     v: 1,
     enabled: true,
     level: 0,
-    climb: 0, // progress toward the next level (needs 2 + level to rise); unused from rework step E
+    climb: 0, // the retired Climb (0.7): kept readable, unused since rework step E
     loyalty: LOYALTY_DEFAULT, // 0..10, rework 0.8
     wrath: 0, // 0..6, rework 0.8
     lockout: null, // null | { until: worldTime|null, untilRest: boolean }
@@ -79,6 +79,7 @@ export function emptyAnsuState() {
     },
     log: [], // [{ t, type, data, note }]
     journalId: null,
+    valuesJournalId: null, // the bearer's "What the Ansu values" page (0.8)
   };
 }
 

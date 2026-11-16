@@ -1,6 +1,6 @@
 /**
  * Ansu GM control panel — same one-screen anatomy as the approved Izir dashboard:
- * roster · identity · stats · Communion control bar · the Climb · ladder · Release
+ * roster · identity · stats · Communion control bar · loyalty and wrath · ladder · Release
  * block · footer. No tabs; Art / History are satellite dialogs. Actors are keyed
  * by UUID so unlinked token actors work. Every mutation goes flags → syncActor →
  * re-render. The subsystem switcher strip (shared core chrome) is injected on
@@ -19,7 +19,7 @@ import {
   attuneActor,
   unattuneActor,
 } from "../state.mjs";
-import { tierForLevel, climbNeeded, forkAllowed, MAX_LEVEL } from "../logic/model.mjs";
+import { forkAllowed, durationRoundsFor, MAX_LEVEL } from "../logic/model.mjs";
 import {
   selectEntries,
   buildCtx,
@@ -31,20 +31,35 @@ import {
   actionDataFor,
   ladderCtxLevel,
 } from "../logic/reconcile.mjs";
-import { dcDraftValue, rosterDots } from "../logic/panel.mjs";
+import {
+  dcDraftValue,
+  rosterDots,
+  loyaltyView,
+  wrathView,
+  deedEffect,
+  lockoutView,
+  shortTime,
+  nextLevelRule,
+  lengthsFor,
+} from "../logic/panel.mjs";
 import { seizureLanding, seizureKind } from "../logic/seizure.mjs";
 import { SEVERITIES } from "../logic/conflict.mjs";
-import { suggestChips } from "../logic/suggest.mjs";
-import { loadContent } from "../content.mjs";
+import { loadContent, loadDeeds } from "../content.mjs";
 import { syncActor, syncAllAttuned, displayTier, readDials, inActiveCombat } from "../sync.mjs";
-import { invokeCommunion, requestInvoke, endCommunion, findCommunionEffect, remainingRounds } from "../mechanics/communion.mjs";
+import {
+  invokeCommunion,
+  requestInvoke,
+  endCommunion,
+  findCommunionEffect,
+  remainingRounds,
+  isFatigued,
+} from "../mechanics/communion.mjs";
 import {
   callRelease,
   suggestedDC,
   recordReleaseOutcome,
   clearPendingRelease,
   dismissReleaseReroll,
-  postUrge,
 } from "../mechanics/release.mjs";
 import { suggestedCallDC, recordCallOutcome, clearPendingCall, dismissCallReroll } from "../mechanics/call.mjs";
 import { startSeizure, returnFromSeizure, isSeized, letAnsuIn, canLetIn } from "../mechanics/seizure.mjs";
@@ -56,8 +71,9 @@ import {
   recordConflictReroll,
   dismissConflictReroll,
 } from "../mechanics/conflict.mjs";
-import { exportLog } from "../journal.mjs";
-import { triggerFork, triggerTaken, setAttunement, applyClimbChange } from "../transform.mjs";
+import { exportLog, deedEffectText, rebuildValuesPage } from "../journal.mjs";
+import { recordDeed, adjustBar, restForNight } from "../mechanics/deeds.mjs";
+import { triggerFork, triggerTaken, setAttunement } from "../transform.mjs";
 import { openArtDialog, openHistoryDialog } from "./ansu-dialogs.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -85,7 +101,7 @@ function tierLabelFor(st) {
  * `game.modules.get(...).api.openPanel("ansu")`, mirrored on
  * `globalThis.TheShardsSubsystems` — is defined on every client, so a player who
  * ran the launcher macro or typed one line in the console got the whole panel,
- * and Foundry then happily let them drive their OWN actor's attunement, Climb
+ * and Foundry then happily let them drive their OWN actor's attunement, loyalty
  * and Communion, because they own it. Gated three times over: the entry point,
  * the render, and every action handler. (0.6.6)
  */
@@ -200,26 +216,67 @@ async function onTaken() {
   this.render();
 }
 
-async function onClimbPlus() {
+async function onBar(bar, delta) {
   const actor = resolveActor(this._actorUuid);
-  if (actor) await applyClimbChange(actor, { delta: +1, source: "gm" });
+  if (actor) await adjustBar(actor, bar, delta);
   this.render();
 }
-async function onClimbMinus() {
-  const actor = resolveActor(this._actorUuid);
-  if (actor) await applyClimbChange(actor, { delta: -1, source: "gm" });
-  this.render();
+async function onLoyaltyPlus() {
+  return onBar.call(this, "loyalty", +1);
 }
-async function onClimbSet(_event, target) {
+async function onLoyaltyMinus() {
+  return onBar.call(this, "loyalty", -1);
+}
+async function onWrathPlus() {
+  return onBar.call(this, "wrath", +1);
+}
+async function onWrathMinus() {
+  return onBar.call(this, "wrath", -1);
+}
+
+/** Apply the deed picked in the list, with the optional note. */
+async function onRecordDeed() {
   const actor = resolveActor(this._actorUuid);
   if (!actor) return;
-  const value = Number(target.dataset.value);
-  if (!Number.isFinite(value)) return;
-  const st = readAnsu(actor);
-  // Clicking the first filled segment clears the bar; anything else sets to it.
-  const set = value === 1 && (st.climb ?? 0) === 1 ? 0 : value;
-  await applyClimbChange(actor, { set, source: "gm" });
+  const select = this.element.querySelector('select[name="deed"]');
+  const noteInput = this.element.querySelector('input[name="deedNote"]');
+  const id = String(select?.value ?? "");
+  if (!id) {
+    ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.DeedPickFirst"));
+    return;
+  }
+  const note = String(noteInput?.value ?? "").trim();
+  this._deedDraft = "";
+  this._deedNoteDraft = "";
+  const r = await recordDeed(actor, id, note);
+  if (r?.leveled) {
+    ui.notifications?.info(game.i18n.format("SHARDS.Ansu.DeedLeveled", { name: actor.name, level: r.level[1] }));
+  }
   this.render();
+}
+
+async function onNightRest() {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  const r = await restForNight(actor);
+  if (r) {
+    const moved = r.wrath[0] !== r.wrath[1] || r.lockoutCleared || r.consentReset;
+    ui.notifications?.info(
+      game.i18n.format(moved ? "SHARDS.Ansu.NightRestDone" : "SHARDS.Ansu.NightRestNothing", {
+        name: actor.name,
+        from: r.wrath[0],
+        to: r.wrath[1],
+      }),
+    );
+  }
+  this.render();
+}
+
+async function onOpenValues() {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  const entry = await rebuildValuesPage(actor);
+  entry?.sheet?.render(true);
 }
 
 async function onToggleSuppress(_event, target) {
@@ -433,33 +490,6 @@ async function onDismissCallReroll() {
   this.render();
 }
 
-async function onChip(_event, target) {
-  const actor = resolveActor(this._actorUuid);
-  if (!actor) return;
-  switch (target.dataset.chip) {
-    case "suggestDiscipline": {
-      const climb = this.element.querySelector(".ansu-climb");
-      climb?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      climb?.classList.add("pulse");
-      setTimeout(() => climb?.classList.remove("pulse"), 1600);
-      return; // no re-render — keep the pulse visible
-    }
-    case "suggestUrge":
-      await postUrge(actor);
-      break;
-    case "suggestSeized": {
-      const comm = this.element.querySelector(".ansu-comm");
-      comm?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      comm?.classList.add("pulse");
-      setTimeout(() => comm?.classList.remove("pulse"), 1600);
-      return;
-    }
-    default:
-      break;
-  }
-  this.render();
-}
-
 async function onExportJournal() {
   const actor = resolveActor(this._actorUuid);
   if (actor) await exportLog(actor);
@@ -550,7 +580,7 @@ function buildLadder(st, content, charLevel, dials) {
     tierId: g.id,
     label: game.i18n.localize(`SHARDS.Ansu.Tier.${g.id}`),
     range: `${g.levels[0]}–${g.levels[g.levels.length - 1]}`,
-    duration: durationLabel(g.id === "trial" ? 1 : g.id === "discipline" ? 3 : 10),
+    duration: lengthsText(g.levels[0]),
     rows: g.levels.map((lvl) => ({
       level: lvl,
       current: !st.terminal && st.level === lvl,
@@ -569,21 +599,39 @@ function buildLadder(st, content, charLevel, dials) {
   return { groups, gateChips };
 }
 
-function buildClimb(st, dials) {
-  if (st.terminal || st.level < 1 || st.level >= MAX_LEVEL) return null;
-  const needed = climbNeeded(st.level, dials.climbBase, dials.climbStep);
-  const value = Math.min(st.climb ?? 0, needed);
+/** Loyalty and wrath bars, the deed picker and the next-level rule. */
+function buildBars(st, deeds, charLevel) {
+  if (st.terminal) return null;
+  const loyalty = loyaltyView(st.loyalty);
+  const wrath = wrathView(st.wrath);
+  const rule = nextLevelRule(st, charLevel);
   return {
-    value,
-    needed,
-    nextLevel: st.level + 1,
-    full: value >= needed,
-    segments: Array.from({ length: needed }, (_, i) => ({
-      value: i + 1,
-      filled: i < value,
-      gap: i > 0 && i % 3 === 0,
+    loyalty: {
+      ...loyalty,
+      bandLabel: game.i18n.localize(`SHARDS.Ansu.LoyaltyBand.${loyalty.band}`),
+      full: loyalty.value >= loyalty.max,
+    },
+    wrath: {
+      ...wrath,
+      bandLabel: game.i18n.localize(`SHARDS.Ansu.WrathBand.${wrath.band}`),
+    },
+    gate: rule.gate,
+    nextLevelText: game.i18n.format(
+      rule.atNinth ? "SHARDS.Ansu.NextLevelNinth" : rule.canRise ? "SHARDS.Ansu.NextLevelOpen" : "SHARDS.Ansu.NextLevelGated",
+      { gate: rule.gate },
+    ),
+    deeds: (deeds?.picker ?? []).map((d) => ({
+      id: d.id,
+      label: `${d.label} (${deedEffectText(deedEffect(d))})`,
     })),
   };
+}
+
+/** One tier's Communion lengths as "F 1 round · S 3 rounds · CS 1 minute". */
+function lengthsText(level) {
+  const l = lengthsFor(level);
+  const lbl = (k) => game.i18n.localize(`SHARDS.Ansu.OutcomeAbbr.${k}`);
+  return `${lbl("f")} ${durationLabel(l.f)} · ${lbl("s")} ${durationLabel(l.s)} · ${lbl("cs")} ${durationLabel(l.cs)}`;
 }
 
 const OUTCOMES = ["criticalSuccess", "success", "failure", "criticalFailure"];
@@ -605,7 +653,6 @@ function rerollView(rec) {
 }
 
 function buildRelease(st, dcPreview) {
-  const suggestionsOn = game.settings.get(MODULE_ID, SETTINGS.ANSU_SUGGESTIONS) === true;
   return {
     dc: dcPreview,
     subjugated: st.terminal === "subjugated",
@@ -613,10 +660,6 @@ function buildRelease(st, dcPreview) {
     pending: st.pendingRelease ? { ...st.pendingRelease } : null,
     reroll: rerollView(st.rerollRelease),
     outcomes: OUTCOMES.map((o) => ({ key: o, label: game.i18n.localize(`SHARDS.Ansu.Outcome.${o}`) })),
-    chips: suggestChips(st.log, { enabled: suggestionsOn }).map((c) => ({
-      chip: c.action,
-      label: game.i18n.localize(c.labelKey),
-    })),
     recent: st.log
       .filter((e) => e.type === "release")
       .slice(-4)
@@ -624,9 +667,15 @@ function buildRelease(st, dcPreview) {
       .map((e) => ({
         outcome: e.data?.outcome ?? "none",
         label: e.data?.outcome ? game.i18n.localize(`SHARDS.Ansu.OutcomeShort.${e.data.outcome}`) : "—",
-        climb: e.data?.climbDelta > 0 ? `+${e.data.climbDelta}` : "±0",
       })),
   };
+}
+
+/** The running lockout as text ("until a night's rest", "4 min"), or null. */
+function lockoutLabel(st) {
+  const lo = lockoutView(st.lockout, game.time?.worldTime ?? 0);
+  if (!lo) return null;
+  return lo.untilRest ? game.i18n.localize("SHARDS.Ansu.LockoutUntilRest") : shortTime(lo.seconds);
 }
 
 /** The Communion control-bar view model. */
@@ -640,6 +689,9 @@ function buildComm(actor, st) {
     if (effect) rounds = remainingRounds(effect);
   }
   const OUTCOME_KEYS = ["criticalSuccess", "success", "failure", "criticalFailure"];
+  const fatigued = isFatigued(actor);
+  const lockout = lockoutLabel(st);
+  const pendingPenalty = st.communion?.returnPenalty === 2;
   return {
     mode,
     modeLabel: game.i18n.localize(`SHARDS.Ansu.Mode.${mode === "none" || mode === "off" ? "dormant" : mode}`),
@@ -649,6 +701,13 @@ function buildComm(actor, st) {
     hasRounds: rounds !== null,
     finalRound: rounds === 0,
     stamped: st.communion?.rounds ?? null,
+    // Out of combat nothing ticks: the row names the stamped length instead.
+    stampedLabel: running && rounds === null && st.communion?.rounds ? durationLabel(st.communion.rounds) : null,
+    // The release-time flags, shown only when they apply.
+    pendingPenalty,
+    fatigued,
+    lockout,
+    hasFlags: pendingPenalty || fatigued || Boolean(lockout),
     canInvoke: !running && st.terminal !== "taken" && (st.level >= 1 || st.terminal === "subjugated"),
     invokeIsCall: !st.terminal, // pre-Mastery the button posts the Call check
     pendingCall: st.pendingCall ? { ...st.pendingCall } : null,
@@ -691,9 +750,13 @@ const PANEL_ACTIONS = {
   levelDown: onLevelDown,
   fork: onFork,
   taken: onTaken,
-  climbPlus: onClimbPlus,
-  climbMinus: onClimbMinus,
-  climbSet: onClimbSet,
+  loyaltyPlus: onLoyaltyPlus,
+  loyaltyMinus: onLoyaltyMinus,
+  wrathPlus: onWrathPlus,
+  wrathMinus: onWrathMinus,
+  recordDeed: onRecordDeed,
+  nightRest: onNightRest,
+  openValues: onOpenValues,
   toggleSuppress: onToggleSuppress,
   editReason: onEditReason,
   invoke: onInvoke,
@@ -715,7 +778,6 @@ const PANEL_ACTIONS = {
   dismissReroll: onDismissReroll,
   recordCallReroll: onRecordCallReroll,
   dismissCallReroll: onDismissCallReroll,
-  chip: onChip,
   exportJournal: onExportJournal,
   resync: onResync,
   openArt: onOpenArt,
@@ -730,6 +792,8 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   _draftUuid = null;
   _dcDraft = null;
   _reasonDraft = "";
+  _deedDraft = "";
+  _deedNoteDraft = "";
 
   static DEFAULT_OPTIONS = {
     id: `${MODULE_ID}-ansu`,
@@ -766,6 +830,16 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       if (this._reasonDraft) reasonInput.value = this._reasonDraft;
       reasonInput.addEventListener("input", () => (this._reasonDraft = reasonInput.value));
     }
+    const deedSelect = this.element.querySelector('select[name="deed"]');
+    const deedNote = this.element.querySelector('input[name="deedNote"]');
+    if (deedSelect) {
+      if (this._deedDraft) deedSelect.value = this._deedDraft;
+      deedSelect.addEventListener("change", () => (this._deedDraft = deedSelect.value));
+    }
+    if (deedNote) {
+      if (this._deedNoteDraft) deedNote.value = this._deedNoteDraft;
+      deedNote.addEventListener("input", () => (this._deedNoteDraft = deedNote.value));
+    }
   }
 
   async _prepareContext() {
@@ -779,6 +853,8 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       this._draftUuid = this._actorUuid;
       this._dcDraft = null;
       this._reasonDraft = "";
+      this._deedDraft = "";
+      this._deedNoteDraft = "";
     }
 
     const roster = attuned.map((a) => {
@@ -802,7 +878,7 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const selected = attuned.find((a) => a.uuid === this._actorUuid) ?? null;
     let detail = null;
     let ladder = null;
-    let climb = null;
+    let bars = null;
     let release = null;
     let comm = null;
     if (selected) {
@@ -821,7 +897,9 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         terminal: st.terminal,
         releaseDc: st.terminal ? "—" : dcPreview,
         callDc: st.terminal ? "—" : suggestedCallDC(st),
-        duration: st.terminal ? durationLabel(null) : durationLabel(st.level >= 1 ? (st.level <= 3 ? 1 : st.level <= 6 ? 3 : 10) : 0),
+        // The success length of the duration table; the full F / S / CS row sits in the tooltip.
+        duration: st.terminal ? durationLabel(null) : durationLabel(durationRoundsFor(st.level, 2)),
+        durationHint: !st.terminal && st.level >= 1 ? lengthsText(st.level) : "",
         suppressedCount: st.suppressed.length,
         canDown: st.level > 0 && !st.terminal,
         canUp: !st.terminal,
@@ -830,7 +908,8 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       detail.releaseDcDraft = dcDraftValue({ draft: this._dcDraft, suggested: dcPreview });
       const content = await loadContent().catch(() => null);
       if (content) ladder = buildLadder(st, content, charLevel, dials);
-      climb = buildClimb(st, dials);
+      const deeds = await loadDeeds().catch(() => null);
+      bars = buildBars(st, deeds, charLevel);
       release = buildRelease(st, dcPreview);
       comm = buildComm(selected, st);
     }
@@ -841,7 +920,7 @@ export class AnsuPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       roster,
       detail,
       ladder,
-      climb,
+      bars,
       release,
       comm,
       densityClass: density === "compact" ? "compact" : "full",
