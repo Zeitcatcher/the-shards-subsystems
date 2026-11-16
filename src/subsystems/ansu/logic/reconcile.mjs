@@ -12,7 +12,7 @@
  * delete ops, updates in place.
  */
 
-import { clampLevel, tierForLevel, releaseDC, callDCFor, durationRounds, tempHpFor, resistFor, parryFor, tierDiceFor, MAX_LEVEL } from "./model.mjs";
+import { clampLevel, tierForLevel, releaseDC, callDCFor, durationRounds, tempHpFor, resistFor, parryFor, tierDiceFor, takeoverCap, MAX_LEVEL } from "./model.mjs";
 
 export const ATTUNEMENT_ENTRY_ID = "ansu-attunement";
 export const COMMUNION_ENTRY_ID = "ansu-communion";
@@ -23,14 +23,16 @@ export const COMMUNION_ENTRY_ID = "ansu-communion";
 
 /**
  * Which content entries are live for this state: unlocked by level (or gate),
- * highest rank per family, not suppressed. `opts.unlockAll` (seizure / Taken)
- * unlocks every level AND the gate — the Ansu wields its whole self.
+ * highest rank per family, not suppressed. `opts.unlockAll` (Taken) unlocks
+ * every level AND the gate: the Ansu wields its whole self. `opts.levelCap` (a
+ * takeover, 0.8) unlocks up to that level and leaves the gate shut.
  * Returns { live, replacedIds }.
  */
 export function selectEntries(state, content, opts = {}) {
   const unlockAll = Boolean(opts.unlockAll);
   const gateOpen = unlockAll || state.terminal === "subjugated" || state.terminal === "taken";
-  const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
+  const capped = Number.isInteger(opts.levelCap) ? clampLevel(opts.levelCap) : null;
+  const level = unlockAll ? MAX_LEVEL : (capped ?? clampLevel(state.level));
   const suppressed = new Set((state.suppressed ?? []).map((s) => s.id));
 
   const unlocked = (content?.entries ?? []).filter((e) => {
@@ -347,8 +349,21 @@ export function composeAttunement(state, content, opts = {}) {
 }
 
 /**
+ * What a Communion mode unlocks (0.8): the terminal "taken" unlocks everything,
+ * the gate included; a takeover ("seized") unlocks entries up to
+ * takeoverCap(level) with the gate shut; anything else, the bearer's own level.
+ * Returns `{unlockAll, level}`; `level` also feeds the numbers (buildCtx).
+ */
+export function unlockFor(state, mode) {
+  if (mode === "taken") return { unlockAll: true, level: MAX_LEVEL };
+  if (mode === "seized") return { unlockAll: false, level: takeoverCap(state.level) };
+  return { unlockAll: false, level: clampLevel(state.level) };
+}
+
+/**
  * Compose the stateful "Ansu — Communion" effect. Null while dormant. Carries
- * every non-Inheritance boon rule (seizure / Taken compose at full strength).
+ * every non-Inheritance boon rule (Taken composes at full strength, a takeover
+ * up to takeoverCap(level)).
  * The item's actual duration is decided Foundry-side (combat vs not); this only
  * reports the tier's round count.
  */
@@ -357,8 +372,7 @@ export function composeCommunion(state, content, opts = {}) {
   const mode = communionMode(state);
   if (mode === "none" || mode === "off") return null;
 
-  const unlockAll = mode === "seized" || mode === "taken";
-  const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
+  const { unlockAll, level } = unlockFor(state, mode);
   if (level < 1) return null;
 
   const ctx = buildCtx(opts.charLevel, level, opts.dials, { loyalty: state.loyalty });
@@ -370,7 +384,7 @@ export function composeCommunion(state, content, opts = {}) {
   const boonLines = [];
   const abilityLines = [];
   const dead = doorsDead(mode);
-  const { live } = selectEntries(state, content, { ...opts, unlockAll });
+  const { live } = selectEntries(state, content, { ...opts, unlockAll, levelCap: level });
   for (const e of live) {
     if (e.always || e.form === "feat") continue;
     // A Taken bearer's Communion effect must not advertise doors that are gone.
@@ -427,12 +441,11 @@ export function composeCommunion(state, content, opts = {}) {
 export function composeFeats(state, content, opts = {}) {
   if (state.enabled === false) return [];
   const mode = communionMode(state);
-  const unlockAll = mode === "seized" || mode === "taken";
-  const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
+  const { unlockAll, level } = unlockFor(state, mode);
   if (level < 1 && !state.terminal) return [];
 
   const ctx = buildCtx(opts.charLevel, level, opts.dials, { loyalty: state.loyalty });
-  const { live } = selectEntries(state, content, { ...opts, unlockAll });
+  const { live } = selectEntries(state, content, { ...opts, unlockAll, levelCap: level });
   return live
     .filter((e) => e.form === "feat")
     .map((e) => {
@@ -457,14 +470,13 @@ export function composeActions(state, content, opts = {}) {
   if (state.enabled === false) return [];
   const mode = communionMode(state);
   const running = mode !== "none" && mode !== "off";
-  const unlockAll = mode === "seized" || mode === "taken";
-  const level = unlockAll ? MAX_LEVEL : clampLevel(state.level);
+  const { unlockAll, level } = unlockFor(state, mode);
   if (level < 1 && !state.terminal) return [];
 
   const ctx = buildCtx(opts.charLevel, level, opts.dials, { loyalty: state.loyalty });
 
   const dead = doorsDead(mode);
-  const { live } = selectEntries(state, content, { ...opts, unlockAll });
+  const { live } = selectEntries(state, content, { ...opts, unlockAll, levelCap: level });
   return live
     .filter((e) => e.form === "action")
     .filter((e) => running || e.actionData?.alwaysAvailable === true)

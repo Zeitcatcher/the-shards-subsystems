@@ -6,7 +6,6 @@ import {
   acceptCallRoll,
   communionLooksExpired,
   turnEndReleaseDue,
-  seizureReturnDue,
   acceptRerollCapture,
   rerollTransition,
   endedRoundOf,
@@ -259,49 +258,6 @@ describe("turnEndReleaseDue", () => {
   it("survives junk input", () => {
     expect(turnEndReleaseDue()).toBe(false);
     expect(turnEndReleaseDue({})).toBe(false);
-  });
-});
-
-describe("seizureReturnDue", () => {
-  const auto = { seized: true, auto: true };
-
-  it("holds through the round the seizure began in", () => {
-    expect(seizureReturnDue({ ...auto, startRound: 3, round: 3 })).toBe(false);
-    expect(seizureReturnDue({ ...auto, startRound: 3, round: 2 })).toBe(false);
-  });
-  it("returns the body at the end of the bearer's next turn (a later round)", () => {
-    expect(seizureReturnDue({ ...auto, startRound: 3, round: 4 })).toBe(true);
-  });
-  it("returns when the round is unknown (out of combat, or an unstamped start)", () => {
-    expect(seizureReturnDue({ ...auto, startRound: null, round: 4 })).toBe(true);
-    expect(seizureReturnDue({ ...auto, startRound: 3, round: undefined })).toBe(true);
-  });
-  it("never auto-returns a manual seizure", () => {
-    expect(seizureReturnDue({ seized: true, auto: false, startRound: 1, round: 5 })).toBe(false);
-    expect(seizureReturnDue({ seized: true, auto: false, force: true })).toBe(false);
-  });
-  it("does nothing when no seizure is running", () => {
-    expect(seizureReturnDue({ seized: false, auto: true, startRound: 1, round: 5 })).toBe(false);
-    expect(seizureReturnDue({ seized: false, auto: true, force: true })).toBe(false);
-  });
-  it("force overrides the round check for an auto seizure (combat deleted mid-hold)", () => {
-    expect(seizureReturnDue({ ...auto, startRound: 3, round: 3, force: true })).toBe(true);
-    expect(seizureReturnDue({ ...auto, startRound: 3, round: null, force: true })).toBe(true);
-  });
-  it("survives junk input", () => {
-    expect(seizureReturnDue()).toBe(false);
-    expect(seizureReturnDue({})).toBe(false);
-  });
-  it("holds when the bearer acts LAST and the tracker has already rolled over", () => {
-    // The turn that ended belonged to round 2 even though the tracker shows 3.
-    // This is the value the endTurn hook now feeds in. (0.6.6)
-    const ended = endedRoundOf({
-      combatant: { flags: { pf2e: { roundOfLastTurnEnd: 2 } } },
-      encounter: { round: 3 },
-    });
-    expect(seizureReturnDue({ ...auto, startRound: 2, round: ended })).toBe(false);
-    // and the old reading — the live round — is exactly what returned it early
-    expect(seizureReturnDue({ ...auto, startRound: 2, round: 3 })).toBe(true);
   });
 });
 

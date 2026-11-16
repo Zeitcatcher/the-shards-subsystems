@@ -312,12 +312,14 @@ async function applyRerollCorrection(actor, prevOutcome, outcome, level) {
 
 /**
  * Reduce Hit Points directly (not damage: temporary Hit Points and resistances
- * do not touch it), never below 0. Returns what was actually taken.
+ * do not touch it), never below 1 (ruling after step C): the release hurts but
+ * never knocks the bearer out. A bearer already at 0 stays there. Returns what
+ * was actually taken.
  */
 async function loseHitPoints(actor, amount) {
   const current = Number(actor.system?.attributes?.hp?.value);
   if (!(amount > 0) || !Number.isFinite(current)) return 0;
-  const next = Math.max(0, current - amount);
+  const next = Math.max(Math.min(current, 1), current - amount);
   if (next !== current) await actor.update({ "system.attributes.hp.value": next });
   return current - next;
 }

@@ -257,22 +257,6 @@ export function turnEndReleaseDue({ mode, terminal } = {}) {
   return mode === "lingering";
 }
 
-/**
- * Does an auto seizure hand the body back now? The caller has already
- * established that the bearer's turn just ended (or passes `force`, for a combat
- * deleted mid-hold). "1 round" means the end of the bearer's NEXT turn, and a
- * combatant acts once per round, so the return round is always later than the
- * one the seizure began in — the starting turn's own end must not cancel it.
- */
-export function seizureReturnDue({ seized, auto, startRound, round, force } = {}) {
-  if (!seized || !auto) return false;
-  if (force) return true;
-  const start = Number(startRound);
-  const now = Number(round);
-  if (Number.isFinite(start) && Number.isFinite(now) && now <= start) return false;
-  return true;
-}
-
 /** A round number only when it really is one — null for a missing or junk value. */
 function readRound(v) {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -282,9 +266,8 @@ function readRound(v) {
  * The round the turn that just ended belonged to.
  *
  * Foundry runs turn events after the combat update has landed, so when the LAST
- * combatant's turn ends the tracker already shows the next round — feeding that
- * to `seizureReturnDue` hands the body back at the end of the very turn the
- * seizure began on. pf2e stamps the combatant's own `roundOfLastTurnEnd` in an
+ * combatant's turn ends the tracker already shows the next round, and reading
+ * that as the ended turn's round misplaced the returned Communion's clock. pf2e stamps the combatant's own `roundOfLastTurnEnd` in an
  * awaited update immediately before firing `pf2e.endTurn`, so that flag is the
  * honest answer; the encounter's previous round is the fallback. Null means
  * nothing readable — the caller falls back to the live round, unchanged.

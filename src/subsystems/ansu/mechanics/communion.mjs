@@ -25,7 +25,7 @@ import { syncActor, encounterOf } from "../sync.mjs";
 import { loadContent } from "../content.mjs";
 import { callRelease, suggestedDC } from "./release.mjs";
 import { callTheCall, suggestedCallDC } from "./call.mjs";
-import { maybeReturnFromSeizure } from "./seizure.mjs";
+import { onSeizureTurnEnd, onSeizureCombatEnd } from "./seizure.mjs";
 import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 /** The live Communion effect item on an actor, if any. */
@@ -469,8 +469,9 @@ export function registerCommunionHooks() {
     const endedRound = endedRoundOf({ combatant, encounter });
     const rolledOver = roundRolledOver({ endedRound, currentRound: encounter?.round });
     (async () => {
-      // 1-round crit-fail seizure; rolledOver also anchors the returned clock
-      await maybeReturnFromSeizure(actor, encounter, { round: endedRound, rolledOver });
+      // Takeovers count the bearer's turn ends (0.8); rolledOver anchors the
+      // clock of a Communion a forced takeover hands back.
+      await onSeizureTurnEnd(actor, { rolledOver });
       await handleTurnEnd(actor); // lingering re-save
     })().catch((err) => console.error(`${MODULE_ID} | ansu turn end`, err));
   });
@@ -501,13 +502,13 @@ export function registerCommunionHooks() {
   // duration and goes on running against world time, so it expires later through
   // pf2e's delete or the world-time sweep above. Check once here too, since the
   // countdown may already have run out during the last turn.
-  // A deleted combat with a live 1-round seizure must still return the body.
+  // A deleted combat hands back a forced or agreed takeover: no turn end will.
   Hooks.on("deleteCombat", (combat) => {
     if (!isPrimaryGM()) return;
     for (const combatant of combat.combatants) {
       const actor = combatant.actor;
       if (!actor || !isAttuned(actor)) continue;
-      maybeReturnFromSeizure(actor, null, { force: true }).catch((err) =>
+      onSeizureCombatEnd(actor).catch((err) =>
         console.error(`${MODULE_ID} | ansu seizure return on combat end`, err),
       );
     }

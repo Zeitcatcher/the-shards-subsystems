@@ -7,6 +7,7 @@
  */
 
 import { MODULE_ID } from "../../core/constants.mjs";
+import { indexDeeds } from "./logic/deeds.mjs";
 
 const KINDS = new Set(["boon"]);
 const FORMS = new Set(["effect", "action", "strike", "feat"]);
@@ -26,6 +27,20 @@ export async function loadContent() {
 /** Drop the cache (e.g. after a hot content edit during dev). */
 export function clearContentCache() {
   cached = null;
+  cachedDeeds = null;
+}
+
+let cachedDeeds = null;
+
+/**
+ * Load + index `data/ansu/deeds.json` once (0.8). The conflict of will applies
+ * its auto deeds through this; the panel's picker reads it from step E on.
+ */
+export async function loadDeeds() {
+  if (cachedDeeds) return cachedDeeds;
+  const raw = await foundry.utils.fetchJsonWithTimeout(`modules/${MODULE_ID}/data/ansu/deeds.json`);
+  cachedDeeds = indexDeeds(raw);
+  return cachedDeeds;
 }
 
 /**

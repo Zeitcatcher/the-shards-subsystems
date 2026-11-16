@@ -12,6 +12,8 @@ import { registerSyncHooks, syncAllAttuned } from "./sync.mjs";
 import { registerCommunionHooks, handleExpiry } from "./mechanics/communion.mjs";
 import { registerReleaseHooks } from "./mechanics/release.mjs";
 import { registerCallHooks } from "./mechanics/call.mjs";
+import { registerConflictHooks } from "./mechanics/conflict.mjs";
+import { registerSeizureHooks } from "./mechanics/seizure.mjs";
 import { setAttunement } from "./transform.mjs";
 import { registerAnsuTraits } from "./traits.mjs";
 
@@ -77,5 +79,7 @@ registerSubsystem({
     registerCommunionHooks();
     registerReleaseHooks();
     registerCallHooks();
+    registerConflictHooks();
+    registerSeizureHooks();
   },
 });

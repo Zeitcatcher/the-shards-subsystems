@@ -172,7 +172,7 @@ describe("a critical failure on the Call (0.8)", () => {
     expect(actor.flag.seizure ?? null).toBeNull();
     expect(actor.flag.pendingCall).toBeNull();
     expect(actor.rolled.map((r) => r.slug)).toEqual(["fortitude"]);
-    expect(messages.some((m) => m.includes("SeizureAutoStart"))).toBe(false);
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.Takeover"))).toBe(false);
     expect(messages.filter((m) => m.includes("CallCritFailReport"))).toHaveLength(1);
     expect(actor.flag.climb).toBe(2);
   });
@@ -181,16 +181,16 @@ describe("a critical failure on the Call (0.8)", () => {
     const actor = withWill(
       bearer({
         communion: { mode: "seized", rounds: null, startAt: null },
-        seizure: { snapshot: {}, at: Date.now(), auto: false, thenMode: "lingering" },
+        seizure: { snapshot: {}, at: Date.now(), kind: "manual", auto: false },
         pendingCall: { id: "fresh1", dc: 28, createdAt: Date.now() },
       }),
     );
     await recordCallOutcome(actor, "criticalFailure", 3);
 
-    expect(messages.some((m) => m.includes("SeizureAutoStart"))).toBe(false);
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.Takeover"))).toBe(false);
     expect(actor.rolled).toHaveLength(0);
     // The manual hold is untouched: its snapshot is still the one that returns.
-    expect(actor.flag.seizure.auto).toBe(false);
+    expect(actor.flag.seizure.kind).toBe("manual");
     expect(actor.flag.communion.mode).toBe("seized");
   });
 });

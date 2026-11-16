@@ -36,8 +36,28 @@ export function describeEntry(entry) {
     case "refuses":
       return game.i18n.format("SHARDS.Ansu.Log.refuses", { id: d.entryId ?? "?", minutes: d.minutes ?? "?" });
     case "seizure":
-      if (d.on) return game.i18n.localize(d.auto ? "SHARDS.Ansu.Log.seizureAuto" : "SHARDS.Ansu.Log.seizureOn");
-      return game.i18n.localize("SHARDS.Ansu.Log.seizureOff");
+      if (!d.on) return game.i18n.localize("SHARDS.Ansu.Log.seizureOff");
+      if (d.kind && d.kind !== "manual") {
+        return game.i18n.format("SHARDS.Ansu.Log.takeover", { kind: game.i18n.localize(`SHARDS.Ansu.TakeoverKind.${d.kind}`) });
+      }
+      return game.i18n.localize("SHARDS.Ansu.Log.seizureOn");
+    case "deed": {
+      const pair = (v) => (Array.isArray(v) ? v : ["?", "?"]);
+      const [lf, lt] = pair(d.loyalty);
+      const [wf, wt] = pair(d.wrath);
+      return game.i18n.format("SHARDS.Ansu.Log.deed", { deed: d.deed ?? "?", lf, lt, wf, wt });
+    }
+    case "conflict": {
+      if (d.on) {
+        return game.i18n.format("SHARDS.Ansu.Log.conflictOpen", {
+          severity: game.i18n.localize(`SHARDS.Ansu.Severity.${d.severity ?? "minor"}`),
+          dc: d.dc ?? "?",
+        });
+      }
+      const outcome = d.outcome ? game.i18n.localize(`SHARDS.Ansu.Outcome.${d.outcome}`) : "?";
+      const stage = game.i18n.localize(`SHARDS.Ansu.ConflictStage.${d.stage ?? "will"}`);
+      return game.i18n.format("SHARDS.Ansu.Log.conflict", { stage, dc: d.dc ?? "?", outcome });
+    }
     case "transform":
       return game.i18n.format("SHARDS.Ansu.Log.transform", {
         path: game.i18n.localize(d.path === "subjugated" ? "SHARDS.Ansu.Tier.subjugated" : "SHARDS.Ansu.Tier.taken"),

@@ -110,7 +110,7 @@ describe("a hero-point reroll of a resolved Release", () => {
   it("is recorded for the GM, and moves nothing on its own", async () => {
     const actor = bearer({
       communion: { mode: "seized", rounds: null, startAt: null },
-      seizure: { snapshot: {}, at: Date.now(), auto: true, thenMode: "lingering" },
+      seizure: { snapshot: {}, at: Date.now(), kind: "forced", auto: true, turnsLeft: 1 },
       lastRelease: { id: "card1", dc: 24, outcome: "criticalFailure", at: Date.now() },
     });
     await fire(rerollMessage(actor, { type: "saving-throw", tag: "shards-ansu-release", id: "card1", outcome: "success" }));
@@ -163,7 +163,7 @@ describe("a hero-point reroll of a resolved Call", () => {
   it("is recorded for the GM, and starts no Communion by itself", async () => {
     const actor = bearer({
       communion: { mode: "seized", rounds: null, startAt: null },
-      seizure: { snapshot: {}, at: Date.now(), auto: true, thenMode: "active" },
+      seizure: { snapshot: {}, at: Date.now(), kind: "berserk", auto: false, turnsLeft: null },
       lastCall: { id: "call1", dc: 28, outcome: "criticalFailure", at: Date.now() },
     });
     await fire(rerollMessage(actor, { type: "skill-check", tag: "shards-ansu-call", id: "call1", outcome: "criticalSuccess" }));

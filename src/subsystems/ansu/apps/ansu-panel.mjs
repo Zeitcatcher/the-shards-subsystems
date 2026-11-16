@@ -32,7 +32,8 @@ import {
   ladderCtxLevel,
 } from "../logic/reconcile.mjs";
 import { dcDraftValue, rosterDots } from "../logic/panel.mjs";
-import { seizeReturnsTo } from "../logic/seizure.mjs";
+import { seizureLanding, seizureKind } from "../logic/seizure.mjs";
+import { SEVERITIES } from "../logic/conflict.mjs";
 import { suggestChips } from "../logic/suggest.mjs";
 import { loadContent } from "../content.mjs";
 import { syncActor, syncAllAttuned, displayTier, readDials, inActiveCombat } from "../sync.mjs";
@@ -46,7 +47,15 @@ import {
   postUrge,
 } from "../mechanics/release.mjs";
 import { suggestedCallDC, recordCallOutcome, clearPendingCall, dismissCallReroll } from "../mechanics/call.mjs";
-import { startSeizure, returnFromSeizure, isSeized } from "../mechanics/seizure.mjs";
+import { startSeizure, returnFromSeizure, isSeized, letAnsuIn, canLetIn } from "../mechanics/seizure.mjs";
+import {
+  startConflict,
+  suggestedConflictDC,
+  recordConflictOutcome,
+  clearPendingConflict,
+  recordConflictReroll,
+  dismissConflictReroll,
+} from "../mechanics/conflict.mjs";
 import { exportLog } from "../journal.mjs";
 import { triggerFork, triggerTaken, setAttunement, applyClimbChange } from "../transform.mjs";
 import { openArtDialog, openHistoryDialog } from "./ansu-dialogs.mjs";
@@ -312,16 +321,69 @@ async function onSeize() {
   if (!actor) return;
   const st = readAnsu(actor);
   if (isSeized(st)) {
-    // A manual (GM) seizure restores the exact pre-seizure snapshot. An auto
-    // seizure returned by hand must still land in its thenMode — otherwise an
-    // out-of-combat Call crit-fail (thenMode "active") never delivers the
-    // Communion the "Ansu comes anyway" beat promises. (B9) The button's tooltip
-    // reads the same answer, so the two can't disagree. (0.6.6)
-    const toMode = seizeReturnsTo(st);
-    await returnFromSeizure(actor, toMode ? { toMode } : {});
+    // Hand back: the landing follows the takeover's kind (seizureLanding), the
+    // same answer the button's tooltip reads. Out of combat this is the only way
+    // a takeover ends. (0.8)
+    await returnFromSeizure(actor, { via: "gm" });
   } else {
-    await startSeizure(actor, { auto: false });
+    await startSeizure(actor, { kind: "manual" });
   }
+  this.render();
+}
+
+/** The GM opens a conflict of will: what the Ansu wants and how serious it is. */
+async function onConflict() {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  const esc = (v) => foundry.utils.escapeHTML(String(v ?? ""));
+  const options = SEVERITIES.map(
+    (sev) =>
+      `<option value="${sev}">${esc(game.i18n.localize(`SHARDS.Ansu.Severity.${sev}`))} (DC ${suggestedConflictDC(actor, sev)})</option>`,
+  ).join("");
+  const content = `<div class="form-group"><label>${esc(game.i18n.localize("SHARDS.Ansu.ConflictWantLabel"))}</label>
+    <input type="text" name="want" autofocus></div>
+    <div class="form-group"><label>${esc(game.i18n.localize("SHARDS.Ansu.ConflictSeverityLabel"))}</label>
+    <select name="severity">${options}</select></div>`;
+  const data = await foundry.applications.api.DialogV2.input({
+    window: { title: game.i18n.localize("SHARDS.Ansu.ConflictDialogTitle") },
+    content,
+    ok: { label: game.i18n.localize("SHARDS.Ansu.ConflictStart") },
+    rejectClose: false,
+  });
+  if (!data) return;
+  await startConflict(actor, { want: data.want ?? "", severity: data.severity ?? "minor" });
+  this.render();
+}
+
+async function onLetIn() {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  await letAnsuIn(actor);
+  this.render();
+}
+
+async function onRecordConflict(_event, target) {
+  const actor = resolveActor(this._actorUuid);
+  if (!actor) return;
+  await recordConflictOutcome(actor, target.dataset.outcome);
+  this.render();
+}
+
+async function onClearPendingConflict() {
+  const actor = resolveActor(this._actorUuid);
+  if (actor) await clearPendingConflict(actor);
+  this.render();
+}
+
+async function onRecordConflictReroll() {
+  const actor = resolveActor(this._actorUuid);
+  if (actor) await recordConflictReroll(actor);
+  this.render();
+}
+
+async function onDismissConflictReroll() {
+  const actor = resolveActor(this._actorUuid);
+  if (actor) await dismissConflictReroll(actor);
   this.render();
 }
 
@@ -598,10 +660,21 @@ function buildComm(actor, st) {
     canEndNoSave: running && !st.terminal && mode !== "seized",
     showSeize: !st.terminal,
     seized: mode === "seized",
-    seizeAuto: Boolean(st.seizure?.auto),
-    // Where Return actually lands them, so the tooltip stops promising "the
-    // exact pre-seizure state" for the two auto variants that never restore it.
-    seizeReturnsTo: seizeReturnsTo(st),
+    // The takeover's kind and where handing back lands, for the tooltip. (0.8)
+    seizeKind: mode === "seized" ? seizureKind(st.seizure) : null,
+    seizeLanding: seizureLanding(st),
+    seizeKindLabel:
+      mode === "seized" ? game.i18n.localize(`SHARDS.Ansu.TakeoverKind.${seizureKind(st.seizure) ?? "manual"}`) : "",
+    seizeTurnsLeft: mode === "seized" ? (st.seizure?.turnsLeft ?? null) : null,
+    canConflict: !st.terminal && mode !== "seized",
+    canLetIn: canLetIn(st),
+    pendingConflict: st.pendingConflict
+      ? {
+          ...st.pendingConflict,
+          stageLabel: game.i18n.localize(`SHARDS.Ansu.ConflictStage.${st.pendingConflict.stage}`),
+        }
+      : null,
+    conflictReroll: rerollView(st.rerollConflict),
   };
 }
 
@@ -630,6 +703,12 @@ const PANEL_ACTIONS = {
   releaseSave: onReleaseSave,
   endNoSave: onEndNoSave,
   seize: onSeize,
+  conflict: onConflict,
+  letIn: onLetIn,
+  recordConflict: onRecordConflict,
+  clearPendingConflict: onClearPendingConflict,
+  recordConflictReroll: onRecordConflictReroll,
+  dismissConflictReroll: onDismissConflictReroll,
   recordOutcome: onRecordOutcome,
   clearPending: onClearPending,
   recordReroll: onRecordReroll,

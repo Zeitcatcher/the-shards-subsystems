@@ -91,12 +91,49 @@
       <span class="ansu-spacer"></span>
       {{#if comm.showSeize}}
       <button type="button" class="ansu-seize {{#if comm.seized}}held{{/if}}" data-action="seize"
-        data-tooltip="{{#if comm.seized}}{{#if comm.seizeReturnsTo}}{{#if (shardsEq comm.seizeReturnsTo 'active')}}{{localize 'SHARDS.Ansu.SeizeReturnAutoActiveHint'}}{{else}}{{localize 'SHARDS.Ansu.SeizeReturnAutoLingeringHint'}}{{/if}}{{else}}{{localize 'SHARDS.Ansu.SeizeReturnHint'}}{{/if}}{{else}}{{localize 'SHARDS.Ansu.SeizeHint'}}{{/if}}">
+        data-tooltip="{{#if comm.seized}}{{#if (shardsEq comm.seizeLanding 'dormant')}}{{localize 'SHARDS.Ansu.HandBackDormantHint'}}{{else if (shardsEq comm.seizeLanding 'release')}}{{localize 'SHARDS.Ansu.HandBackReleaseHint'}}{{else}}{{localize 'SHARDS.Ansu.SeizeReturnHint'}}{{/if}}{{else}}{{localize 'SHARDS.Ansu.SeizeHint'}}{{/if}}">
         {{#if comm.seized}}<i class="fa-solid fa-rotate-left"></i> {{localize "SHARDS.Ansu.SeizeReturn"}}
         {{else}}<i class="fa-solid fa-hand-back-fist"></i> {{localize "SHARDS.Ansu.Seize"}}{{/if}}
       </button>
       {{/if}}
     </div>
+
+    <div class="ansu-conflict-row">
+      <button type="button" class="ansu-ghost" data-action="conflict" {{#unless comm.canConflict}}disabled{{/unless}}
+        data-tooltip="{{localize 'SHARDS.Ansu.ConflictHint'}}"><i class="fa-solid fa-scale-unbalanced"></i> {{localize "SHARDS.Ansu.ConflictButton"}}</button>
+      <button type="button" class="ansu-ghost" data-action="letIn" {{#unless comm.canLetIn}}disabled{{/unless}}
+        data-tooltip="{{localize 'SHARDS.Ansu.LetInHint'}}"><i class="fa-solid fa-door-open"></i> {{localize "SHARDS.Ansu.LetInButton"}}</button>
+      {{#if comm.seizeKind}}
+      <span class="ansu-state st-seized">{{comm.seizeKindLabel}}{{#if comm.seizeTurnsLeft}} · {{localize "SHARDS.Ansu.TurnEndsLeft"}} {{comm.seizeTurnsLeft}}{{/if}}</span>
+      {{/if}}
+    </div>
+
+    {{#if comm.pendingConflict}}
+    <div class="ansu-pending ansu-pending-conflict">
+      <p><i class="fa-solid fa-scale-unbalanced"></i> {{localize "SHARDS.Ansu.ConflictPendingTitle"}} ({{comm.pendingConflict.stageLabel}}), DC {{comm.pendingConflict.dc}}</p>
+      <div class="ansu-outcomes">
+        <span class="ansu-outcome-label">{{localize "SHARDS.Ansu.RecordManually"}}</span>
+        {{#each comm.callOutcomes}}
+        <button type="button" class="ansu-outcome-btn outcome-{{this.key}}" data-action="recordConflict" data-outcome="{{this.key}}">{{this.label}}</button>
+        {{/each}}
+        <button type="button" class="ansu-ghost" data-action="clearPendingConflict" data-tooltip="{{localize 'SHARDS.Ansu.ClearPending'}}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    {{/if}}
+
+    {{#if comm.conflictReroll}}
+    <div class="ansu-reroll">
+      <p><i class="fa-solid fa-circle-h"></i> {{localize "SHARDS.Ansu.RerollConflictTitle"}}:
+        {{comm.conflictReroll.fromLabel}} → <strong>{{comm.conflictReroll.toLabel}}</strong>
+        {{#if comm.conflictReroll.total}}<small>({{comm.conflictReroll.total}})</small>{{/if}}</p>
+      <div class="ansu-outcomes">
+        <button type="button" class="ansu-outcome-btn outcome-{{comm.conflictReroll.outcome}}" data-action="recordConflictReroll"
+          data-tooltip="{{localize 'SHARDS.Ansu.RerollApplyHint'}}">{{localize "SHARDS.Ansu.RerollApply"}}</button>
+        <button type="button" class="ansu-ghost" data-action="dismissConflictReroll"
+          data-tooltip="{{localize 'SHARDS.Ansu.RerollDismiss'}}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    {{/if}}
 
     {{#if comm.callReroll}}
     <div class="ansu-reroll">

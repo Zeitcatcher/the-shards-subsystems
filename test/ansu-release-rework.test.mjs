@@ -144,11 +144,17 @@ describe("release outcomes (0.8)", () => {
     expect(messages.some((m) => m.includes("Seizure"))).toBe(false);
   });
 
-  it("critical failure at Trial locks out until a rest, and Hit Points stop at 0", async () => {
+  it("critical failure at Trial locks out until a rest, and Hit Points stop at 1", async () => {
     const actor = bearer({ level: 2 }, { hp: 5 });
     await recordReleaseOutcome(actor, "criticalFailure", 2);
-    expect(hp(actor)).toBe(0);
+    expect(hp(actor)).toBe(1);
     expect(actor.flag.lockout).toEqual({ until: null, untilRest: true });
+  });
+
+  it("a bearer already at 0 Hit Points is not healed by the floor", async () => {
+    const actor = bearer({ level: 2 }, { hp: 0 });
+    await recordReleaseOutcome(actor, "failure", 2);
+    expect(hp(actor)).toBe(0);
   });
 
   it("a stored Lingering reads as dormant", () => {

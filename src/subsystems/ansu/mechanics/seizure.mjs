@@ -1,33 +1,58 @@
 /**
- * The Seizure override — the Ansu takes the body.
+ * Takeovers: the Ansu takes the body (0.8).
  *
- * GM button, any attunement: snapshot the actor's whole subsystem state, then
- * compose Communion at full strength (every boon through attunement 10, no
- * duration, no saves) while the GM plays the character. The same button restores
- * the exact pre-seizure state.
- *
- * The 1-round critical-failure seizure is the same mechanism with an auto-return
- * at the end of the bearer's next turn, and it has TWO landings: a failed Release
- * drops back into Lingering (the wrestle continues), while a failed Call lands in
- * a fresh Communion under the player — the Ansu came anyway. (0.6.6)
+ * Every kind snapshots the subsystem state and composes Communion with the
+ * entries up to takeoverCap(level) (reconcile), while the GM plays the bearer.
+ * - manual:  the GM's own button; the same button hands the body back whole.
+ * - forced:  a lost conflict with a calm or angry Ansu; returns at the bearer's
+ *            next turn end (angry: one turn end later), restoring the snapshot,
+ *            so a running Communion resumes with the rounds it had left and no
+ *            release save is rolled. Then `vented-1` / `vented-2`.
+ * - berserk: a lost conflict at breaking point; no auto return. A Will check at
+ *            each bearer turn end (conflict.mjs) or falling unconscious ends it,
+ *            with no Communion and no release save. Then `berserk-end`.
+ * - agreed:  the GM lets the Ansu in (calm, once a day, below level 10); runs
+ *            durationRoundsFor(level, 2) bearer turns, then the release card.
+ * Out of combat nothing counts turns: the GM hands back with the panel button.
  */
 
 import { MODULE_ID } from "../../../core/constants.mjs";
-import { readAnsu, patchAnsu, appendLog } from "../state.mjs";
-import { durationRounds } from "../logic/model.mjs";
-import { seizureReturnDue, freshClockStart } from "../logic/timing.mjs";
-import { seizureSnapshot, restoredPendings } from "../logic/seizure.mjs";
+import { isPrimaryGM } from "../../../core/platform.mjs";
+import { readAnsu, patchAnsu, appendLog, isAttuned } from "../state.mjs";
+import { durationRoundsFor, takeoverCap, wrathBand, MAX_LEVEL } from "../logic/model.mjs";
+import { freshClockStart } from "../logic/timing.mjs";
+import {
+  seizureSnapshot,
+  seizureKind,
+  seizureLanding,
+  restoredPendings,
+  takeoverTurnEnd,
+  returnsOnCombatEnd,
+} from "../logic/seizure.mjs";
 import { syncActor, encounterOf } from "../sync.mjs";
+import { recordDeed } from "./deeds.mjs";
 import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
 
-/** GM-only card. The actor name is player-editable, so escape at the choke point. */
-async function whisperGM(actor, key, data = {}) {
+/** Non-GM users who own this actor. */
+function playerOwners(actor) {
+  return (game.users?.contents ?? [])
+    .filter((u) => !u.isGM && actor.testUserPermission?.(u, "OWNER"))
+    .map((u) => u.id);
+}
+
+/**
+ * A takeover card. `to`: "gm" (GM only), "owners" (owners and GM) or "public".
+ * The actor name is player-editable, so escape at the choke point.
+ */
+async function postCard(actor, key, data = {}, { to = "gm", body = null } = {}) {
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+  const whisper = to === "public" ? [] : to === "owners" ? [...new Set([...playerOwners(actor), ...gmIds])] : gmIds;
+  const extra = body ? `<p>${esc(body)}</p>` : "";
   await ChatMessage.create({
-    content: `<div class="ansu-card"><p class="ansu-card-title"><i class="fa-solid fa-hand-back-fist"></i> ${esc(game.i18n.format(key, data))}</p></div>`,
-    whisper: gmIds,
+    content: `<div class="ansu-card"><p class="ansu-card-title"><i class="fa-solid fa-hand-back-fist"></i> ${esc(game.i18n.format(key, data))}</p>${extra}</div>`,
+    ...(whisper.length ? { whisper } : {}),
     speaker: ChatMessage.getSpeaker({ actor }),
   });
 }
@@ -37,85 +62,129 @@ export function isSeized(state) {
   return state.communion?.mode === "seized";
 }
 
+/** Is it this bearer's own turn in their encounter right now? */
+function isBearersTurn(actor) {
+  const c = encounterOf(actor)?.combatant;
+  return Boolean(c && (c.actor === actor || c.actor?.uuid === actor.uuid));
+}
+
+/** Rounds left on a running Communion, or null (no effect or no countdown). */
+async function communionRoundsLeft(actor, st) {
+  if (st.communion?.mode !== "active") return null;
+  const { findCommunionEffect, remainingRounds } = await import("./communion.mjs");
+  const effect = findCommunionEffect(actor);
+  return effect ? remainingRounds(effect) : null;
+}
+
+/** May the GM let the Ansu in now? Calm (wrath 0-2), not used since the last rest, below level 10. */
+export function canLetIn(st) {
+  return (
+    !st.terminal &&
+    !isSeized(st) &&
+    st.level >= 1 &&
+    st.level < MAX_LEVEL &&
+    wrathBand(st.wrath) === "calm" &&
+    st.consentUsed !== true
+  );
+}
+
 /**
- * Take the body. `auto` marks the 1-round variant (returns by itself at the end
- * of the bearer's next turn); a manual seizure holds until the GM presses
- * Return. `thenMode` names where an auto seizure lands afterwards: "lingering"
- * (release crit-fail — the wrestle continues) or "active" (Call crit-fail — the
- * Ansu came anyway; Communion then runs under the player with a fresh duration).
+ * Take the body. `kind` is "manual" (default), "forced", "berserk" or "agreed".
+ * `turnsLeft` counts the bearer turn ends a forced or agreed takeover lasts;
+ * `deed` is applied when the body comes back; `dc` is the berserk Will DC.
  * No-op at a terminal or while already seized. Returns whether the body was
  * actually taken, so a caller never reports a seizure that did not start.
  */
-export async function startSeizure(actor, { auto = false, thenMode = "lingering" } = {}) {
+export async function startSeizure(actor, { kind = "manual", turnsLeft = null, deed = null, dc = null, conflictId = null } = {}) {
   const st = readAnsu(actor);
   if (st.terminal || isSeized(st)) return false;
+  const roundsLeft = await communionRoundsLeft(actor, st);
 
-  await patchAnsu(actor, {
+  const patch = {
     communion: { mode: "seized", rounds: null, startAt: null },
-    // Both open cards go away with the body. A Call rolled during a seizure used
-    // to be consumed for nothing: invokeCommunion bails on mode !== "none" and
-    // startSeizure bails on isSeized, so the outcome vanished. The snapshot keeps
-    // them and Return hands the same ids back, still clickable. (0.6.6)
+    // Both open cards go away with the body; the snapshot keeps them and a
+    // snapshot landing hands the same ids back, still clickable. (0.6.6)
     pendingRelease: null,
     pendingCall: null,
-    // startRound anchors the "1 round" auto-return: a seizure that begins on the
-    // bearer's own turn (Invoke → Call → crit fail) must survive that turn's end
-    // and return at the end of their NEXT turn, not collapse to zero actions. (B8)
-    // The bearer's OWN encounter, not the one on the scene the GM is looking at.
     seizure: {
-      snapshot: seizureSnapshot(st),
+      snapshot: seizureSnapshot(st, { roundsLeft }),
       at: Date.now(),
-      auto,
-      thenMode,
+      kind,
+      auto: kind === "forced" || kind === "agreed",
+      turnsLeft: Number.isInteger(turnsLeft) ? turnsLeft : null,
+      // A takeover that starts on the bearer's own turn must survive that
+      // turn's end: the Ansu always gets a turn. (B8)
+      skipTurnEnd: isBearersTurn(actor),
+      deed,
+      dc: Number.isFinite(dc) ? dc : null,
+      conflictId,
       startRound: encounterOf(actor)?.round ?? null,
     },
-  });
-  await appendLog(actor, "seizure", { on: true, auto });
+  };
+  if (kind === "agreed") patch.consentUsed = true;
+  await patchAnsu(actor, patch);
+  await appendLog(actor, "seizure", { on: true, kind });
   await syncActor(actor);
-  // Name the landing, not just the fact: an auto seizure from a failed Call ends
-  // in Communion under the player, and saying "then Lingering resumes" there
-  // contradicted the very card the Call posted one line earlier. (0.6.6)
-  const key = auto
-    ? thenMode === "active"
-      ? "SHARDS.Ansu.SeizureAutoStartActive"
-      : "SHARDS.Ansu.SeizureAutoStart"
-    : "SHARDS.Ansu.SeizureStart";
-  await whisperGM(actor, key, { name: actor.name });
+
+  const name = actor.name;
+  const cap = takeoverCap(st.level);
+  if (kind === "forced") {
+    await postCard(actor, turnsLeft >= 2 ? "SHARDS.Ansu.TakeoverForcedAngry" : "SHARDS.Ansu.TakeoverForced", { name, cap }, { to: "owners" });
+  } else if (kind === "berserk") {
+    await postCard(actor, "SHARDS.Ansu.TakeoverBerserk", { name }, {
+      to: "public",
+      body: game.i18n.format("SHARDS.Ansu.TakeoverBerserkBody", { name, dc: dc ?? "?", cap }),
+    });
+  } else if (kind === "agreed") {
+    await postCard(actor, "SHARDS.Ansu.TakeoverAgreed", { name, rounds: turnsLeft ?? "?", cap }, { to: "owners" });
+  } else {
+    await postCard(actor, "SHARDS.Ansu.SeizureStart", { name });
+  }
   refreshAnsuPanel();
   return true;
 }
 
+/** GM entry point: the bearer lets the Ansu in (an agreed takeover). */
+export async function letAnsuIn(actor) {
+  const st = readAnsu(actor);
+  if (!canLetIn(st)) {
+    ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.LetInBlocked"));
+    return false;
+  }
+  return startSeizure(actor, { kind: "agreed", turnsLeft: durationRoundsFor(st.level, 2) });
+}
+
 /**
- * Give the body back. Default restores the snapshot exactly (level, climb,
- * communion, both pending rolls — everything as before the press). `toMode`
- * overrides the landing state for the auto variants: "lingering" keeps the
- * wrestle going, "active" starts a fresh Communion at the bearer's own tier
- * duration; both drop the snapshot's stale cards.
+ * Give the body back, landing by kind (seizureLanding): manual and forced
+ * restore the snapshot; berserk lands dormant; agreed lands dormant and posts
+ * the release card. Then the takeover's deed, unless `deed` is false (a reroll
+ * undoing the takeover).
  *
- * `rolledOver` is only ever passed by the turn-end auto-return, and it decides
- * where that fresh countdown begins. The panel's manual Return leaves it null:
- * handing the body back mid-turn already lands the clock correctly.
+ * `rolledOver` is only passed by the turn-end return, and it decides where a
+ * restored Communion's countdown begins. The panel's hand-back leaves it null.
  */
-export async function returnFromSeizure(actor, { toMode = null, rolledOver = null } = {}) {
+export async function returnFromSeizure(actor, { rolledOver = null, deed = true, via = "gm" } = {}) {
   const st = readAnsu(actor);
   if (!isSeized(st) || !st.seizure?.snapshot) return;
 
   const snap = st.seizure.snapshot;
-  // A restored snapshot never carries its old start stamp: that clock is spent.
-  let communion = { ...snap.communion, startAt: null };
-  const { pendingRelease, pendingCall } = restoredPendings({ snapshot: snap, toMode });
-  if (toMode === "lingering") {
-    communion = { mode: "lingering", rounds: null, startAt: null };
-  } else if (toMode === "active") {
-    // pf2e resolves a rounds clock at a turn START, and this fires at a turn end.
-    // Stamped as-is, a 1-round Communion (attunement 1–3) would expire at the
-    // bearer's very next turn start and buy them nothing — while the ability text
-    // promises Communion continues under their control. (0.6.6)
-    const startAt =
-      rolledOver === null
-        ? null
-        : freshClockStart({ worldTime: game.time?.worldTime, roundTime: CONFIG.time?.roundTime, rolledOver });
-    communion = { mode: "active", rounds: durationRounds(snap.level), startAt };
+  const kind = seizureKind(st.seizure);
+  const landing = seizureLanding(st);
+  const { pendingRelease, pendingCall } = restoredPendings({ snapshot: snap, landing });
+  let communion;
+  if (landing === "snapshot") {
+    // A restored Communion resumes with the rounds it had left. pf2e resolves a
+    // rounds clock at a turn START and a turn-end return fires at a turn end, so
+    // the countdown starts where the bearer's next turn can still use it. (0.6.6)
+    const resumes = snap.communion?.mode === "active" && rolledOver !== null;
+    const startAt = resumes
+      ? freshClockStart({ worldTime: game.time?.worldTime, roundTime: CONFIG.time?.roundTime, rolledOver })
+      : null;
+    communion = { ...snap.communion, startAt };
+  } else {
+    // An agreed takeover still owes a failed Call's +2 on its release.
+    const returnPenalty = landing === "release" && snap.communion?.returnPenalty === 2 ? 2 : 0;
+    communion = { mode: "none", rounds: null, startAt: null, returnPenalty };
   }
   await patchAnsu(actor, {
     level: snap.level,
@@ -126,35 +195,74 @@ export async function returnFromSeizure(actor, { toMode = null, rolledOver = nul
     pendingCall,
     seizure: null,
   });
-  await appendLog(actor, "seizure", { on: false, toMode });
+  await appendLog(actor, "seizure", { on: false, kind, via });
   await syncActor(actor);
-  await whisperGM(actor, "SHARDS.Ansu.SeizureEnd", { name: actor.name });
+  await postCard(actor, "SHARDS.Ansu.SeizureEnd", { name: actor.name }, { to: kind === "manual" ? "gm" : "owners" });
+  if (deed !== false && st.seizure.deed) await recordDeed(actor, st.seizure.deed);
+  if (landing === "release") {
+    const { callRelease, suggestedDC } = await import("./release.mjs");
+    await callRelease(actor, suggestedDC(readAnsu(actor)), game.i18n.localize("SHARDS.Ansu.TakeoverAgreedReason"));
+  }
   refreshAnsuPanel();
 }
 
 /**
- * Turn-end hook: an auto seizure returns at the end of the bearer's next turn,
- * landing in its `thenMode`. `force` returns any auto seizure immediately
- * (combat deleted mid-hold). Manual seizures never auto-return.
- *
- * The caller establishes whose turn ended — pf2e's own end-of-turn signal names
- * the combatant — so there is no combat.previous guessing here. It also passes
- * the round that turn BELONGED to: the tracker has already rolled over when the
- * last combatant finishes, and reading it live cancelled the seizure a turn
- * early. `combat.round` stays as the fallback for the force path. (B8, 0.6.6)
+ * Turn-end hook (the bearer's own turn ended). Forced and agreed takeovers
+ * count down and hand back when due; a berserk one posts its Will check, or
+ * ends at once when the bearer is unconscious. Manual never moves.
  */
-export async function maybeReturnFromSeizure(actor, combat, { force = false, round, rolledOver = null } = {}) {
+export async function onSeizureTurnEnd(actor, { rolledOver = null } = {}) {
   const st = readAnsu(actor);
-  const due = seizureReturnDue({
-    seized: isSeized(st),
-    auto: st.seizure?.auto === true,
-    startRound: st.seizure?.startRound,
-    round: round ?? combat?.round,
-    force,
-  });
-  if (!due) return;
-  await returnFromSeizure(actor, {
-    toMode: st.seizure.thenMode === "active" ? "active" : "lingering",
-    rolledOver,
+  if (!isSeized(st) || !st.seizure) return;
+  const kind = seizureKind(st.seizure);
+  if (kind === "berserk" && isUnconscious(actor)) {
+    await returnFromSeizure(actor, { via: "unconscious" });
+    return;
+  }
+  const step = takeoverTurnEnd({ kind, turnsLeft: st.seizure.turnsLeft, skipTurnEnd: st.seizure.skipTurnEnd === true });
+  if (step.due) {
+    await returnFromSeizure(actor, { rolledOver, via: "turn-end" });
+    return;
+  }
+  await patchAnsu(actor, { seizure: { turnsLeft: step.turnsLeft, skipTurnEnd: step.skipTurnEnd } });
+  if (step.check) {
+    const { postBerserkCheck } = await import("./conflict.mjs");
+    await postBerserkCheck(actor);
+  }
+  refreshAnsuPanel();
+}
+
+/** A combat ended: forced and agreed takeovers hand back (no turns will count them). */
+export async function onSeizureCombatEnd(actor) {
+  const st = readAnsu(actor);
+  if (!isSeized(st) || !returnsOnCombatEnd(seizureKind(st.seizure))) return;
+  await returnFromSeizure(actor, { via: "combat-end" });
+}
+
+/** A berserk takeover ends when the bearer falls unconscious. */
+export async function onBearerUnconscious(actor) {
+  const st = readAnsu(actor);
+  if (!isSeized(st) || seizureKind(st.seizure) !== "berserk") return;
+  await returnFromSeizure(actor, { via: "unconscious" });
+}
+
+/** pf2e's own condition lookup, defensively. */
+function isUnconscious(actor) {
+  try {
+    if (typeof actor.hasCondition === "function") return Boolean(actor.hasCondition("unconscious"));
+  } catch {
+    /* fall through */
+  }
+  return Boolean(actor.itemTypes?.condition?.some?.((c) => c.slug === "unconscious"));
+}
+
+/** Register the unconscious watcher. Primary GM only. Call on ready. */
+export function registerSeizureHooks() {
+  Hooks.on("createItem", (item) => {
+    if (!isPrimaryGM()) return;
+    if (item?.type !== "condition" || item.slug !== "unconscious") return;
+    const actor = item.actor;
+    if (!actor || !isAttuned(actor)) return;
+    onBearerUnconscious(actor).catch((err) => console.error(`${MODULE_ID} | ansu berserk unconscious`, err));
   });
 }

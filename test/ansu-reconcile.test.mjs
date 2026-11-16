@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   selectEntries,
+  unlockFor,
   buildCtx,
   injectNumbers,
   durationLabel,
@@ -70,9 +71,22 @@ describe("selectEntries", () => {
     expect(selectEntries(state({ level: 10, terminal: "subjugated" }), CONTENT).live.map((e) => e.id)).toContain("capstone");
     expect(selectEntries(state({ level: 10, terminal: "taken" }), CONTENT).live.map((e) => e.id)).toContain("capstone");
   });
-  it("unlockAll (seizure) opens every level and the gate", () => {
+  it("unlockAll (Taken) opens every level and the gate", () => {
     const all = selectEntries(state({ level: 1 }), CONTENT, { unlockAll: true });
     expect(all.live.map((e) => e.id)).toEqual(expect.arrayContaining(["vigor-2", "horns", "skin", "capstone"]));
+  });
+  it("levelCap (a takeover) opens up to the cap and keeps the gate shut", () => {
+    const ids = selectEntries(state({ level: 1 }), CONTENT, { levelCap: 4 }).live.map((e) => e.id);
+    expect(ids).toEqual(expect.arrayContaining(["vigor", "horns"]));
+    expect(ids).not.toContain("skin");
+    expect(ids).not.toContain("capstone");
+    expect(selectEntries(state({ level: 7 }), CONTENT, { levelCap: 10 }).live.map((e) => e.id)).not.toContain("capstone");
+  });
+  it("unlockFor: Taken unlocks all, a takeover up to takeoverCap(level), else the own level", () => {
+    expect(unlockFor(state({ level: 2 }), "taken")).toEqual({ unlockAll: true, level: 10 });
+    expect(unlockFor(state({ level: 2 }), "seized")).toEqual({ unlockAll: false, level: 5 });
+    expect(unlockFor(state({ level: 8 }), "seized")).toEqual({ unlockAll: false, level: 10 });
+    expect(unlockFor(state({ level: 2 }), "active")).toEqual({ unlockAll: false, level: 2 });
   });
   it("drops suppressed families", () => {
     const s = selectEntries(state({ level: 2, suppressed: [{ id: "vigor", reason: "" }] }), CONTENT);
@@ -195,12 +209,15 @@ describe("composeCommunion", () => {
     const temp = c.rules.find((r) => r.key === "TempHP");
     expect(temp.value).toBe(15); // 3 × 5
   });
-  it("seizure composes at full strength regardless of level", () => {
-    const c = composeCommunion(state({ level: 1, communion: { mode: "seized" } }), CONTENT, { charLevel: 4 });
-    expect(c.level).toBe(10);
-    const damage = c.rules.filter((r) => r.key === "FlatModifier" && r.selector === "melee-strike-damage");
-    expect(damage).toHaveLength(1);
-    expect(damage[0].value).toBe(3); // vigor rank 2 shadowed rank 1
+  it("a takeover composes up to takeoverCap(level), not at full strength (0.8)", () => {
+    const low = composeCommunion(state({ level: 1, communion: { mode: "seized" } }), CONTENT, { charLevel: 4 });
+    expect(low.level).toBe(4);
+    const lowDamage = low.rules.filter((r) => r.key === "FlatModifier" && r.selector === "melee-strike-damage");
+    expect(lowDamage.map((r) => r.value)).toEqual([2]); // vigor rank 1: rank 2 (level 7) stays locked
+    const high = composeCommunion(state({ level: 4, communion: { mode: "seized" } }), CONTENT, { charLevel: 8 });
+    expect(high.level).toBe(7);
+    const damage = high.rules.filter((r) => r.key === "FlatModifier" && r.selector === "melee-strike-damage");
+    expect(damage.map((r) => r.value)).toEqual([3]); // vigor rank 2 shadowed rank 1
   });
   it("permanent (Mastery) and taken never expire", () => {
     const master = composeCommunion(state({ level: 10, terminal: "subjugated", communion: { mode: "active" } }), CONTENT, { charLevel: 9 });
@@ -356,9 +373,12 @@ describe("composeActions — communion gating", () => {
     const acts = composeActions(state({ level: 5, communion: { mode: "lingering" } }), CONTENT, { charLevel: 5 });
     expect(acts.map((a) => a.entryId)).toContain("wrath");
   });
-  it("seizure unlocks every active including the gate", () => {
-    const acts = composeActions(state({ level: 1, communion: { mode: "seized" } }), CONTENT, { charLevel: 4 });
-    expect(acts.map((a) => a.entryId)).toEqual(expect.arrayContaining(["invoke", "wrath", "refuses", "capstone"]));
+  it("a takeover unlocks actives up to takeoverCap(level), the gate stays shut", () => {
+    const low = composeActions(state({ level: 1, communion: { mode: "seized" } }), CONTENT, { charLevel: 4 });
+    expect(low.map((a) => a.entryId).sort()).toEqual(["invoke", "wrath"]);
+    const high = composeActions(state({ level: 7, communion: { mode: "seized" } }), CONTENT, { charLevel: 14 });
+    expect(high.map((a) => a.entryId)).toEqual(expect.arrayContaining(["invoke", "wrath", "refuses"]));
+    expect(high.map((a) => a.entryId)).not.toContain("capstone");
   });
 });
 

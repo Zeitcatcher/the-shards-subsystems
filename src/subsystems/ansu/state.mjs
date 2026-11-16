@@ -61,7 +61,12 @@ export function emptyAnsuState() {
     lastCall: null, // { id, dc, outcome, at }
     rerollRelease: null, // { id, from, outcome, total, at }
     rerollCall: null, // { id, from, outcome, total, at }
-    seizure: null, // { snapshot, at, auto, returnAt: { combatId, round, turn }, kind: "forced"|"agreed"|"berserk"|"manual", turnsLeft }
+    // The conflict of will (0.8): the open card (stage persuade | will | berserk),
+    // the last resolved check and a reroll of it waiting on the GM.
+    pendingConflict: null, // { id, dc, stage, want, severity, createdAt }
+    lastConflict: null, // { id, dc, stage, outcome, wrath, want, at }
+    rerollConflict: null, // { id, stage, from, outcome, total, at }
+    seizure: null, // { snapshot, at, kind: "forced"|"agreed"|"berserk"|"manual", auto, turnsLeft, skipTurnEnd, deed, dc, conflictId, startRound }
     cooldowns: [], // [{ id: <entryId>, until: worldTime }] — module-owned ability cooldowns (array: replaced wholesale on patch)
     art: {
       thresholds: {
