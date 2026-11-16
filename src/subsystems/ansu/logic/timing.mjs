@@ -9,6 +9,8 @@
  * No Foundry imports.
  */
 
+import { hpLoss } from "./model.mjs";
+
 /** The roll option every module-posted Release save carries. */
 export const RELEASE_OPTION = "shards-ansu-release";
 
@@ -164,26 +166,39 @@ export function acceptRerollCapture({
 }
 
 /**
- * What a forced re-record of a rerolled outcome is allowed to do to a state that
- * has already moved. Nothing here reverses a resolved transition blindly:
+ * The release's reroll table (0.8). Every release outcome ends Communion, so a
+ * correction never has a Communion to resurrect or a body to hand back; it only
+ * settles the costs. Nothing is refunded on its own: Hit Points and Fatigued may
+ * have moved since, so the GM is told to restore them by hand.
  *
- * - `returnBody`  the correction is being applied to a bearer the Ansu is
- *                 holding, so the body goes back first (the route `onSeize`
- *                 takes), and only then does the new outcome land.
- * - `blocked`     the recorded outcome was a win and the corrected one is not,
- *                 so honouring it would mean resurrecting a Communion that was
- *                 deleted (Release) or unpicking one the table has been playing
- *                 under (Call). The GM is told instead; the Climb stays theirs.
+ * - `hpExtra`     a worse outcome: the further Hit Points it costs (the
+ *                 difference between the two losses at this level).
+ * - `fatigue`     corrected into a critical failure: Fatigued.
+ * - `lockout`     ... and the release lockout.
+ * - `liftLockout` a critical failure corrected into anything better: the
+ *                 lockout it stamped goes.
+ * - `handFix`     a better outcome took Hit Points or Fatigued that the new one
+ *                 does not: the GM restores them by hand.
  *
- * @param {{mode: string, prevOutcome: string|null, outcome: string|null}} input
- * @returns {{returnBody: boolean, blocked: boolean}}
+ * @param {{prevOutcome: string|null, outcome: string|null, level: number}} input
  */
-export function rerollTransition({ mode, prevOutcome, outcome } = {}) {
-  const won = (o) => o === "success" || o === "criticalSuccess";
-  return {
-    returnBody: mode === "seized",
-    blocked: won(prevOutcome) && !won(outcome),
-  };
+export function rerollTransition({ prevOutcome, outcome, level } = {}) {
+  const plan = { hpExtra: 0, fatigue: false, lockout: false, liftLockout: false, handFix: false };
+  const deg = (o) => ["criticalFailure", "failure", "success", "criticalSuccess"].indexOf(o);
+  const p = deg(prevOutcome);
+  const n = deg(outcome);
+  if (p < 0 || n < 0 || p === n) return plan;
+  if (n < p) {
+    plan.hpExtra = Math.max(0, hpLoss(level, n) - hpLoss(level, p));
+    if (n === 0) {
+      plan.fatigue = true;
+      plan.lockout = true;
+    }
+    return plan;
+  }
+  plan.liftLockout = p === 0;
+  plan.handFix = hpLoss(level, p) > hpLoss(level, n) || p === 0;
+  return plan;
 }
 
 /**

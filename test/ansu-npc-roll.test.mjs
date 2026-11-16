@@ -66,11 +66,11 @@ describe("NPC rolls are whispered to the GM", () => {
     expect(args.extraRollOptions).toContain("shards-ansu-call");
   });
 
-  it("the Release rolls Will with messageMode gm", async () => {
+  it("the Release rolls Fortitude with messageMode gm", async () => {
     await callRelease(actor, 24, "expiry");
     expect(actor.calls).toHaveLength(1);
     const { slug, args } = actor.calls[0];
-    expect(slug).toBe("will");
+    expect(slug).toBe("fortitude");
     expect(args.messageMode).toBe("gm");
     expect(args.dc).toEqual({ value: 24 });
     expect(args.extraRollOptions).toContain("shards-ansu-release");

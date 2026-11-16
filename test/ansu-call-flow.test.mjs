@@ -154,7 +154,7 @@ describe("a Call rolled from a superseded card", () => {
   });
 });
 
-/** The NPC release path rolls Will through getStatistic; record what it was asked. */
+/** The NPC release path rolls a save through getStatistic; record what it was asked. */
 function withWill(actor) {
   actor.rolled = [];
   actor.getStatistic = (slug) => ({ roll: async (args) => actor.rolled.push({ slug, args }) });
@@ -171,7 +171,7 @@ describe("a critical failure on the Call (0.8)", () => {
     expect(actor.flag.lockout).toEqual({ until: 60, untilRest: false });
     expect(actor.flag.seizure ?? null).toBeNull();
     expect(actor.flag.pendingCall).toBeNull();
-    expect(actor.rolled.map((r) => r.slug)).toEqual(["will"]);
+    expect(actor.rolled.map((r) => r.slug)).toEqual(["fortitude"]);
     expect(messages.some((m) => m.includes("SeizureAutoStart"))).toBe(false);
     expect(messages.filter((m) => m.includes("CallCritFailReport"))).toHaveLength(1);
     expect(actor.flag.climb).toBe(2);
@@ -275,10 +275,10 @@ describe("Invoke blocks (0.8)", () => {
     expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.lockout"))).toBe(true);
   });
 
-  it("refuses while a Call is pending, and keeps that Call", async () => {
-    const actor = await blocked({ pendingCall: { id: "old1", dc: 28, createdAt: 1 } });
-    expect(actor.flag.pendingCall.id).toBe("old1");
-    expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked.pending"))).toBe(true);
+  it("does not refuse over a stale pending Call: the fresh Invoke replaces it", async () => {
+    const actor = await blocked({ pendingCall: { id: "old1", dc: 28, createdAt: 1 } }, withWill({}));
+    expect(actor.flag.pendingCall.id).toBe("fresh1");
+    expect(messages.some((m) => m.includes("SHARDS.Ansu.InvokeBlocked"))).toBe(false);
   });
 
   it("refuses while the Ansu holds the body", async () => {

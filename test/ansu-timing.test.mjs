@@ -516,28 +516,42 @@ describe("acceptRerollCapture", () => {
   });
 });
 
-describe("rerollTransition", () => {
-  it("returns the body before applying a correction to a seized bearer", () => {
-    expect(rerollTransition({ mode: "seized", prevOutcome: "criticalFailure", outcome: "success" })).toEqual({
-      returnBody: true,
-      blocked: false,
+describe("rerollTransition (0.8 release table)", () => {
+  const INERT = { hpExtra: 0, fatigue: false, lockout: false, liftLockout: false, handFix: false };
+  it("a worse outcome adds only the further Hit Points", () => {
+    expect(rerollTransition({ prevOutcome: "success", outcome: "failure", level: 4 })).toEqual({ ...INERT, hpExtra: 8 });
+  });
+  it("corrected into a critical failure: the rest of the loss, Fatigued and the lockout", () => {
+    expect(rerollTransition({ prevOutcome: "failure", outcome: "criticalFailure", level: 4 })).toEqual({
+      ...INERT,
+      hpExtra: 8,
+      fatigue: true,
+      lockout: true,
+    });
+    expect(rerollTransition({ prevOutcome: "criticalSuccess", outcome: "criticalFailure", level: 2 }).hpExtra).toBe(8);
+  });
+  it("a critical failure withdrawn lifts the lockout and leaves HP and Fatigued to the GM", () => {
+    expect(rerollTransition({ prevOutcome: "criticalFailure", outcome: "success", level: 4 })).toEqual({
+      ...INERT,
+      liftLockout: true,
+      handFix: true,
+    });
+    expect(rerollTransition({ prevOutcome: "criticalFailure", outcome: "failure", level: 4 })).toMatchObject({
+      hpExtra: 0,
+      liftLockout: true,
+      handFix: true,
     });
   });
-  it("applies a correction straight when nothing holds the body", () => {
-    expect(rerollTransition({ mode: "lingering", prevOutcome: "failure", outcome: "criticalSuccess" })).toEqual({
-      returnBody: false,
-      blocked: false,
-    });
+  it("a failure corrected into a win only asks the GM to give the HP back", () => {
+    expect(rerollTransition({ prevOutcome: "failure", outcome: "criticalSuccess", level: 4 })).toEqual({ ...INERT, handFix: true });
   });
-  it("refuses to walk back a win: that Communion is already played", () => {
-    expect(rerollTransition({ mode: "none", prevOutcome: "success", outcome: "failure" }).blocked).toBe(true);
-    expect(rerollTransition({ mode: "none", prevOutcome: "criticalSuccess", outcome: "criticalFailure" }).blocked).toBe(true);
-  });
-  it("lets one win be corrected into another", () => {
-    expect(rerollTransition({ mode: "none", prevOutcome: "success", outcome: "criticalSuccess" }).blocked).toBe(false);
+  it("one win corrected into another changes nothing", () => {
+    expect(rerollTransition({ prevOutcome: "success", outcome: "criticalSuccess", level: 4 })).toEqual(INERT);
   });
   it("survives junk input as an inert plan", () => {
-    expect(rerollTransition()).toEqual({ returnBody: false, blocked: false });
+    expect(rerollTransition()).toEqual(INERT);
+    expect(rerollTransition({ prevOutcome: "failure", outcome: "failure", level: 4 })).toEqual(INERT);
+    expect(rerollTransition({ prevOutcome: "nonsense", outcome: "failure", level: 4 })).toEqual(INERT);
   });
 });
 

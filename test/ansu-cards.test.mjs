@@ -117,7 +117,8 @@ describe("the inline checks roll as the card's own actor", () => {
   it("the Release card carries roller:self", async () => {
     await callRelease(bearer(), 26, "");
     expect(messages).toHaveLength(1);
-    expect(messages[0].content).toContain("@Check[will|");
+    expect(messages[0].content).toContain("@Check[fortitude|");
+    expect(messages[0].content).not.toContain("traits:mental");
     expect(messages[0].content).toContain("|roller:self|");
   });
 

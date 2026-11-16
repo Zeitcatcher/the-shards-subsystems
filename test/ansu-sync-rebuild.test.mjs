@@ -25,8 +25,8 @@ function itemsOf(list) {
   return coll;
 }
 
-/** An attuned bearer whose Communion effect pf2e has just deleted. */
-function bearer({ level = 5, mode = "lingering", temp = 0, tempsource } = {}) {
+/** An attuned bearer whose Communion effect pf2e has just deleted. Active, since a stored "lingering" reads as dormant from 0.8. */
+function bearer({ level = 5, mode = "active", temp = 0, tempsource } = {}) {
   const hp = { value: 60, max: 60, temp, ...(tempsource === undefined ? {} : { tempsource }) };
   const actor = {
     id: "a1",

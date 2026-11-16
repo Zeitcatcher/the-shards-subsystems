@@ -46,7 +46,7 @@ export function emptyAnsuState() {
     terminal: null, // null | "subjugated" (Mastery) | "taken" (the Ansu wins)
     suppressed: [], // [{ id: <family>, reason: string, at: ts }]
     communion: {
-      mode: "none", // "none" | "active" | "lingering" | "seized"
+      mode: "none", // "none" | "active" | "seized" ("lingering" is healed to "none" on read since 0.8)
       rounds: null, // stamped duration at invoke (display only)
       startAt: null, // one-shot world-time stamp for the next countdown (seizure return); consumed by the sync
       returnPenalty: 0, // 0 | 2, added to the next release DC
@@ -97,6 +97,13 @@ function healRework(st) {
   st.consentUsed = st.consentUsed === true;
   if (st.communion && typeof st.communion === "object") {
     st.communion.returnPenalty = Number(st.communion.returnPenalty) === 2 ? 2 : 0;
+    // Lingering is unreachable from 0.8 (step C): no release outcome leads into
+    // it. A stored one (an old world, or a seizure landing) reads as dormant.
+    if (st.communion.mode === "lingering") {
+      st.communion.mode = "none";
+      st.communion.rounds = null;
+      st.communion.startAt = null;
+    }
   }
   const lo = st.lockout;
   if (!lo || typeof lo !== "object" || Array.isArray(lo)) {

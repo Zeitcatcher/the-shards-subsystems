@@ -1,17 +1,18 @@
 /**
- * The Release save — the wrestle to hand the borrowed strength back.
+ * The release save: handing the borrowed strength back.
  *
- * GM (or the player's Release action) triggers a check → for a PC, a whispered
- * chat card with an inline pf2e @Check the player clicks; for an NPC the GM rolls
- * directly. One createChatMessage capture records the degree of success:
- * clean release feeds the Climb (+1 / +2 crit), failure means Lingering, and a
- * critical failure hands the body to the GM for one round (the hard rule).
+ * GM (or the player's Release action, or the Communion running out) triggers a
+ * Fortitude save: for a PC, a whispered chat card with an inline pf2e @Check the
+ * player clicks; for an NPC the GM rolls directly. One createChatMessage capture
+ * records the degree of success (0.8): every outcome ends Communion; a failure
+ * costs Hit Points, a critical failure more Hit Points, Fatigued and a lockout
+ * on the Call. No Lingering, no seizure, no Climb.
  */
 
 import { MODULE_ID, SETTINGS } from "../../../core/constants.mjs";
 import { isPrimaryGM, actorKey } from "../../../core/platform.mjs";
 import { readAnsu, patchAnsu, isAttuned } from "../state.mjs";
-import { releaseDC, climbDeltaFor, climbNeeded } from "../logic/model.mjs";
+import { releaseDCFor, degreeOf, hpLoss, lockoutAfterRelease, makeLockout } from "../logic/model.mjs";
 import {
   acceptReleaseRoll,
   acceptRerollCapture,
@@ -24,10 +25,10 @@ import { refreshAnsuPanel } from "../apps/ansu-panel.mjs";
 
 const esc = (s) => foundry.utils.escapeHTML(String(s ?? ""));
 
-/** The default Release DC for an actor's current attunement. */
+/** The default release DC for an actor: attunement plus the failed Call's +2. */
 export function suggestedDC(state) {
   const d = readDials();
-  return releaseDC(state.level, d.dcBase, d.dcStep, d.dcCap);
+  return releaseDCFor(state.level, state.communion?.returnPenalty ?? 0, { base: d.dcBase, step: d.dcStep, cap: d.dcCap });
 }
 
 /** Non-GM users who own this actor (players who can roll for it). */
@@ -62,14 +63,19 @@ async function postReleaseCard(actor, id, dc, reason, ownerIds) {
   const showDc = game.settings.get(MODULE_ID, SETTINGS.ANSU_SHOW_DC) || "gm";
   const name = game.i18n.localize("SHARDS.Ansu.ReleaseTitle");
   // roller:self — a SAVE has no fallback to the card's actor at all, so a clicker
-  // with an enemy token selected rolled the enemy's Will and one with nothing
+  // with an enemy token selected rolled the enemy's save and one with nothing
   // selected got "No token selected" and could not roll. The card is whispered to
   // owners plus GMs, all of whom can update the actor, so nobody hits pf2e's
   // plain-text downgrade at text-editor.ts:722. (0.6.6)
-  const check = `@Check[will|dc:${dc}|traits:mental|name:${name}|showDC:${showDc}|roller:self|options:${RELEASE_OPTION},${RELEASE_ID_PREFIX}${id}]`;
+  // Fortitude, no mental trait (0.8).
+  const check = `@Check[fortitude|dc:${dc}|name:${name}|showDC:${showDc}|roller:self|options:${RELEASE_OPTION},${RELEASE_ID_PREFIX}${id}]`;
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   const whisper = [...new Set([...ownerIds, ...gmIds])];
-  const body = reason ? `<p class="ansu-card-reason"><em>${esc(reason)}</em></p>` : "";
+  const penalty =
+    readAnsu(actor).communion?.returnPenalty === 2
+      ? `<p class="ansu-card-penalty">${esc(game.i18n.localize("SHARDS.Ansu.ReleasePenaltyLine"))}</p>`
+      : "";
+  const body = (reason ? `<p class="ansu-card-reason"><em>${esc(reason)}</em></p>` : "") + penalty;
   const content = `<div class="ansu-card">
     <p class="ansu-card-title"><i class="fa-solid fa-hand-fist"></i> ${game.i18n.localize("SHARDS.Ansu.ReleaseCardTitle")}</p>
     ${body}
@@ -78,21 +84,21 @@ async function postReleaseCard(actor, id, dc, reason, ownerIds) {
   await ChatMessage.create({ content, whisper, speaker: ChatMessage.getSpeaker({ actor }) });
 }
 
-/** NPC path: GM rolls the save directly; same tag → same capture. */
+/** NPC path: GM rolls the Fortitude save directly; same tag → same capture. */
 async function rollNpcRelease(actor, id, dc) {
-  const will = actor.getStatistic?.("will") ?? actor.saves?.will;
-  if (!will?.roll) {
-    ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.NoWill"));
+  const fortitude = actor.getStatistic?.("fortitude") ?? actor.saves?.fortitude;
+  if (!fortitude?.roll) {
+    ui.notifications?.warn(game.i18n.localize("SHARDS.Ansu.NoFortitude"));
     await patchAnsu(actor, { pendingRelease: null }); // don't wedge the release block (C7)
     return;
   }
-  await will.roll({
+  await fortitude.roll({
     dc: { value: dc },
     label: game.i18n.localize("SHARDS.Ansu.ReleaseTitle"),
     extraRollOptions: [RELEASE_OPTION, `${RELEASE_ID_PREFIX}${id}`],
     // NOT rollMode: v14 renamed the concept and pf2e 8.5.0 has no such parameter
     // (Statistic#roll builds its context from an explicit object literal), so the
-    // old key was dropped in silence and every NPC Will save went public.
+    // old key was dropped in silence and every NPC save went public.
     // "gm" is the CONFIG.ChatMessage.modes key pf2e itself writes. (0.6.6)
     messageMode: "gm",
   });
@@ -156,10 +162,9 @@ async function captureFromMessage(message) {
 }
 
 /**
- * A reroll of the Release we already resolved. Nothing is applied here: undoing
- * a recorded success means resurrecting a deleted effect and unpicking a Climb
- * that may have crossed a level threshold, so the GM gets a card and the panel
- * gets a button. An unchanged outcome is not even worth mentioning.
+ * A reroll of the release we already resolved. Nothing is applied here: the
+ * costs of the recorded outcome have already landed, so the GM gets a card and
+ * the panel gets a button. An unchanged outcome is not even worth mentioning.
  */
 async function noteReroll(actor, st, ctx, outcome, total) {
   const last = st.lastRelease;
@@ -201,12 +206,13 @@ async function whisperGM(actor, text) {
 }
 
 /**
- * Write a release outcome to the log, clear the pending marker, and move the
- * state machine: clean release ends Communion and feeds the Climb (+1 / +2 crit);
- * failure lingers; critical failure hands the body to the GM for one round.
+ * Write a release outcome to the log, clear the pending marker and the return
+ * penalty, and apply the outcome (0.8): every degree ends Communion (a no-op
+ * after a critically failed Call, which granted none); failure and critical
+ * failure cost Hit Points; a critical failure adds Fatigued and the lockout.
  *
- * Imports of communion/seizure/transform are deferred to call time — the three
- * modules form a cycle at load otherwise.
+ * The communion import is deferred to call time: the modules form a cycle at
+ * load otherwise.
  */
 const recording = new Set();
 
@@ -221,7 +227,7 @@ export async function recordReleaseOutcome(actor, outcome, total = null, { force
       : null);
   if (!pending) return; // already recorded (auto-capture cleared it) — nothing to do
   // Guard a double-apply when auto-capture and the manual recorder fire for the
-  // same pending Release at once (a crit would otherwise Climb twice). (C5)
+  // same pending Release at once (a failure would otherwise cost HP twice). (C5)
   // The forced re-record is a second, separate pass over the same id. (0.6.6)
   const key = `${actorKey(actor)}:${pending.id}${force ? ":reroll" : ""}`;
   if (recording.has(key)) return;
@@ -234,113 +240,120 @@ export async function recordReleaseOutcome(actor, outcome, total = null, { force
 }
 
 async function recordReleaseOutcomeInner(actor, st, pending, outcome, total, force = false) {
-  // A correction owes only the DIFFERENCE in Climb — the recorded outcome
-  // already moved the bar. A negative difference is never taken back on its own:
-  // the GM has the ± controls and may have spent the level. (0.6.6)
   const prevOutcome = force ? (st.rerollRelease?.from ?? st.lastRelease?.outcome ?? null) : null;
-  const delta = Math.max(0, climbDeltaFor(outcome) - (force ? climbDeltaFor(prevOutcome) : 0));
+  // A correction is costed at the level the first roll was made at.
+  const level = force && Number.isInteger(st.lastRelease?.level) ? st.lastRelease.level : st.level;
   const log = [
     ...st.log,
     {
       t: Date.now(),
       type: "release",
-      data: { id: pending.id, dc: pending.dc ?? null, outcome, total, climbDelta: delta, ...(force ? { reroll: true } : {}) },
+      data: { id: pending.id, dc: pending.dc ?? null, outcome, total, ...(force ? { reroll: true } : {}) },
       note: pending.reason ?? "",
     },
   ];
   const patch = {
     log,
     pendingRelease: null,
-    lastRelease: { id: pending.id, dc: pending.dc ?? null, outcome, at: Date.now() },
+    lastRelease: { id: pending.id, dc: pending.dc ?? null, outcome, level, at: Date.now() },
+    // The failed Call's +2 is spent on this roll.
+    communion: { returnPenalty: 0 },
   };
   if (force) patch.rerollRelease = null;
   await patchAnsu(actor, patch);
 
-  const { endCommunion, slipToLingering } = await import("./communion.mjs");
-
   if (force) {
-    const step = rerollTransition({ mode: st.communion?.mode ?? "none", prevOutcome, outcome });
-    if (step.returnBody) {
-      // The recorded critical failure took the body, and the correction says it
-      // never happened: restore the pre-seizure snapshot (the panel's Return for
-      // a manual hold) rather than the seizure's own landing state, then let the
-      // new outcome apply from there. Landing in `thenMode` would keep the
-      // consequence of the outcome being thrown away. (0.6.6)
-      const { returnFromSeizure } = await import("./seizure.mjs");
-      await returnFromSeizure(actor, {});
-    }
-    if (step.blocked) {
-      await whisperGM(
-        actor,
-        game.i18n.format("SHARDS.Ansu.RerollNoRestore", {
-          name: actor.name,
-          from: outcomeLabel(prevOutcome),
-          to: outcomeLabel(outcome),
-        }),
-      );
-      refreshAnsuPanel();
-      return;
-    }
+    await applyRerollCorrection(actor, prevOutcome, outcome, level);
+    refreshAnsuPanel();
+    return;
   }
 
-  if (outcome === "success" || outcome === "criticalSuccess") {
-    await endCommunion(actor, { via: "release" });
-    const { applyClimbChange } = await import("../transform.mjs");
-    const r = await applyClimbChange(actor, { delta, source: "release" });
-    // Report what LANDED. At attunement 9 the bar caps, so a clean release used
-    // to whisper "+1: now 11 / 11" with nothing written and no log row. (0.6.6)
-    if (r && (r.moved > 0 || r.atTenth)) await whisperClimbReport(actor, r.moved, r);
-    if (r && r.moved !== delta) await correctLoggedClimb(actor, pending.id, r.moved);
-  } else if (outcome === "criticalFailure") {
-    const { startSeizure } = await import("./seizure.mjs");
-    await startSeizure(actor, { auto: true });
-  } else if (outcome === "failure") {
-    await slipToLingering(actor);
+  const { endCommunion } = await import("./communion.mjs");
+  await endCommunion(actor, { via: "release" });
+
+  const degree = degreeOf(outcome);
+  if (degree === null || degree >= 2) {
+    refreshAnsuPanel();
+    return;
   }
+  const lost = await loseHitPoints(actor, hpLoss(level, degree));
+  if (degree === 0) {
+    await addFatigued(actor);
+    await stampReleaseLockout(actor, level);
+  }
+  await whisperOwners(
+    actor,
+    game.i18n.format(degree === 0 ? "SHARDS.Ansu.ReleaseCritFailReport" : "SHARDS.Ansu.ReleaseFailReport", {
+      name: actor.name,
+      hp: lost,
+      lockout: lockoutLabel(level),
+    }),
+  );
   refreshAnsuPanel();
 }
 
 /**
- * GM-only confirmation of the climb movement after a captured outcome. `moved`
- * is what actually landed, so a full bar at attunement 9 reports the tenth step
- * alone instead of claiming movement that was never written.
+ * Settle a GM-recorded reroll (rerollTransition): a worse outcome adds its
+ * further cost, a critical failure withdrawn lifts its lockout, and anything that
+ * would have to be given back (Hit Points, Fatigued) is left to the GM.
  */
-async function whisperClimbReport(actor, moved, r) {
-  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
-  const parts = [];
-  if (moved > 0) {
-    const d = readDials();
-    const needed = climbNeeded(r.level, d.climbBase, d.climbStep);
-    parts.push(game.i18n.format("SHARDS.Ansu.ClimbMoved", { delta: moved, value: r.climb, needed }));
-    if (r.leveled) parts.push(game.i18n.format("SHARDS.Ansu.ClimbLeveled", { name: actor.name, level: r.level }));
-  }
-  if (r.atTenth) parts.push(game.i18n.format("SHARDS.Ansu.TenthReady", { name: actor.name }));
-  if (!parts.length) return;
-  await ChatMessage.create({
-    content: `<div class="ansu-card"><p>${esc(parts.join(" "))}</p></div>`,
-    whisper: gmIds,
-    speaker: ChatMessage.getSpeaker({ actor }),
-  });
+async function applyRerollCorrection(actor, prevOutcome, outcome, level) {
+  const step = rerollTransition({ prevOutcome, outcome, level });
+  const hp = step.hpExtra > 0 ? await loseHitPoints(actor, step.hpExtra) : 0;
+  if (step.fatigue) await addFatigued(actor);
+  if (step.lockout) await stampReleaseLockout(actor, level);
+  if (step.liftLockout) await patchAnsu(actor, { lockout: null });
+  const text = step.handFix ? "SHARDS.Ansu.RerollReleaseHandFix" : "SHARDS.Ansu.RerollReleaseApplied";
+  await whisperGM(
+    actor,
+    game.i18n.format(text, { name: actor.name, from: outcomeLabel(prevOutcome), to: outcomeLabel(outcome), hp }),
+  );
 }
 
 /**
- * Correct the release row's `climbDelta` once the Climb has actually moved.
- *
- * The row has to be written before the transition — a crash halfway through must
- * still leave the outcome recorded — but the panel history and the journal export
- * both print that number, and at a capped bar it claimed a climb that never
- * happened. Only the one row for this card is touched. (0.6.6)
+ * Reduce Hit Points directly (not damage: temporary Hit Points and resistances
+ * do not touch it), never below 0. Returns what was actually taken.
  */
-async function correctLoggedClimb(actor, id, moved) {
-  const log = [...readAnsu(actor).log];
-  for (let i = log.length - 1; i >= 0; i -= 1) {
-    const row = log[i];
-    if (row?.type !== "release" || row.data?.id !== id) continue;
-    if (row.data.climbDelta === moved) return;
-    log[i] = { ...row, data: { ...row.data, climbDelta: moved } };
-    await patchAnsu(actor, { log });
-    return;
+async function loseHitPoints(actor, amount) {
+  const current = Number(actor.system?.attributes?.hp?.value);
+  if (!(amount > 0) || !Number.isFinite(current)) return 0;
+  const next = Math.max(0, current - amount);
+  if (next !== current) await actor.update({ "system.attributes.hp.value": next });
+  return current - next;
+}
+
+/** Fatigued through pf2e's own condition API, defensively. */
+async function addFatigued(actor) {
+  try {
+    await actor.increaseCondition?.("fatigued");
+  } catch (err) {
+    console.warn(`${MODULE_ID} | could not auto-apply fatigued`, err);
   }
+}
+
+/** The release lockout for this level. It replaces a shorter Call lockout. */
+async function stampReleaseLockout(actor, level) {
+  const spec = lockoutAfterRelease(level);
+  if (!spec) return;
+  await patchAnsu(actor, { lockout: makeLockout(spec, game.time?.worldTime ?? 0) });
+}
+
+/** The lockout in words, for the critical failure line. */
+function lockoutLabel(level) {
+  const spec = lockoutAfterRelease(level);
+  if (!spec) return "";
+  if (spec.untilRest) return game.i18n.localize("SHARDS.Ansu.LockoutUntilRest");
+  return game.i18n.format("SHARDS.Ansu.LockoutMinutes", { minutes: Math.round(spec.seconds / 60) });
+}
+
+/** A line the bearer's owners and the GM all see. Escaped here. */
+async function whisperOwners(actor, text) {
+  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+  await ChatMessage.create({
+    content: `<div class="ansu-card"><p>${esc(text)}</p></div>`,
+    whisper: [...new Set([...playerOwners(actor), ...gmIds])],
+    speaker: ChatMessage.getSpeaker({ actor }),
+  });
 }
 
 /** Discard a pending release without recording an outcome. */

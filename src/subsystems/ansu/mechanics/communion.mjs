@@ -1,9 +1,8 @@
 /**
  * The Communion state machine. Invoke applies the composed Communion effect for
- * the tier's duration (rounds tick natively in combat); when it expires the
- * module posts the Release save automatically and the state slips to Lingering —
- * boons stay on while the bearer wrestles, re-saving at the end of each of their
- * turns. Out of combat nothing expires: the GM drives from the panel.
+ * the length the Call bought (rounds tick natively in combat); when it expires
+ * Communion ends and the module posts the release save, whose outcome sets the
+ * cost (0.8). Lingering is unreachable since 0.8; its code stays for now.
  *
  * Player side: clicking the "Invoke the Ansu" / "Release the Ansu" sheet actions
  * posts a chat card; a createChatMessage capture turns those cards into state.
@@ -117,7 +116,8 @@ async function whisperOwnersCard(actor, text) {
  * The player-facing entrance: subjugated masters toggle straight in; everyone
  * else must win the Call first (Athletics vs 20 + 2 x attunement, moved by the
  * loyalty band). The Call is refused, with a notice, while the bearer is
- * seized, a Call is pending, a lockout runs, or the bearer is Fatigued (0.8).
+ * seized, a lockout runs, or the bearer is Fatigued (0.8). A pending Call does
+ * not block: callTheCall replaces the stale card, as in v0.6.1.
  * The Call capture then drives invokeCommunion or the critical failure.
  */
 export async function requestInvoke(actor) {
@@ -136,10 +136,10 @@ export async function requestInvoke(actor) {
     await invokeCommunion(actor, game.i18n.localize("SHARDS.Ansu.InvokedByPlayer"));
     return;
   }
-  // A pending Call now blocks (0.8): roll it, or the GM clears it from the panel.
+  // A stale pending Call never blocks: the fresh Invoke replaces it (step B ruling).
   const block = invokeBlock({
     seized: st.communion.mode === "seized",
-    pendingCall: st.pendingCall,
+    pendingCall: null,
     lockout: st.lockout,
     now: game.time?.worldTime ?? 0,
     fatigued: isFatigued(actor),
@@ -184,7 +184,8 @@ export async function endCommunion(actor, { via = "gm", note = "" } = {}) {
 }
 
 /**
- * Slip from active into Lingering (failed release / expired duration unresolved).
+ * Slip from active into Lingering. Unreachable since 0.8 (no caller; a stored
+ * "lingering" reads as "none"). Kept until the cleanup pass.
  * `runOpts` is the expiry rebuild, passed straight to the sync that re-creates
  * the effect pf2e just deleted.
  */
@@ -209,29 +210,26 @@ export async function slipToLingering(actor, runOpts = {}) {
 const expiring = new Set();
 
 /**
- * On expiry of the Communion countdown: post the Release save and slip to
- * Lingering — the boons stay on while the bearer wrestles the Ansu back down.
+ * On expiry of the Communion countdown (0.8): Communion ends and the release
+ * save goes up at the DC it was owed (the failed Call's +2 included). Its outcome
+ * applies with no Communion left, the way the release after a critically failed
+ * Call does. A release card the player already opened stays open and counts.
  *
- * `runOpts` arrives only from the deleteItem path, where pf2e removed the
- * expired effect: the Lingering sync below RE-creates it, so it must be told not
- * to re-fire the create-time grants and given back the temp HP pool the delete
- * zeroed. The sweep path (removeEffects off) is an in-place update and needs
- * neither. (0.6.6)
+ * `runOpts` (the deleteItem path's rebuild options) is no longer needed: nothing
+ * re-creates the expired effect. The parameter stays for the caller.
  */
-export async function handleExpiry(actor, runOpts = {}) {
+export async function handleExpiry(actor, _runOpts = {}) {
   const st = readAnsu(actor);
   if (st.communion.mode !== "active" || st.terminal) return;
   const key = actorKey(actor);
   if (expiring.has(key)) return;
   expiring.add(key);
   try {
-    await slipToLingering(actor, runOpts);
-    // Re-read before deciding: the state was just written, and a player's own
-    // Release click could have landed a pending marker while we awaited.
-    const now = readAnsu(actor);
-    if (!now.pendingRelease) {
-      await callRelease(actor, suggestedDC(now), game.i18n.localize("SHARDS.Ansu.ExpiryReason"));
-    }
+    const dc = suggestedDC(st);
+    const open = st.pendingRelease;
+    await endCommunion(actor, { via: "expiry" });
+    if (open) await patchAnsu(actor, { pendingRelease: open });
+    else await callRelease(actor, dc, game.i18n.localize("SHARDS.Ansu.ExpiryReason"));
   } finally {
     expiring.delete(key);
   }
